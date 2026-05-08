@@ -49,7 +49,10 @@ def _load_cache() -> msal.SerializableTokenCache:
     # Prefer env var — set by Railway as a persistent environment variable
     env_cache = os.getenv('MSAL_TOKEN_CACHE', '').strip()
     if env_cache:
-        cache.deserialize(env_cache)
+        try:
+            cache.deserialize(env_cache)
+        except Exception as e:
+            print(f"Warning: MSAL_TOKEN_CACHE is malformed, ignoring: {e}")
     elif os.path.exists(TOKEN_CACHE_PATH):
         with open(TOKEN_CACHE_PATH, 'r') as f:
             cache.deserialize(f.read())
