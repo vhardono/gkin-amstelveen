@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GKIN Amstelveen – Tools</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: { extend: { colors: { gkin: { green: '#3A7C22', dark: '#2d6119' } } } }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+    <header class="bg-gkin-green shadow-md">
+        <div class="max-w-2xl mx-auto px-6 py-5 flex items-center gap-4">
+            <img src="/static/logo2.png" alt="GKIN Logo" class="h-12 w-12 object-contain shrink-0">
+            <div>
+                <h1 class="text-white text-2xl font-bold tracking-tight">GKIN Amstelveen</h1>
+                <p class="text-green-100 text-sm mt-0.5">Kies een tool</p>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-2xl mx-auto px-6 py-10">
+        <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+
+            <!-- Mededelingen -->
+            <a href="/mededelingen"
+               class="bg-white rounded-xl shadow-sm border border-gray-200 p-7 flex flex-col gap-4 hover:border-gkin-green hover:shadow-md transition group">
+                <div class="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center group-hover:bg-green-100 transition">
+                    <svg class="w-6 h-6 text-gkin-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0119 9.414V19a2 2 0 01-2 2z"/>
+                    </svg>
+                </div>
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-800 group-hover:text-gkin-green transition">Mededelingen</h2>
+                    <p class="text-sm text-gray-500 mt-1">Genereer het wekelijkse mededelingen bulletin</p>
+                </div>
+                <span class="mt-auto text-sm font-medium text-gkin-green flex items-center gap-1">
+                    Openen
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                </span>
+            </a>
+
+            <!-- Liturgie -->
+            <a href="/liturgie"
+               class="bg-white rounded-xl shadow-sm border border-gray-200 p-7 flex flex-col gap-4 hover:border-gkin-green hover:shadow-md transition group">
+                <div class="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center group-hover:bg-green-100 transition">
+                    <svg class="w-6 h-6 text-gkin-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                    </svg>
+                </div>
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-800 group-hover:text-gkin-green transition">Liturgie</h2>
+                    <p class="text-sm text-gray-500 mt-1">Genereer liturgie documenten en beamer PPT</p>
+                </div>
+                <span class="mt-auto text-sm font-medium text-gkin-green flex items-center gap-1">
+                    Openen
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                </span>
+            </a>
+
+        </div>
+    </main>
+
+</body>
+</html>

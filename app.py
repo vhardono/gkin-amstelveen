@@ -2,7 +2,13 @@
 GKIN Amstelveen Mededelingen Generator – Web App
 """
 
+import base64
+import builtins
 import os
+import shutil
+import tempfile
+import threading
+import traceback
 import uuid
 from datetime import datetime
 from flask import Flask, render_template, request, send_file, jsonify
@@ -32,8 +38,7 @@ def _get_takenrooster():
     return _takenrooster_cache
 
 
-@app.route('/')
-def index():
+def _get_takenrooster_and_render_page():
     taken = _get_takenrooster()
     dutch_months = [
         'januari', 'februari', 'maart', 'april', 'mei', 'juni',
@@ -67,7 +72,17 @@ def index():
             'ovd': entry.get('ovd', ''),
         })
 
-    return render_template('index.html', dates=dates)
+    return render_template('mededelingen.html', dates=dates)
+
+
+@app.route('/')
+def home():
+    return render_template('home.html')
+
+
+@app.route('/mededelingen')
+def mededelingen_index():
+    return _get_takenrooster_and_render_page()
 
 
 @app.route('/uploads/<path:filename>')
@@ -447,6 +462,162 @@ def refresh_dates():
     global _takenrooster_cache
     _takenrooster_cache = None
     return jsonify({'status': 'ok'})
+
+
+# ---------------------------------------------------------------------------
+# Liturgie routes
+# ---------------------------------------------------------------------------
+
+_LITURGIE_BASE    = os.path.dirname(__file__)
+_LITURGIE_CACHE   = os.path.join(_LITURGIE_BASE, 'bible_cache')
+_LITURGIE_LOGO    = os.path.join(_LITURGIE_BASE, 'logo.png')
+_LITURGIE_PHONE   = os.path.join(_LITURGIE_BASE, 'telephone.gif')
+_LITURGIE_LOCK    = threading.Lock()
+_LITURGIE_FILE_LOCKS: dict = {}
+
+DROPBOX_APP_KEY_L      = os.getenv('DROPBOX_APP_KEY', '')
+DROPBOX_APP_SECRET_L   = os.getenv('DROPBOX_APP_SECRET', '')
+DROPBOX_REFRESH_L      = os.getenv('DROPBOX_REFRESH_TOKEN', '')
+BIBLE_DROPBOX_PATH     = '/working folder/bible'
+LOGO_DROPBOX_PATH_L    = '/working folder/logo.png'
+PHONE_DROPBOX_PATH_L   = '/working folder/telephone.gif'
+
+
+def _get_dbx_liturgie():
+    import dropbox
+    return dropbox.Dropbox(
+        oauth2_refresh_token=DROPBOX_REFRESH_L,
+        app_key=DROPBOX_APP_KEY_L,
+        app_secret=DROPBOX_APP_SECRET_L,
+    )
+
+
+def _ensure_liturgie_file(remote_path: str, local_path: str):
+    """Download a single file from Dropbox if not cached locally."""
+    if os.path.exists(local_path):
+        return
+    try:
+        dbx = _get_dbx_liturgie()
+        _, resp = dbx.files_download(remote_path)
+        os.makedirs(os.path.dirname(local_path), exist_ok=True)
+        with open(local_path, 'wb') as f:
+            f.write(resp.content)
+    except Exception as e:
+        print(f'Warning: could not download {remote_path}: {e}')
+
+
+def _ensure_bible_file(filename: str):
+    """Download a single bible chapter file from Dropbox on demand."""
+    os.makedirs(_LITURGIE_CACHE, exist_ok=True)
+    local_path = os.path.join(_LITURGIE_CACHE, filename)
+    if os.path.exists(local_path):
+        return
+    with _LITURGIE_LOCK:
+        if filename not in _LITURGIE_FILE_LOCKS:
+            _LITURGIE_FILE_LOCKS[filename] = threading.Lock()
+    with _LITURGIE_FILE_LOCKS[filename]:
+        if os.path.exists(local_path):
+            return
+        dbx = _get_dbx_liturgie()
+        dropbox_path = f'{BIBLE_DROPBOX_PATH}/{filename}'
+        try:
+            _, resp = dbx.files_download(dropbox_path)
+            with open(local_path, 'wb') as f:
+                f.write(resp.content)
+        except Exception as e:
+            raise FileNotFoundError(f'Bijbelbestand niet gevonden in Dropbox: {filename} ({e})')
+
+
+def _run_liturgi(excel_bytes: bytes, preek_bytes, work_dir: str) -> dict:
+    _ensure_liturgie_file(LOGO_DROPBOX_PATH_L, _LITURGIE_LOGO)
+    _ensure_liturgie_file(PHONE_DROPBOX_PATH_L, _LITURGIE_PHONE)
+    os.makedirs(_LITURGIE_CACHE, exist_ok=True)
+
+    file_mingguan = os.path.join(work_dir, 'file mingguan')
+    os.makedirs(file_mingguan, exist_ok=True)
+
+    with open(os.path.join(file_mingguan, 'Main Liturgy file.xlsx'), 'wb') as f:
+        f.write(excel_bytes)
+    if preek_bytes:
+        with open(os.path.join(file_mingguan, 'Preek.docx'), 'wb') as f:
+            f.write(preek_bytes)
+
+    for name, src in [('bible', _LITURGIE_CACHE), ('logo.png', _LITURGIE_LOGO), ('telephone.gif', _LITURGIE_PHONE)]:
+        link = os.path.join(work_dir, name)
+        if not os.path.exists(link) and os.path.exists(src):
+            os.symlink(src, link)
+
+    src_path = os.path.join(_LITURGIE_BASE, 'liturgi_core.py')
+    with open(src_path, 'r', encoding='utf-8') as fh:
+        patched = fh.read().replace(
+            'dir_path = os.path.dirname(os.path.realpath(__file__))',
+            f'dir_path = {repr(work_dir)}'
+        )
+
+    ns = {
+        '__file__': src_path,
+        '__name__': '__liturgi_run__',
+        '__builtins__': builtins,
+        '_ensure_bible_file': _ensure_bible_file,
+    }
+    try:
+        exec(compile(patched, src_path, 'exec'), ns)
+    except SystemExit:
+        pass
+
+    result = {}
+    for fname in os.listdir(file_mingguan):
+        if fname.startswith('LiturgieA') and fname.endswith('.docx'):
+            result['liturgieA'] = os.path.join(file_mingguan, fname)
+            result['liturgieA_name'] = fname
+        elif fname.startswith('LiturgieB') and fname.endswith('.docx'):
+            result['liturgieB'] = os.path.join(file_mingguan, fname)
+            result['liturgieB_name'] = fname
+        elif fname.startswith('LiturgieP') and fname.endswith('.pptx'):
+            result['liturgieP'] = os.path.join(file_mingguan, fname)
+            result['liturgieP_name'] = fname
+    return result
+
+
+@app.route('/liturgie')
+def liturgie_index():
+    return render_template('liturgie.html')
+
+
+@app.route('/liturgie/generate', methods=['POST'])
+def liturgie_generate():
+    excel_file = request.files.get('excel_file')
+    if not excel_file or not excel_file.filename:
+        return jsonify({'error': 'Excel bestand is verplicht.'}), 400
+
+    excel_bytes = excel_file.read()
+    preek_file  = request.files.get('preek_file')
+    preek_bytes = preek_file.read() if preek_file and preek_file.filename else None
+    want_a = request.form.get('want_a', '1') == '1'
+    want_b = request.form.get('want_b', '1') == '1'
+    want_p = request.form.get('want_p', '1') == '1'
+
+    work_dir = tempfile.mkdtemp(prefix='liturgi_')
+    try:
+        result = _run_liturgi(excel_bytes, preek_bytes, work_dir)
+        if not result:
+            return jsonify({'error': 'Geen output bestanden gegenereerd.'}), 500
+
+        files_out = []
+        for key, want in [('liturgieA', want_a), ('liturgieB', want_b), ('liturgieP', want_p)]:
+            if want and key in result:
+                with open(result[key], 'rb') as fh:
+                    files_out.append({'name': result[f'{key}_name'], 'data': base64.b64encode(fh.read()).decode('ascii')})
+
+        if not files_out:
+            return jsonify({'error': 'Geen geselecteerde bestanden gevonden in output.'}), 500
+        return jsonify(files_out)
+
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        shutil.rmtree(work_dir, ignore_errors=True)
 
 
 if __name__ == '__main__':

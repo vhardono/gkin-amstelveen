@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GKIN Amstelveen – Mededelingen Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: { extend: { colors: { gkin: { green: '#3A7C22', dark: '#2d6119' } } } }
+        }
+    </script>
+    <style>
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .spinner { animation: spin 1s linear infinite; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+    <!-- Header -->
+    <header class="bg-gkin-green shadow-md">
+        <div class="max-w-3xl mx-auto px-6 py-5 flex items-center gap-4">
+            <a href="/"><img src="/static/logo2.png" alt="GKIN Logo" class="h-12 w-12 object-contain shrink-0"></a>
+            <div>
+                <h1 class="text-white text-2xl font-bold tracking-tight">GKIN Amstelveen</h1>
+                <p class="text-green-100 text-sm mt-0.5">Mededelingen Generator</p>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main -->
+    <main class="max-w-3xl mx-auto px-6 py-8">
+        <form id="genForm" action="/generate" method="POST" enctype="multipart/form-data">
+
+        <!-- 1. Datum -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-5">
+            <h2 class="text-base font-semibold text-gkin-green mb-4 flex items-center gap-2">
+                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                Eredienst datum
+            </h2>
+            <label for="date" class="block text-sm font-medium text-gray-700 mb-1">Datum</label>
+            <select id="date" name="date" required
+                    class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-gkin-green">
+                <option value="" disabled selected>— Kies een datum —</option>
+                {% for d in dates %}
+                <option value="{{ d.value }}">{{ d.label }}</option>
+                {% endfor %}
+            </select>
+            <div id="infoCard" class="hidden mt-4 bg-green-50 border border-green-200 rounded-lg p-4">
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div><p class="text-gray-500 text-xs uppercase tracking-wide mb-0.5">Predikant</p><p id="infoPred" class="font-semibold text-gray-800">—</p></div>
+                    <div><p class="text-gray-500 text-xs uppercase tracking-wide mb-0.5">Ouderling van Dienst</p><p id="infoOvd" class="font-semibold text-gray-800">—</p></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Outlook connection bar -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 px-5 py-3 mb-5 flex items-center justify-between gap-4">
+            <div class="flex items-center gap-2">
+                <svg class="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                <span class="text-sm text-gray-600">Outlook e-mail</span>
+                <span id="outlookStatus" class="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">Niet verbonden</span>
+            </div>
+            <button type="button" id="emailLoginBtn"
+                    class="text-xs bg-orange-50 hover:bg-orange-100 text-orange-700 border border-orange-200 rounded-lg px-3 py-1.5 flex items-center gap-1 transition-colors disabled:opacity-50">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+                <span id="emailLoginText">Inloggen bij Outlook</span>
+            </button>
+        </div>
+        <!-- Device-code login dialog -->
+        <div id="deviceCodeDialog" class="hidden mb-5 p-4 bg-amber-50 border border-amber-200 rounded-xl text-sm">
+            <p class="font-semibold text-amber-800 mb-2">Stap 1: Open in je browser</p>
+            <a id="deviceCodeUrl" href="" target="_blank"
+               class="text-blue-600 underline font-mono text-xs break-all"></a>
+            <p class="mt-3 font-semibold text-amber-800">Stap 2: Voer deze code in</p>
+            <p id="deviceCodeValue" class="font-mono text-2xl font-bold tracking-widest text-amber-900 mt-1"></p>
+            <p class="mt-3 text-amber-700 text-xs">Na inloggen in de browser, klik hieronder:</p>
+            <button type="button" id="deviceCodeDoneBtn"
+                    class="mt-2 text-xs bg-green-600 hover:bg-green-700 text-white rounded-lg px-4 py-2 disabled:opacity-50">
+                Ik heb ingelogd ✓
+            </button>
+        </div>
+
+        <!-- 2. Overdenking -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-5">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-base font-semibold text-gkin-green flex items-center gap-2">
+                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                    Overdenking
+                </h2>
+                <button type="button" id="fetchOvdBtn"
+                        class="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg px-3 py-1.5 flex items-center gap-1 transition-colors disabled:opacity-50">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                    <span id="fetchOvdText">Laden uit e-mail</span>
+                </button>
+            </div>
+            <div id="ovdFetchStatus" class="hidden mb-3 text-xs rounded-lg p-2 border"></div>
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Naam predikant</label>
+                    <input type="text" name="overdenking_predikant" placeholder="bijv. ds. J. Linandi"
+                           class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gkin-green">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Schriftlezing</label>
+                    <input type="text" name="overdenking_schriftlezing" placeholder="bijv. Matteüs 28:11-20"
+                           class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gkin-green">
+                </div>
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Thema</label>
+                <input type="text" name="overdenking_thema" placeholder="bijv. Overwin nepnieuws door het goede nieuws te verspreiden"
+                       class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gkin-green">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Inhoud overdenking <span class="text-gray-400 font-normal">(alinea's scheiden met een lege regel)</span>
+                </label>
+                <textarea name="overdenking_content" rows="8"
+                          placeholder="Voer de tekst van de overdenking in..."
+                          class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gkin-green resize-y"></textarea>
+            </div>
+        </div>
+
+        <!-- 3. Collecte opbrengsten -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-5">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-base font-semibold text-gkin-green flex items-center gap-2">
+                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2z"/></svg>
+                    Collecte opbrengsten <span class="text-gray-400 font-normal text-sm ml-1">(vorige week)</span>
+                </h2>
+                <button type="button" id="fetchOpbrengstBtn"
+                        class="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg px-3 py-1.5 flex items-center gap-1 transition-colors disabled:opacity-50">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                    <span id="fetchOpbrengstText">Laden uit e-mail</span>
+                </button>
+            </div>
+            <div id="opbrengstFetchStatus" class="hidden mb-3 text-xs rounded-lg p-2 border"></div>
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                {% for label, name in [('1. Contant', 'collecte_contant'), ('2. Collectebonnen', 'collecte_bonnen'), ('3. Bankoverschrijving', 'collecte_bank'), ('4. Tikkie', 'collecte_tikkie')] %}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ label }} (€)</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-3 flex items-center text-gray-400 text-sm pointer-events-none">€</span>
+                        <input type="text" name="{{ name }}" placeholder="0,00"
+                               class="w-full rounded-lg border border-gray-300 pl-7 pr-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gkin-green">
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            <div class="grid grid-cols-3 gap-4 pt-4 border-t border-gray-100">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">OLE Collecte (€)</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-3 flex items-center text-gray-400 text-sm pointer-events-none">€</span>
+                        <input type="text" name="collecte_ole" placeholder="0,00"
+                               class="w-full rounded-lg border border-gray-300 pl-7 pr-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gkin-green">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Bezoekers volwassenen</label>
+                    <input type="number" name="bezoekers_volwassenen" min="0" placeholder="0"
+                           class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gkin-green">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Bezoekers kinderen</label>
+                    <input type="number" name="bezoekers_kinderen" min="0" placeholder="0"
+                           class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gkin-green">
+                </div>
+            </div>
+            <!-- Hidden field stores email-fetched entries JSON for multi-table generation -->
+            <input type="hidden" name="opbrengst_entries_json" id="opbrengst_entries_json">
+        </div>
+
+        <!-- 4. Collecte informatie URLs & QR -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-5">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-base font-semibold text-gkin-green flex items-center gap-2">
+                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+                    Collecte informatie – URLs &amp; QR codes
+                </h2>
+                    <button type="button" id="fetchEmailBtn"
+                            class="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg px-3 py-1.5 flex items-center gap-1 transition-colors disabled:opacity-50">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                        <span id="fetchEmailText">Laden uit e-mail</span>
+                    </button>
+            </div>
+            <div id="emailFetchStatus" class="hidden mb-3 text-xs rounded-lg p-2 border"></div>
+            {% for title, url_name, qr_name, url_prefix, path_name in [
+                ('Dankoffer (GKIN Amstelveen)', 'dankoffer_url', 'dankoffer_qr_file', 'dankoffer', 'dankoffer_qr_path'),
+                ('Online Landelijke Eredienst (OLE)', 'ole_url', 'ole_qr_file', 'ole', 'ole_qr_path')
+            ] %}
+            <div class="p-4 bg-gray-50 rounded-lg border border-gray-200 mb-3 last:mb-0">
+                <p class="text-sm font-semibold text-gray-700 mb-3">{{ title }}</p>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Betaalverzoek URL</label>
+                        <input type="url" name="{{ url_name }}" id="{{ url_name }}" placeholder="https://..."
+                               class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gkin-green"
+                               oninput="updateUrlPreview('{{ url_name }}', '{{ url_prefix }}_url_preview')">
+                        <a id="{{ url_prefix }}_url_preview" href="#" target="_blank"
+                           class="hidden mt-1 text-xs text-blue-600 underline truncate block"></a>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">QR code afbeelding</label>
+                        <label class="flex items-center gap-2 w-full rounded-lg border border-dashed border-gray-300 px-3 py-2 bg-white cursor-pointer hover:border-gkin-green transition-colors">
+                            <svg class="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                            <span class="text-sm text-gray-500 qr-label-{{ loop.index }}">Kies afbeelding...</span>
+                            <input type="file" name="{{ qr_name }}" accept="image/*" class="hidden"
+                                   onchange="updateFileLabel(this, '.qr-label-{{ loop.index }}'); clearEmailQr('{{ path_name }}', '{{ url_prefix }}_qr_preview')">
+                        </label>
+                        <!-- Hidden field to pass email-fetched QR filename to generate endpoint -->
+                        <input type="hidden" name="{{ path_name }}" id="{{ path_name }}">
+                        <!-- QR preview image (shown when loaded from email) -->
+                        <img id="{{ url_prefix }}_qr_preview" src="" alt="QR preview"
+                             class="hidden mt-2 h-24 w-24 object-contain rounded border border-gray-200 bg-white">
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- 5. Activiteiten kalender -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-5">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-base font-semibold text-gkin-green flex items-center gap-2">
+                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                    Activiteiten kalender
+                </h2>
+                <button type="button" id="loadActBtn"
+                        class="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg px-3 py-1.5 flex items-center gap-1 transition-colors disabled:opacity-50">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                    <span id="loadActText">Laden uit mededelingen</span>
+                </button>
+            </div>
+            <!-- Column headers -->
+            <div class="grid grid-cols-12 gap-2 mb-1 px-1">
+                <div class="col-span-2 text-xs font-medium text-gray-500 uppercase tracking-wide">Datum</div>
+                <div class="col-span-2 text-xs font-medium text-gray-500 uppercase tracking-wide">Tijd</div>
+                <div class="col-span-3 text-xs font-medium text-gray-500 uppercase tracking-wide">Activiteit</div>
+                <div class="col-span-3 text-xs font-medium text-gray-500 uppercase tracking-wide">O.l.v. (persoon)</div>
+                <div class="col-span-2 text-xs font-medium text-gray-500 uppercase tracking-wide">Locatie</div>
+            </div>
+            <div id="activiteitenRows"></div>
+            <button type="button" id="addActBtn"
+                    class="mt-3 text-sm text-gkin-green hover:text-gkin-dark font-medium flex items-center gap-1">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                Rij toevoegen
+            </button>
+        </div>
+
+        <!-- Action buttons -->
+        <div class="flex gap-3 mb-10">
+            <button type="button" id="resetBtn"
+                    class="flex-1 flex items-center justify-center gap-2 border-2 border-gray-300 hover:border-gray-400 text-gray-600 hover:text-gray-800 font-semibold py-3.5 px-6 rounded-xl transition-colors">
+                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+                Opnieuw beginnen
+            </button>
+            <button id="genBtn" type="submit"
+                    class="flex-[2] flex items-center justify-center gap-2 bg-gkin-green hover:bg-gkin-dark text-white font-semibold py-3.5 px-6 rounded-xl shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                <svg id="btnIcon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17v3a2 2 0 002 2h14a2 2 0 002-2v-3"/>
+                </svg>
+                <svg id="btnSpinner" class="hidden spinner h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
+                </svg>
+                <span id="btnText">Genereer &amp; Download Mededelingen</span>
+            </button>
+        </div>
+        <div id="statusMsg" class="hidden mb-8 text-center text-sm rounded-lg p-3"></div>
+
+        </form>
+
+        <p class="text-center text-xs text-gray-400 mb-8">
+            Data bronnen: Dropbox Takenrooster &amp; Mededelingen &middot; Scipio Verjaardagen &middot; GKIN Preekrooster
+        </p>
+    </main>
+
+    <script>
+        const dateData = {{ dates | tojson }};
+        const dateSelect = document.getElementById('date');
+        const infoCard = document.getElementById('infoCard');
+        const infoPred = document.getElementById('infoPred');
+        const infoOvd = document.getElementById('infoOvd');
+        const genForm = document.getElementById('genForm');
+        const genBtn = document.getElementById('genBtn');
+        const btnIcon = document.getElementById('btnIcon');
+        const btnSpinner = document.getElementById('btnSpinner');
+        const btnText = document.getElementById('btnText');
+        const statusMsg = document.getElementById('statusMsg');
+
+        const inputCls = 'w-full rounded-lg border border-gray-300 px-2.5 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gkin-green';
+
+        // Show predikant/OvD on date select
+        dateSelect.addEventListener('change', () => {
+            const sel = dateData.find(d => d.value === dateSelect.value);
+            if (sel) {
+                infoPred.textContent = sel.predikant;
+                infoOvd.textContent = sel.ovd;
+                infoCard.classList.remove('hidden');
+            }
+            statusMsg.classList.add('hidden');
+        });
+
+        // File label updater for QR uploads
+        function updateFileLabel(input, selector) {
+            const label = document.querySelector(selector);
+            if (label && input.files.length) {
+                label.textContent = input.files[0].name;
+                label.classList.add('text-gkin-green');
+            }
+        }
+
+        // Show clickable URL preview below input
+        function updateUrlPreview(inputId, previewId) {
+            const input = document.getElementById(inputId);
+            const preview = document.getElementById(previewId);
+            if (!input || !preview) return;
+            const val = input.value.trim();
+            if (val) {
+                preview.href = val;
+                preview.textContent = val;
+                preview.classList.remove('hidden');
+            } else {
+                preview.classList.add('hidden');
+            }
+        }
+
+        // Clear email QR when user manually picks a file
+        function clearEmailQr(pathFieldId, previewId) {
+            const pathField = document.getElementById(pathFieldId);
+            const preview   = document.getElementById(previewId);
+            if (pathField) pathField.value = '';
+            if (preview)   { preview.src = ''; preview.classList.add('hidden'); }
+        }
+
+        // Show QR preview from email-fetched filename
+        function showQrPreview(filename, previewId, pathFieldId, labelSelector) {
+            const preview   = document.getElementById(previewId);
+            const pathField = document.getElementById(pathFieldId);
+            const label     = document.querySelector(labelSelector);
+            if (!filename) return;
+            if (preview) {
+                preview.src = '/uploads/' + filename;
+                preview.classList.remove('hidden');
+            }
+            if (pathField) pathField.value = filename;
+            if (label) { label.textContent = filename; label.classList.add('text-gkin-green'); }
+        }
+
+        // Activiteiten rows
+        let actRowCount = 0;
+
+        function addActRow(datum='', tijd='', activiteit='', olv='', locatie='') {
+            const idx = actRowCount++;
+            const container = document.getElementById('activiteitenRows');
+            const row = document.createElement('div');
+            row.className = 'act-row grid grid-cols-12 gap-2 mb-2 items-center';
+            row.innerHTML = `
+                <div class="col-span-2">
+                    <input type="text" name="act_datum_${idx}" value="${datum}" placeholder="21 jun 2026" class="${inputCls}">
+                </div>
+                <div class="col-span-2">
+                    <input type="text" name="act_tijd_${idx}" value="${tijd}" placeholder="10:30" class="${inputCls}">
+                </div>
+                <div class="col-span-3">
+                    <input type="text" name="act_activiteit_${idx}" value="${escHtml(activiteit)}" placeholder="Activiteit" class="${inputCls}">
+                </div>
+                <div class="col-span-3">
+                    <input type="text" name="act_olv_${idx}" value="${escHtml(olv)}" placeholder="ds. Naam" class="${inputCls}">
+                </div>
+                <div class="col-span-1">
+                    <input type="text" name="act_locatie_${idx}" value="${escHtml(locatie)}" placeholder="Locatie" class="${inputCls}">
+                </div>
+                <div class="col-span-1 flex justify-center">
+                    <button type="button" onclick="this.closest('.act-row').remove()"
+                        class="text-red-400 hover:text-red-600 p-1 rounded">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>`;
+            container.appendChild(row);
+        }
+
+        function escHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;'); }
+
+        // Start with 1 empty row
+        addActRow();
+
+        document.getElementById('addActBtn').addEventListener('click', () => addActRow());
+
+        // Load activities from mededelingen
+        document.getElementById('loadActBtn').addEventListener('click', async () => {
+            const dateVal = dateSelect.value;
+            if (!dateVal) { alert('Selecteer eerst een datum'); return; }
+            const btn = document.getElementById('loadActBtn');
+            const btnLabel = document.getElementById('loadActText');
+            btn.disabled = true;
+            btnLabel.textContent = 'Laden...';
+            try {
+                const fd = new FormData();
+                fd.append('date', dateVal);
+                const resp = await fetch('/get-mededelingen', { method: 'POST', body: fd });
+                const data = await resp.json();
+                if (data.error) throw new Error(data.error);
+                if (data.activities && data.activities.length > 0) {
+                    document.getElementById('activiteitenRows').innerHTML = '';
+                    actRowCount = 0;
+                    data.activities.forEach(a => addActRow(a.datum, a.tijd, a.activiteit, a.olv, a.locatie));
+                    btnLabel.textContent = `${data.activities.length} activiteit(en) geladen`;
+                } else {
+                    btnLabel.textContent = 'Geen activiteiten gevonden';
+                }
+            } catch(e) {
+                btnLabel.textContent = 'Fout: ' + e.message;
+            } finally {
+                btn.disabled = false;
+                setTimeout(() => { btnLabel.textContent = 'Laden uit mededelingen'; }, 3000);
+            }
+        });
+
+        // --- Outlook email integration ---
+        function showEmailStatus(msg, type) {
+            const el = document.getElementById('emailFetchStatus');
+            el.textContent = msg;
+            el.className = `mb-3 text-xs rounded-lg p-2 border ${
+                type === 'ok'  ? 'bg-green-50 text-green-700 border-green-200' :
+                type === 'err' ? 'bg-red-50 text-red-700 border-red-200' :
+                                 'bg-blue-50 text-blue-700 border-blue-200'
+            }`;
+            el.classList.remove('hidden');
+        }
+
+        // Central function: update Outlook status pill + login btn + all fetch buttons
+        function setOutlookConnected(connected) {
+            const pill    = document.getElementById('outlookStatus');
+            const loginBtn = document.getElementById('emailLoginBtn');
+            const loginLbl = document.getElementById('emailLoginText');
+            const fetchBtns = [
+                document.getElementById('fetchOvdBtn'),
+                document.getElementById('fetchOpbrengstBtn'),
+                document.getElementById('fetchEmailBtn'),
+            ];
+            if (connected) {
+                pill.textContent = 'Verbonden';
+                pill.className = 'text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700';
+                loginLbl.textContent = '✓ Verbonden';
+                loginBtn.className = loginBtn.className
+                    .replace('bg-orange-50','bg-green-50').replace('hover:bg-orange-100','hover:bg-green-100')
+                    .replace('text-orange-700','text-green-700').replace('border-orange-200','border-green-200');
+                fetchBtns.forEach(b => { if (b) b.disabled = false; });
+            } else {
+                pill.textContent = 'Niet verbonden';
+                pill.className = 'text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500';
+                loginLbl.textContent = 'Inloggen bij Outlook';
+                fetchBtns.forEach(b => { if (b) b.disabled = true; });
+            }
+        }
+
+        // Check auth status on page load
+        (async () => {
+            try {
+                const r = await fetch('/email-auth-status');
+                const d = await r.json();
+                setOutlookConnected(!!d.authenticated);
+            } catch(e) { setOutlookConnected(false); }
+        })();
+
+        // Login button — starts device-code flow
+        document.getElementById('emailLoginBtn').addEventListener('click', async () => {
+            const btn = document.getElementById('emailLoginBtn');
+            const lbl = document.getElementById('emailLoginText');
+            btn.disabled = true;
+            lbl.textContent = 'Bezig...';
+            try {
+                const resp = await fetch('/email-login-start', { method: 'POST' });
+                const data = await resp.json();
+                if (data.error) throw new Error(data.error);
+                // Show device-code dialog
+                document.getElementById('deviceCodeUrl').href = data.verification_uri;
+                document.getElementById('deviceCodeUrl').textContent = data.verification_uri;
+                document.getElementById('deviceCodeValue').textContent = data.user_code;
+                document.getElementById('deviceCodeDialog').classList.remove('hidden');
+                lbl.textContent = 'Wachten op login...';
+            } catch(e) {
+                showEmailStatus('Inloggen mislukt: ' + e.message, 'err');
+                lbl.textContent = 'Inloggen bij Outlook';
+            } finally {
+                btn.disabled = false;
+            }
+        });
+
+        // "I have logged in" button
+        document.getElementById('deviceCodeDoneBtn').addEventListener('click', async () => {
+            const doneBtn = document.getElementById('deviceCodeDoneBtn');
+            doneBtn.disabled = true;
+            doneBtn.textContent = 'Controleren...';
+            try {
+                const resp = await fetch('/email-login-complete', { method: 'POST' });
+                const data = await resp.json();
+                if (data.status === 'ok') {
+                    setOutlookConnected(true);
+                    document.getElementById('deviceCodeDialog').classList.add('hidden');
+                    showEmailStatus('✓ Succesvol ingelogd bij Outlook!', 'ok');
+                } else if (data.error) {
+                    throw new Error(data.error);
+                } else {
+                    showEmailStatus('Login nog niet voltooid. Probeer opnieuw na inloggen.', 'info');
+                    doneBtn.disabled = false;
+                    doneBtn.textContent = 'Ik heb ingelogd ✓';
+                }
+            } catch(e) {
+                showEmailStatus('Fout: ' + e.message, 'err');
+                doneBtn.disabled = false;
+                doneBtn.textContent = 'Ik heb ingelogd ✓';
+            }
+        });
+
+        // Fetch collecte data from email
+        document.getElementById('fetchEmailBtn').addEventListener('click', async () => {
+            const btn = document.getElementById('fetchEmailBtn');
+            const lbl = document.getElementById('fetchEmailText');
+            btn.disabled = true;
+            lbl.textContent = 'Zoeken...';
+            try {
+                const selectedDate = document.getElementById('date').value; // e.g. "2026-05-10"
+                const resp = await fetch('/fetch-email-collecte', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ date: selectedDate }),
+                });
+                const data = await resp.json();
+                if (resp.status === 401 || data.error === 'login_required') {
+                    showEmailStatus('Niet ingelogd — klik eerst op "Inloggen bij Outlook".', 'err');
+                    return;
+                }
+                if (data.error) throw new Error(data.error);
+
+                // Populate URL fields + show clickable previews
+                if (data.dankoffer_url) {
+                    document.getElementById('dankoffer_url').value = data.dankoffer_url;
+                    updateUrlPreview('dankoffer_url', 'dankoffer_url_preview');
+                }
+                if (data.ole_url) {
+                    document.getElementById('ole_url').value = data.ole_url;
+                    updateUrlPreview('ole_url', 'ole_url_preview');
+                }
+
+                // Populate amount fields
+                for (const name of ['collecte_contant','collecte_bonnen','collecte_bank','collecte_tikkie','collecte_ole']) {
+                    if (data[name]) document.querySelector(`[name="${name}"]`).value = data[name];
+                }
+
+                // Show QR image previews
+                if (data.dankoffer_qr) showQrPreview(data.dankoffer_qr, 'dankoffer_qr_preview', 'dankoffer_qr_path', '.qr-label-1');
+                if (data.ole_qr)       showQrPreview(data.ole_qr,       'ole_qr_preview',       'ole_qr_path',       '.qr-label-2');
+
+                const lines = [];
+                const notFound = data.not_found || [];
+                if (data.dankoffer_qr) lines.push('✓ Dankoffer QR opgeslagen');
+                if (data.ole_qr)       lines.push('✓ OLE QR opgeslagen');
+                if (data.dankoffer_url) lines.push('✓ Tikkie link gevonden');
+                if (data.ole_url)       lines.push('✓ OLE link gevonden');
+                notFound.forEach(w => lines.push('⚠ ' + w));
+
+                const type = notFound.length === 2 ? 'err' : notFound.length === 1 ? 'info' : 'ok';
+                showEmailStatus(lines.join(' · ') || 'Geen collecte e-mails gevonden voor deze datum.', type);
+                lbl.textContent = data.emails_found > 0 ? `${data.emails_found} e-mail(s) geladen` : 'Niets gevonden';
+            } catch(e) {
+                showEmailStatus('Fout: ' + e.message, 'err');
+                lbl.textContent = 'Laden uit e-mail';
+            } finally {
+                btn.disabled = false;
+                setTimeout(() => { lbl.textContent = 'Laden uit e-mail'; }, 5000);
+            }
+        });
+
+        // Fetch overdenking from email
+        document.getElementById('fetchOvdBtn').addEventListener('click', async () => {
+            const btn = document.getElementById('fetchOvdBtn');
+            const lbl = document.getElementById('fetchOvdText');
+            const statusEl = document.getElementById('ovdFetchStatus');
+            btn.disabled = true;
+            lbl.textContent = 'Zoeken...';
+            statusEl.classList.add('hidden');
+            try {
+                const selectedDate = document.getElementById('date').value;
+                const resp = await fetch('/fetch-email-overdenking', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ date: selectedDate }),
+                });
+                const data = await resp.json();
+                if (resp.status === 401 || data.error === 'login_required') {
+                    statusEl.textContent = 'Niet ingelogd — klik eerst op "Inloggen bij Outlook" in de Collecte URLs sectie.';
+                    statusEl.className = 'mb-3 text-xs rounded-lg p-2 border bg-red-50 text-red-700 border-red-200';
+                    statusEl.classList.remove('hidden');
+                    return;
+                }
+                if (data.error) throw new Error(data.error);
+                if (data.not_found && data.not_found.length) {
+                    statusEl.textContent = '⚠ ' + data.not_found.join(' · ');
+                    statusEl.className = 'mb-3 text-xs rounded-lg p-2 border bg-amber-50 text-amber-700 border-amber-200';
+                    statusEl.classList.remove('hidden');
+                    lbl.textContent = 'Niets gevonden';
+                    return;
+                }
+
+                // Populate fields
+                if (data.predikant)     document.querySelector('[name="overdenking_predikant"]').value    = data.predikant;
+                if (data.schriftlezing) document.querySelector('[name="overdenking_schriftlezing"]').value = data.schriftlezing;
+                if (data.thema)         document.querySelector('[name="overdenking_thema"]').value         = data.thema;
+                if (data.content)       document.querySelector('[name="overdenking_content"]').value       = data.content;
+
+                statusEl.textContent = `✓ Geladen: "${data.thema || data.predikant}" · bron: ${data.source_subject || ''}`;
+                statusEl.className = 'mb-3 text-xs rounded-lg p-2 border bg-green-50 text-green-700 border-green-200';
+                statusEl.classList.remove('hidden');
+                lbl.textContent = 'Geladen';
+            } catch(e) {
+                statusEl.textContent = 'Fout: ' + e.message;
+                statusEl.className = 'mb-3 text-xs rounded-lg p-2 border bg-red-50 text-red-700 border-red-200';
+                statusEl.classList.remove('hidden');
+                lbl.textContent = 'Laden uit e-mail';
+            } finally {
+                btn.disabled = false;
+                setTimeout(() => { lbl.textContent = 'Laden uit e-mail'; }, 6000);
+            }
+        });
+
+        // Fetch collecte opbrengsten from email
+        document.getElementById('fetchOpbrengstBtn').addEventListener('click', async () => {
+            const btn = document.getElementById('fetchOpbrengstBtn');
+            const lbl = document.getElementById('fetchOpbrengstText');
+            const statusEl = document.getElementById('opbrengstFetchStatus');
+            btn.disabled = true;
+            lbl.textContent = 'Zoeken...';
+            statusEl.classList.add('hidden');
+            try {
+                const selectedDate = document.getElementById('date').value;
+                const resp = await fetch('/fetch-email-opbrengst', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ date: selectedDate }),
+                });
+                const data = await resp.json();
+                if (resp.status === 401 || data.error === 'login_required') {
+                    statusEl.textContent = 'Niet ingelogd — klik eerst op "Inloggen bij Outlook" in de Collecte URLs sectie.';
+                    statusEl.className = 'mb-3 text-xs rounded-lg p-2 border bg-red-50 text-red-700 border-red-200';
+                    statusEl.classList.remove('hidden');
+                    return;
+                }
+                if (data.error) throw new Error(data.error);
+
+                // Store all entries as JSON for the generate endpoint (multi-table)
+                const entries = data.entries || [];
+                document.getElementById('opbrengst_entries_json').value =
+                    entries.length ? JSON.stringify(entries) : '';
+
+                // Fill flat fields from the last entry for display
+                const fieldMap = {
+                    collecte_contant: data.collecte_contant,
+                    collecte_bonnen:  data.collecte_bonnen,
+                    collecte_bank:    data.collecte_bank,
+                    collecte_tikkie:  data.collecte_tikkie,
+                    collecte_ole:     data.collecte_ole,
+                    bezoekers_volwassenen: data.bezoekers_volwassenen,
+                    bezoekers_kinderen:    data.bezoekers_kinderen,
+                };
+                for (const [name, val] of Object.entries(fieldMap)) {
+                    if (val) {
+                        const el = document.querySelector(`[name="${name}"]`);
+                        if (el) el.value = val;
+                    }
+                }
+
+                // Build status lines — one block per entry
+                const lines = [];
+                entries.forEach((e, i) => {
+                    const parts = [`Dienst ${i+1}: ${e.service_date}`];
+                    if (e.collecte_contant) parts.push(`contant €${e.collecte_contant}`);
+                    if (e.collecte_bonnen)  parts.push(`bonnen €${e.collecte_bonnen}`);
+                    if (e.collecte_bank)    parts.push(`bank €${e.collecte_bank}`);
+                    if (e.collecte_tikkie)  parts.push(`tikkie €${e.collecte_tikkie}`);
+                    if (e.collecte_ole)     parts.push(`OLE €${e.collecte_ole}`);
+                    if (e.bezoekers_volwassenen) parts.push(`${e.bezoekers_volwassenen}+${e.bezoekers_kinderen} bez.`);
+                    lines.push('✓ ' + parts.join(', '));
+                });
+                const notFound = data.not_found || [];
+                notFound.forEach(w => lines.push('⚠ ' + w));
+
+                const type = notFound.length === 2 ? 'err' : notFound.length === 1 ? 'info' : 'ok';
+                statusEl.textContent = lines.join(' · ') || 'Geen opbrengst e-mails gevonden voor deze datum.';
+                statusEl.className = `mb-3 text-xs rounded-lg p-2 border ${
+                    type === 'ok'  ? 'bg-green-50 text-green-700 border-green-200' :
+                    type === 'err' ? 'bg-red-50 text-red-700 border-red-200' :
+                                     'bg-amber-50 text-amber-700 border-amber-200'
+                }`;
+                statusEl.classList.remove('hidden');
+                lbl.textContent = data.emails_found > 0 ? `${data.emails_found} e-mail(s) geladen` : 'Niets gevonden';
+            } catch(e) {
+                statusEl.textContent = 'Fout: ' + e.message;
+                statusEl.className = 'mb-3 text-xs rounded-lg p-2 border bg-red-50 text-red-700 border-red-200';
+                statusEl.classList.remove('hidden');
+                lbl.textContent = 'Laden uit e-mail';
+            } finally {
+                btn.disabled = false;
+                setTimeout(() => { lbl.textContent = 'Laden uit e-mail'; }, 5000);
+            }
+        });
+
+        // Reset button
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            if (!confirm('Alle ingevulde gegevens wissen?')) return;
+            genForm.reset();
+            infoCard.classList.add('hidden');
+            statusMsg.classList.add('hidden');
+            document.getElementById('activiteitenRows').innerHTML = '';
+            actRowCount = 0;
+            addActRow();
+            // Reset file labels
+            document.querySelectorAll('[class*="qr-label"]').forEach(el => {
+                el.textContent = 'Kies afbeelding...';
+                el.classList.remove('text-gkin-green');
+            });
+        });
+
+        // Sort activiteiten rows by date (earliest first)
+        function sortActiviteiten() {
+            const NL_MONTHS = {jan:1,feb:2,mrt:3,mar:3,apr:4,mei:5,jun:6,jul:7,aug:8,sep:9,okt:10,nov:11,dec:12};
+            const container = document.getElementById('activiteitenRows');
+            const rows = Array.from(container.querySelectorAll('.act-row'));
+            rows.sort((a, b) => {
+                const dateVal = el => {
+                    const inp = el.querySelector('input[name^="act_datum_"]');
+                    const txt = (inp ? inp.value : '').trim().toLowerCase();
+                    // Parse "24 mei", "3 jun 2026", "24 mei 2026"
+                    const m = txt.match(/^(\d{1,2})\s+([a-z]+)(?:\s+(\d{4}))?/);
+                    if (!m) return new Date(9999, 0);
+                    const day = parseInt(m[1]);
+                    const mon = NL_MONTHS[m[2].slice(0,3)] || 0;
+                    const yr  = m[3] ? parseInt(m[3]) : new Date().getFullYear();
+                    return new Date(yr, mon - 1, day);
+                };
+                return dateVal(a) - dateVal(b);
+            });
+            rows.forEach(r => container.appendChild(r));
+        }
+
+        // Handle form submit with fetch for download
+        genForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!dateSelect.value) { alert('Selecteer eerst een datum'); return; }
+            sortActiviteiten();
+
+            genBtn.disabled = true;
+            btnIcon.classList.add('hidden');
+            btnSpinner.classList.remove('hidden');
+            btnText.textContent = 'Genereren... (~30s)';
+            statusMsg.classList.add('hidden');
+
+            try {
+                const resp = await fetch('/generate', { method: 'POST', body: new FormData(genForm) });
+                if (!resp.ok) {
+                    const err = await resp.json();
+                    throw new Error(err.error || 'Onbekende fout');
+                }
+                const blob = await resp.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                const disp = resp.headers.get('Content-Disposition') || '';
+                const m = disp.match(/filename="?(.+?)"?$/);
+                a.download = m ? m[1] : 'mededelingen.docx';
+                a.href = url;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(url);
+                statusMsg.textContent = '✓ Bestand succesvol gedownload!';
+                statusMsg.className = 'mb-8 text-center text-sm rounded-lg p-3 bg-green-50 text-green-700 border border-green-200';
+                statusMsg.classList.remove('hidden');
+            } catch (err) {
+                statusMsg.textContent = 'Fout: ' + err.message;
+                statusMsg.className = 'mb-8 text-center text-sm rounded-lg p-3 bg-red-50 text-red-700 border border-red-200';
+                statusMsg.classList.remove('hidden');
+            } finally {
+                genBtn.disabled = false;
+                btnIcon.classList.remove('hidden');
+                btnSpinner.classList.add('hidden');
+                btnText.textContent = 'Genereer & Download Mededelingen';
+            }
+        });
+    </script>
+</body>
+</html>
