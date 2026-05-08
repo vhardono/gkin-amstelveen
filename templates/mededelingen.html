@@ -19,7 +19,7 @@
 
     <!-- Header -->
     <header class="bg-gkin-green shadow-md">
-        <div class="max-w-3xl mx-auto px-6 py-5 flex items-center gap-4">
+        <div class="max-w-2xl mx-auto px-6 py-5 flex items-center gap-4">
             <a href="/"><img src="/static/logo2.png" alt="GKIN Logo" class="h-12 w-12 object-contain shrink-0"></a>
             <div>
                 <h1 class="text-white text-2xl font-bold tracking-tight">GKIN Amstelveen</h1>
@@ -29,7 +29,13 @@
     </header>
 
     <!-- Main -->
-    <main class="max-w-3xl mx-auto px-6 py-8">
+    <main class="max-w-2xl mx-auto px-6 py-8">
+        <a href="/" class="inline-flex items-center gap-1 text-sm text-gkin-green hover:text-gkin-dark mb-5">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+            Terug
+        </a>
         <form id="genForm" action="/generate" method="POST" enctype="multipart/form-data">
 
         <!-- 1. Datum -->
