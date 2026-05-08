@@ -29,6 +29,9 @@ _GRAPH_BASE       = 'https://graph.microsoft.com/v1.0'
 TOKEN_CACHE_PATH  = os.path.join(os.path.dirname(__file__), '..', '.msal_token_cache.json')
 UPLOAD_DIR        = os.path.join(os.path.dirname(__file__), '..', 'output', '_uploads')
 
+# In-memory store for device flow (avoids filesystem writes on Railway)
+_device_flow_store: Dict[str, Any] = {}
+
 # Keywords to match collecte-related email subjects
 COLLECTE_SUBJECT_PAT = re.compile(
     r'(tikkie|collecte|betaalverzoek|donatie|ole|dankoffer|qr)',
@@ -103,9 +106,14 @@ class OutlookCollecteReader:
         if 'user_code' not in flow:
             raise RuntimeError(f"Device flow failed: {flow.get('error_description', flow)}")
         # Store flow in a temp file so acquire_token_by_device_flow can be called later
-        flow_path = os.path.join(os.path.dirname(TOKEN_CACHE_PATH), '.msal_device_flow.json')
-        with open(flow_path, 'w') as f:
-            json.dump(flow, f)
+        _device_flow_store['flow'] = flow
+        # Also try file for local dev (ignore errors on Railway)
+        try:
+            flow_path = os.path.join(os.path.dirname(TOKEN_CACHE_PATH), '.msal_device_flow.json')
+            with open(flow_path, 'w') as f:
+                json.dump(flow, f)
+        except OSError:
+            pass
         return {
             'user_code':        flow['user_code'],
             'verification_uri': flow['verification_uri'],
@@ -114,17 +122,25 @@ class OutlookCollecteReader:
 
     def complete_device_flow(self) -> bool:
         """Poll for completion of device-code login. Returns True if successful."""
-        flow_path = os.path.join(os.path.dirname(TOKEN_CACHE_PATH), '.msal_device_flow.json')
-        if not os.path.exists(flow_path):
-            return False
-        with open(flow_path) as f:
-            flow = json.load(f)
+        # Try in-memory first (Railway), then fall back to file (local dev)
+        flow = _device_flow_store.get('flow')
+        if not flow:
+            flow_path = os.path.join(os.path.dirname(TOKEN_CACHE_PATH), '.msal_device_flow.json')
+            if not os.path.exists(flow_path):
+                return False
+            with open(flow_path) as f:
+                flow = json.load(f)
         cache = _load_cache()
         app   = _make_app(cache)
         result = app.acquire_token_by_device_flow(flow)
         _save_cache(cache)
+        _device_flow_store.pop('flow', None)
+        flow_path = os.path.join(os.path.dirname(TOKEN_CACHE_PATH), '.msal_device_flow.json')
         if os.path.exists(flow_path):
-            os.remove(flow_path)
+            try:
+                os.remove(flow_path)
+            except OSError:
+                pass
         return 'access_token' in result
 
     def _get_token(self) -> str:
