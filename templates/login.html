@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GKIN Amstelveen – Inloggen</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: { extend: { colors: { gkin: { green: '#3A7C22', dark: '#2d6119' } } } }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col">
+
+    <header class="bg-gkin-green shadow-md">
+        <div class="max-w-2xl mx-auto px-6 py-5 flex items-center gap-4">
+            <img src="/static/logo2.png" alt="GKIN Logo" class="h-12 w-12 object-contain shrink-0">
+            <div>
+                <h1 class="text-white text-2xl font-bold tracking-tight">GKIN Amstelveen</h1>
+                <p class="text-green-100 text-sm mt-0.5">Beveiligde toegang</p>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 flex items-center justify-center px-6 py-12">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8 w-full max-w-sm">
+            <div class="flex justify-center mb-6">
+                <div class="w-14 h-14 rounded-full bg-green-50 flex items-center justify-center">
+                    <svg class="w-7 h-7 text-gkin-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                    </svg>
+                </div>
+            </div>
+            <h2 class="text-lg font-semibold text-gray-800 text-center mb-1">Inloggen vereist</h2>
+            <p class="text-sm text-gray-500 text-center mb-6">Voer het wachtwoord in om verder te gaan.</p>
+
+            {% if error %}
+            <div class="mb-4 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3">
+                {{ error }}
+            </div>
+            {% endif %}
+
+            <form method="POST" action="/login?next={{ next }}">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Wachtwoord</label>
+                    <input type="password" name="password" autofocus
+                           class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green"
+                           placeholder="••••••••">
+                </div>
+                <button type="submit"
+                        class="w-full bg-gkin-green hover:bg-gkin-dark text-white font-semibold py-2.5 rounded-lg transition text-sm">
+                    Inloggen
+                </button>
+            </form>
+        </div>
+    </main>
+
+</body>
+</html>

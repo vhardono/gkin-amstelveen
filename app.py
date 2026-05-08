@@ -11,7 +11,7 @@ import threading
 import traceback
 import uuid
 from datetime import datetime
-from flask import Flask, render_template, request, send_file, jsonify
+from flask import Flask, render_template, request, send_file, jsonify, session, redirect, url_for
 from werkzeug.utils import secure_filename
 
 import re
@@ -27,6 +27,34 @@ from voorlees_generator import VoorleesGenerator
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10MB max upload
+app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'gkin-amstelveen-secret-2026')
+SITE_PASSWORD = os.environ.get('SITE_PASSWORD', '')
+
+def _password_required(f):
+    from functools import wraps
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if SITE_PASSWORD and not session.get('authenticated'):
+            return redirect(url_for('login_page', next=request.path))
+        return f(*args, **kwargs)
+    return decorated
+
+@app.route('/login', methods=['GET', 'POST'])
+def login_page():
+    error = None
+    if request.method == 'POST':
+        if request.form.get('password') == SITE_PASSWORD:
+            session['authenticated'] = True
+            next_url = request.args.get('next') or '/'
+            return redirect(next_url)
+        error = 'Onjuist wachtwoord. Probeer opnieuw.'
+    return render_template('login.html', error=error,
+                           next=request.args.get('next', '/'))
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect('/')
 
 UPLOAD_DIR = os.path.join(os.path.dirname(__file__), 'output', '_uploads')
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -134,11 +162,13 @@ def home():
 
 
 @app.route('/mededelingen')
+@_password_required
 def mededelingen_index():
     return _get_takenrooster_and_render_page()
 
 
 @app.route('/preekbevestiging')
+@_password_required
 def preekbevestiging_index():
     taken = _get_takenrooster()
     dutch_months = [
