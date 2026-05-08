@@ -210,7 +210,7 @@ def get_mededelingen_data():
     try:
         reader = DropboxExcelReader()
         meded = reader.get_mededelingen(mededelingen_date=selected_date)
-        activities = _parse_activities_from_mededelingen(meded)
+        activities = _parse_activities_from_mededelingen(meded, selected_date)
         return jsonify({
             'regionale_nl': meded.get('regionale_nl', ''),
             'landelijke_nl': meded.get('landelijke_nl', ''),
@@ -220,7 +220,7 @@ def get_mededelingen_data():
         return jsonify({'error': str(e)}), 500
 
 
-def _parse_activities_from_mededelingen(meded: dict) -> list:
+def _parse_activities_from_mededelingen(meded: dict, selected_date: datetime = None) -> list:
     """Parse activity rows from regionale + landelijke mededelingen blocks.
 
     Scans each paragraph block for Dutch date mentions (e.g. '21 juni', 'zondag 24 mei 2026').
@@ -281,6 +281,25 @@ def _parse_activities_from_mededelingen(meded: dict) -> list:
                           'oktober':'okt','november':'nov','december':'dec'}
             for full, abbr in MONTH_ABBR.items():
                 datum = re.sub(rf'\b{full}\b', abbr, datum, flags=re.IGNORECASE)
+
+            # Filter out dates in the past relative to selected_date
+            if selected_date:
+                MONTH_NUM = {'jan':1,'feb':2,'mrt':3,'mar':3,'apr':4,'mei':5,'jun':6,
+                             'jul':7,'aug':8,'sep':9,'okt':10,'nov':11,'dec':12}
+                dm2 = re.match(r'(\d{1,2})\s+(\w+)', datum)
+                if dm2:
+                    try:
+                        day = int(dm2.group(1))
+                        mon = MONTH_NUM.get(dm2.group(2).lower()[:3], 0)
+                        yr  = selected_date.year
+                        act_date = datetime(yr, mon, day) if mon else None
+                        # If date already passed this year, try next year
+                        if act_date and act_date.date() < selected_date.date():
+                            act_date = datetime(yr + 1, mon, day)
+                        if act_date and act_date.date() < selected_date.date():
+                            continue
+                    except Exception:
+                        pass
 
             # Time
             tm = time_pat.search(flat)
