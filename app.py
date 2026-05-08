@@ -293,9 +293,6 @@ def _parse_activities_from_mededelingen(meded: dict, selected_date: datetime = N
                         mon = MONTH_NUM.get(dm2.group(2).lower()[:3], 0)
                         yr  = selected_date.year
                         act_date = datetime(yr, mon, day) if mon else None
-                        # If date already passed this year, try next year
-                        if act_date and act_date.date() < selected_date.date():
-                            act_date = datetime(yr + 1, mon, day)
                         if act_date and act_date.date() < selected_date.date():
                             continue
                     except Exception:
