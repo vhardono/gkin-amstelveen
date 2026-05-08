@@ -17,6 +17,50 @@
 </head>
 <body class="bg-gray-50 min-h-screen">
 
+    <!-- Password gate overlay -->
+    <div id="pwGate" class="fixed inset-0 z-50 bg-gray-50 flex items-center justify-center">
+        <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-8 w-full max-w-sm mx-4">
+            <div class="flex flex-col items-center mb-6">
+                <div class="bg-gkin-green rounded-full p-3 mb-3">
+                    <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                    </svg>
+                </div>
+                <h2 class="text-lg font-bold text-gray-800">Toegang vereist</h2>
+                <p class="text-sm text-gray-500 mt-1">Voer het wachtwoord in om door te gaan</p>
+            </div>
+            <div class="mb-4">
+                <input type="password" id="pwInput" placeholder="Wachtwoord"
+                       class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gkin-green"
+                       onkeydown="if(event.key==='Enter') checkPw()">
+            </div>
+            <p id="pwError" class="hidden text-xs text-red-600 mb-3 text-center">Onjuist wachtwoord. Probeer opnieuw.</p>
+            <button onclick="checkPw()"
+                    class="w-full bg-gkin-green hover:bg-gkin-dark text-white font-semibold py-2.5 rounded-lg transition-colors text-sm">
+                Inloggen
+            </button>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            if (sessionStorage.getItem('meded_auth') === '1') {
+                document.getElementById('pwGate').style.display = 'none';
+            }
+        })();
+        function checkPw() {
+            const val = document.getElementById('pwInput').value;
+            if (val === 'secretaris') {
+                sessionStorage.setItem('meded_auth', '1');
+                document.getElementById('pwGate').style.display = 'none';
+            } else {
+                document.getElementById('pwError').classList.remove('hidden');
+                document.getElementById('pwInput').value = '';
+                document.getElementById('pwInput').focus();
+            }
+        }
+    </script>
+
     <!-- Header -->
     <header class="bg-gkin-green shadow-md">
         <div class="max-w-3xl mx-auto px-6 py-5">
