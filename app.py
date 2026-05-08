@@ -19,6 +19,7 @@ from data_sources.scipio_scraper import ScipioScraper
 from data_sources.preekroster_scraper import PreekrosterScraper
 from data_sources.email_reader import OutlookCollecteReader, get_token_cache_json
 from bulletin_generator import BulletinGenerator
+from voorlees_generator import VoorleesGenerator
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10MB max upload
@@ -198,6 +199,117 @@ def generate():
         import traceback
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
+
+
+@app.route('/generate-voorlees', methods=['POST'])
+def generate_voorlees():
+    date_str = request.form.get('date')
+    if not date_str:
+        return jsonify({'error': 'No date selected'}), 400
+    selected_date = datetime.strptime(date_str, '%Y-%m-%d')
+    try:
+        taken = _get_takenrooster()
+        entry = None
+        for e in taken['entries']:
+            if e['date'] == selected_date:
+                entry = e
+                break
+        if entry is None:
+            return jsonify({'error': f'Geen rooster gevonden voor {date_str}'}), 404
+
+        reader = DropboxExcelReader()
+        meded  = reader.get_mededelingen(mededelingen_date=selected_date)
+
+        def fv(key): return request.form.get(key, '').strip()
+
+        def save_upload_v(field_name, fallback_field):
+            f = request.files.get(field_name)
+            if f and f.filename:
+                ext  = os.path.splitext(secure_filename(f.filename))[1].lower()
+                path = os.path.join(UPLOAD_DIR, f'{uuid.uuid4().hex}{ext}')
+                f.save(path)
+                return path
+            fname = fv(fallback_field)
+            if fname:
+                full = os.path.join(UPLOAD_DIR, os.path.basename(fname))
+                if os.path.exists(full):
+                    return full
+            return ''
+
+        import json as _json
+        opbrengst_entries = []
+        opbrengst_json = request.form.get('opbrengst_entries_json', '')
+        if opbrengst_json:
+            try:
+                opbrengst_entries = _json.loads(opbrengst_json)
+            except Exception:
+                pass
+
+        user_data = {
+            'collecte_contant':      fv('collecte_contant'),
+            'collecte_bonnen':       fv('collecte_bonnen'),
+            'collecte_bank':         fv('collecte_bank'),
+            'collecte_tikkie':       fv('collecte_tikkie'),
+            'collecte_ole':          fv('collecte_ole'),
+            'bezoekers_volwassenen': fv('bezoekers_volwassenen'),
+            'bezoekers_kinderen':    fv('bezoekers_kinderen'),
+            'dankoffer_url':         fv('dankoffer_url'),
+            'dankoffer_qr':          save_upload_v('dankoffer_qr_file', 'dankoffer_qr_path'),
+            'ole_url':               fv('ole_url'),
+            'ole_qr':                save_upload_v('ole_qr_file', 'ole_qr_path'),
+            'opbrengst_entries':     opbrengst_entries,
+        }
+
+        # Extract welkomstwoord paragraphs from the mededelingen template
+        welkom_paras = _extract_welkom_paragraphs(selected_date, entry, meded)
+
+        gen      = VoorleesGenerator()
+        filepath = gen.generate(selected_date, entry, meded, user_data,
+                                welkom_paragraphs=welkom_paras)
+        filename = os.path.basename(filepath)
+        return send_file(filepath, as_attachment=True, download_name=filename,
+                         mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
+def _extract_welkom_paragraphs(selected_date: datetime, entry: dict, meded: dict) -> list:
+    """Read the Welkomstwoord paragraphs from the mededelingen Word template."""
+    from bulletin_generator import BulletinGenerator, TEMPLATE_PATH
+    from docx import Document as _Document
+    try:
+        doc = _Document(TEMPLATE_PATH)
+        paras = []
+        in_welkom = False
+        for p in doc.paragraphs:
+            if p.style.name.startswith('Heading') and 'welkomstwoord' in p.text.lower():
+                in_welkom = True
+                continue
+            if in_welkom:
+                if p.style.name.startswith('Heading'):
+                    break
+                txt = p.text.strip()
+                if txt:
+                    paras.append(txt)
+        # Fill in dynamic date/predikant/ovd from the template text
+        predikant = entry.get('predikant', '')
+        ovd = entry.get('ovd', '')
+        dutch_months = ['januari','februari','maart','april','mei','juni',
+                        'juli','augustus','september','oktober','november','december']
+        dutch_days = ['maandag','dinsdag','woensdag','donderdag','vrijdag','zaterdag','zondag']
+        date_str = f"{selected_date.day} {dutch_months[selected_date.month-1]} {selected_date.year}"
+        day_name = dutch_days[selected_date.weekday()]
+        result = []
+        for p in paras:
+            if 'Vandaag,' in p:
+                p = f"Vandaag, {day_name} {date_str}, gaat voor {predikant}. De ouderling van dienst is {ovd}. Als u vragen heeft, kunt u de ouderling van dienst aanspreken."
+            result.append(p)
+        return result
+    except Exception:
+        return []
 
 
 @app.route('/get-mededelingen', methods=['POST'])

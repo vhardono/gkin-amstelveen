@@ -116,12 +116,16 @@ class DropboxExcelReader:
         self._people_map = {}
         for _, row in df.iterrows():
             short = str(row.get('Short Name', '')).strip()
-            if not short:
+            if not short or short.lower() == 'nan':
                 continue
+            def _s(col):
+                v = row.get(col, '')
+                s = str(v).strip() if pd.notna(v) else ''
+                return '' if s.lower() == 'nan' else s
             self._people_map[short] = {
-                'first_name': str(row.get('First Name', '')).strip(),
-                'last_name': str(row.get('Last Name', '')).strip(),
-                'title': str(row.get('Title', '')).strip(),
+                'first_name': _s('First Name'),
+                'last_name':  _s('Last Name'),
+                'title':      _s('Title'),
             }
 
     def _resolve_name(self, short_name: str) -> str:
@@ -131,7 +135,8 @@ class DropboxExcelReader:
             return short_name
         person = self._people_map.get(short_name)
         if person:
-            return f"{person['title']} {person['first_name']} {person['last_name']}"
+            parts = [person['title'], person['first_name'], person['last_name']]
+            return ' '.join(p for p in parts if p and p.lower() != 'nan')
         return short_name
 
     def _parse_current_sheet(self, df: pd.DataFrame) -> List[Dict[str, Any]]:
@@ -152,8 +157,17 @@ class DropboxExcelReader:
         headers = [str(v).strip().upper() if pd.notna(v) else '' for v in df.iloc[header_idx]]
         col = {}
         for idx, h in enumerate(headers):
-            if h in ('DAG', 'DATUM', 'PREDIKANT', 'OVD', 'OPMERKING', 'TIJD'):
-                col[h] = idx
+            h_norm = h.strip().upper().replace('\n', ' ')
+            # Canonical mappings
+            if h_norm in ('DAG', 'DATUM', 'PREDIKANT', 'OPMERKING', 'TIJD',
+                          'BEAMER', 'MUZIEK', 'MULTIMEDIA'):
+                col[h_norm] = idx
+            elif h_norm in ('OVD', 'OVD.', 'OV D'):
+                col['OVD'] = idx
+            elif h_norm.startswith('1E') or h_norm in ('1E ONTV', '1E OUDERLING',
+                                                        'EERSTE OUDERLING', '1EO'):
+                col['1EO'] = idx
+        print(f'Takenrooster columns found: {col}')
 
         entries = []
         for i in range(header_idx + 1, len(df)):
@@ -171,16 +185,25 @@ class DropboxExcelReader:
                 except Exception:
                     continue
 
-            dag = str(row.iloc[col.get('DAG', 0)]).strip() if pd.notna(row.iloc[col.get('DAG', 0)]) else ''
-            predikant = str(row.iloc[col.get('PREDIKANT', 4)]).strip() if pd.notna(row.iloc[col.get('PREDIKANT', 4)]) else ''
-            ovd_short = str(row.iloc[col.get('OVD', 5)]).strip() if pd.notna(row.iloc[col.get('OVD', 5)]) else ''
-            opmerking = str(row.iloc[col.get('OPMERKING', 3)]).strip() if pd.notna(row.iloc[col.get('OPMERKING', 3)]) else ''
+            def _cell(key, default_col):
+                idx2 = col.get(key, default_col)
+                v = row.iloc[idx2] if idx2 < len(row) else None
+                return str(v).strip() if pd.notna(v) else ''
+
+            dag       = _cell('DAG', 0)
+            predikant = _cell('PREDIKANT', 4)
+            ovd_short = _cell('OVD', 5)
+            opmerking = _cell('OPMERKING', 3)
+            eo1_short    = _cell('1EO', 6)    # G = index 6 (1e ONTV)
+            beamer_short = _cell('BEAMER', 9)  # J = index 9 (BEAMER)
 
             entries.append({
-                'date': date_obj,
-                'dag': dag,
+                'date':      date_obj,
+                'dag':       dag,
                 'predikant': predikant,
-                'ovd': self._resolve_name(ovd_short),
+                'ovd':       self._resolve_name(ovd_short) or ovd_short,
+                '1eo':       self._resolve_name(eo1_short) or eo1_short,
+                'beamer':    self._resolve_name(beamer_short) or beamer_short,
                 'opmerking': opmerking,
             })
 

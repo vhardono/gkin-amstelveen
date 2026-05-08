@@ -273,8 +273,25 @@
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
                 </svg>
-                <span id="btnText">Genereer &amp; Download Mededelingen</span>
+                <span id="btnText">Genereer &amp; Download</span>
             </button>
+        </div>
+
+        <!-- Document type selector -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4">
+            <p class="text-sm font-semibold text-gray-700 mb-3">Te genereren documenten:</p>
+            <div class="flex flex-col gap-2">
+                <label class="flex items-center gap-3 cursor-pointer">
+                    <input type="checkbox" id="chkGedrukt" checked
+                           class="w-4 h-4 rounded border-gray-300 text-gkin-green focus:ring-gkin-green">
+                    <span class="text-sm text-gray-700">Mededelingen (gedrukte versie)</span>
+                </label>
+                <label class="flex items-center gap-3 cursor-pointer">
+                    <input type="checkbox" id="chkVoorlezen"
+                           class="w-4 h-4 rounded border-gray-300 text-gkin-green focus:ring-gkin-green">
+                    <span class="text-sm text-gray-700">Mededelingen (voorlees versie)</span>
+                </label>
+            </div>
         </div>
         <div id="statusMsg" class="hidden mb-8 text-center text-sm rounded-lg p-3"></div>
 
@@ -774,32 +791,44 @@
         genForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             if (!dateSelect.value) { alert('Selecteer eerst een datum'); return; }
-            sortActiviteiten();
 
+            const doGedrukt   = document.getElementById('chkGedrukt').checked;
+            const doVoorlezen = document.getElementById('chkVoorlezen').checked;
+            if (!doGedrukt && !doVoorlezen) {
+                alert('Selecteer minimaal één document om te genereren.');
+                return;
+            }
+
+            sortActiviteiten();
             genBtn.disabled = true;
             btnIcon.classList.add('hidden');
             btnSpinner.classList.remove('hidden');
             btnText.textContent = 'Genereren... (~30s)';
             statusMsg.classList.add('hidden');
 
-            try {
-                const resp = await fetch('/generate', { method: 'POST', body: new FormData(genForm) });
+            async function downloadFrom(endpoint, fallbackName) {
+                const resp = await fetch(endpoint, { method: 'POST', body: new FormData(genForm) });
                 if (!resp.ok) {
-                    const err = await resp.json();
-                    throw new Error(err.error || 'Onbekende fout');
+                    const err = await resp.json().catch(() => ({}));
+                    throw new Error(err.error || `Fout bij ${endpoint}`);
                 }
                 const blob = await resp.blob();
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 const disp = resp.headers.get('Content-Disposition') || '';
                 const m = disp.match(/filename="?(.+?)"?$/);
-                a.download = m ? m[1] : 'mededelingen.docx';
+                a.download = m ? m[1] : fallbackName;
                 a.href = url;
                 document.body.appendChild(a);
                 a.click();
                 a.remove();
                 window.URL.revokeObjectURL(url);
-                statusMsg.textContent = '✓ Bestand succesvol gedownload!';
+            }
+
+            try {
+                if (doGedrukt)   await downloadFrom('/generate',         'mededelingen.docx');
+                if (doVoorlezen) await downloadFrom('/generate-voorlees','vertaling_mededelingen.docx');
+                statusMsg.textContent = '✓ Bestand(en) succesvol gedownload!';
                 statusMsg.className = 'mb-8 text-center text-sm rounded-lg p-3 bg-green-50 text-green-700 border border-green-200';
                 statusMsg.classList.remove('hidden');
             } catch (err) {
@@ -810,7 +839,7 @@
                 genBtn.disabled = false;
                 btnIcon.classList.remove('hidden');
                 btnSpinner.classList.add('hidden');
-                btnText.textContent = 'Genereer & Download Mededelingen';
+                btnText.textContent = 'Genereer & Download';
             }
         });
     </script>
