@@ -441,16 +441,14 @@
             el.classList.remove('hidden');
         }
 
+        let _outlookConnected = false;
+
         // Central function: update Outlook status pill + login btn + all fetch buttons
         function setOutlookConnected(connected) {
+            _outlookConnected = connected;
             const pill    = document.getElementById('outlookStatus');
             const loginBtn = document.getElementById('emailLoginBtn');
             const loginLbl = document.getElementById('emailLoginText');
-            const fetchBtns = [
-                document.getElementById('fetchOvdBtn'),
-                document.getElementById('fetchOpbrengstBtn'),
-                document.getElementById('fetchEmailBtn'),
-            ];
             if (connected) {
                 pill.textContent = 'Verbonden';
                 pill.className = 'text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700';
@@ -458,14 +456,30 @@
                 loginBtn.className = loginBtn.className
                     .replace('bg-orange-50','bg-green-50').replace('hover:bg-orange-100','hover:bg-green-100')
                     .replace('text-orange-700','text-green-700').replace('border-orange-200','border-green-200');
-                fetchBtns.forEach(b => { if (b) b.disabled = false; });
             } else {
                 pill.textContent = 'Niet verbonden';
                 pill.className = 'text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500';
                 loginLbl.textContent = 'Inloggen bij Outlook';
-                fetchBtns.forEach(b => { if (b) b.disabled = true; });
             }
+            updateFetchButtons();
         }
+
+        // Enable/disable all fetch buttons based on date + outlook state
+        function updateFetchButtons() {
+            const hasDate = !!dateSelect.value;
+            const emailBtns = [
+                document.getElementById('fetchOvdBtn'),
+                document.getElementById('fetchOpbrengstBtn'),
+                document.getElementById('fetchEmailBtn'),
+            ];
+            emailBtns.forEach(b => { if (b) b.disabled = !hasDate || !_outlookConnected; });
+            const loadActBtn = document.getElementById('loadActBtn');
+            if (loadActBtn) loadActBtn.disabled = !hasDate;
+        }
+
+        // Re-evaluate buttons whenever date changes
+        dateSelect.addEventListener('change', updateFetchButtons);
+        updateFetchButtons();
 
         // Check auth status on page load
         (async () => {
