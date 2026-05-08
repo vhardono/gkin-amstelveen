@@ -411,16 +411,32 @@ def email_auth_status():
 
 @app.route('/email-token-export', methods=['GET'])
 def email_token_export():
-    """Export current MSAL token cache as JSON string.
-    Copy the value into Railway's MSAL_TOKEN_CACHE environment variable
-    so the token survives redeployments.
-    """
+    """Export current MSAL token cache as JSON string."""
     try:
         token_json = get_token_cache_json()
         if not token_json or token_json == '{}':
             return jsonify({'error': 'Geen token gevonden — log eerst in bij Outlook.'}), 404
         return jsonify({'token_cache': token_json,
-                        'instructions': 'Kopieer token_cache en plak het in Railway > Variables > MSAL_TOKEN_CACHE'})
+                        'instructions': 'Gebruik /email-token-download voor een schoon tekstbestand.'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/email-token-download', methods=['GET'])
+def email_token_download():
+    """Download the raw MSAL token cache as a plain .txt file.
+    Open the file and paste its entire contents into Railway > Variables > MSAL_TOKEN_CACHE.
+    """
+    try:
+        from flask import Response
+        token_json = get_token_cache_json()
+        if not token_json or token_json == '{}':
+            return jsonify({'error': 'Geen token gevonden — log eerst in bij Outlook.'}), 404
+        return Response(
+            token_json,
+            mimetype='text/plain',
+            headers={'Content-Disposition': 'attachment; filename=msal_token_cache.txt'}
+        )
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
