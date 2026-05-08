@@ -1,0 +1,23 @@
+# Environment & secrets
+.env
+.msal_token_cache.json
+.msal_device_flow.json
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# Output files (generated docs + uploads)
+output/*.docx
+output/_uploads/
+
+# macOS
+.DS_Store
+
+# IDE
+.windsurf/
+.vscode/
