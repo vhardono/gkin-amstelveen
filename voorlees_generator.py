@@ -174,6 +174,39 @@ def _parse_meded_blocks(text: str) -> List[dict]:
     return blocks
 
 
+def _align_id_blocks(nl_blocks: list, id_blocks: list) -> list:
+    """
+    Ensure id_blocks has the same length as nl_blocks by merging extra
+    consecutive ID blocks (those without a heading) into the preceding block.
+    This handles cases where the ID translation has extra blank-line splits.
+    """
+    if len(id_blocks) <= len(nl_blocks):
+        # Pad with empty blocks if ID has fewer
+        result = list(id_blocks)
+        while len(result) < len(nl_blocks):
+            result.append({'heading': '', 'body': ''})
+        return result
+
+    # Merge forward: collapse headingless blocks into previous
+    merged = []
+    for blk in id_blocks:
+        if blk['heading'] == '' and merged:
+            prev = merged[-1]
+            sep = '\n' if prev['body'] else ''
+            prev['body'] = prev['body'] + sep + blk['body']
+        else:
+            merged.append({'heading': blk['heading'], 'body': blk['body']})
+    # If still more than nl_blocks, merge tail into last
+    while len(merged) > len(nl_blocks) and len(merged) > 1:
+        last = merged.pop()
+        sep = '\n' if merged[-1]['body'] else ''
+        merged[-1]['body'] = merged[-1]['body'] + sep + last['heading'] + ('\n' if last['heading'] and last['body'] else '') + last['body']
+    # Pad if needed
+    while len(merged) < len(nl_blocks):
+        merged.append({'heading': '', 'body': ''})
+    return merged
+
+
 # ── Generator class ───────────────────────────────────────────────────────────
 
 class VoorleesGenerator:
@@ -504,42 +537,12 @@ class VoorleesGenerator:
             except Exception:
                 pass
 
-        # OLE dankoffer row (if applicable)
-        if ole_url or ole_qr:
-            nl_ole = (
-                f"Online Liturgie Eredienst (OLE)\n"
-                f"Het dankoffer voor de landelijke kas kunt u overmaken naar het "
-                f"landelijke rekeningnummer van Gereja Kristen Indonesia Nederland (GKIN).\n"
-                f"3.  Gebruik te maken van de QR-code:"
-            )
-            id_ole = (
-                f"Ibadah Online (OLE)\n"
-                f"Persembahan untuk kas nasional dapat ditransfer ke rekening nasional "
-                f"Gereja Kristen Indonesia Nederland (GKIN).\n"
-                f"3.  Menggunakan kode QR:"
-            )
-            row2 = table.add_row()
-            nl2 = row2.cells[0]
-            id2 = row2.cells[1]
-            _set_cell_margins(nl2); _set_cell_margins(id2)
-            _set_col_width(nl2, 8.0); _set_col_width(id2, 8.0)
-            p2 = nl2.paragraphs[0]
-            _r(p2, nl_ole, color=NL_COLOR, size_pt=12)
-            p3 = id2.paragraphs[0]
-            _r(p3, id_ole, color=ID_COLOR, size_pt=12)
-            if ole_qr and os.path.exists(ole_qr):
-                try:
-                    run_img = p2.add_run()
-                    run_img.add_picture(ole_qr, width=Cm(3.5))
-                except Exception:
-                    pass
-
         # ── 4. Regionale Mededelingen ─────────────────────────────────────
         _section_header_row(table, 'Regionale Mededelingen', 'Berita Regional')
         reg_nl = mededelingen_data.get('regionale_nl', '').strip()
         reg_id = mededelingen_data.get('regionale_id', '').strip()
         nl_blocks = _parse_meded_blocks(reg_nl)
-        id_blocks = _parse_meded_blocks(reg_id)
+        id_blocks = _align_id_blocks(nl_blocks, _parse_meded_blocks(reg_id))
         max_b = max(len(nl_blocks), len(id_blocks))
         for i in range(max_b):
             nb = nl_blocks[i] if i < len(nl_blocks) else {'heading': '', 'body': ''}
@@ -565,7 +568,7 @@ class VoorleesGenerator:
         land_nl = mededelingen_data.get('landelijke_nl', '').strip()
         land_id = mededelingen_data.get('landelijke_id', '').strip()
         nl_blocks = _parse_meded_blocks(land_nl)
-        id_blocks = _parse_meded_blocks(land_id)
+        id_blocks = _align_id_blocks(nl_blocks, _parse_meded_blocks(land_id))
         max_b = max(len(nl_blocks), len(id_blocks))
         for i in range(max_b):
             nb = nl_blocks[i] if i < len(nl_blocks) else {'heading': '', 'body': ''}

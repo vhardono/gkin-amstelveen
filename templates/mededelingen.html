@@ -255,6 +255,32 @@
             </button>
         </div>
 
+        <!-- Document type selector -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-5">
+            <h2 class="text-base font-semibold text-gkin-green mb-4 flex items-center gap-2">
+                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                </svg>
+                Te genereren documenten
+            </h2>
+            <div class="space-y-3">
+                <label class="flex items-center gap-3 cursor-pointer">
+                    <input type="checkbox" id="chkGedrukt" checked class="w-4 h-4 accent-gkin-green">
+                    <div>
+                        <span class="text-sm font-medium text-gray-800">Mededelingen.docx</span>
+                        <span class="text-xs text-gray-400 ml-2">Gedrukte versie</span>
+                    </div>
+                </label>
+                <label class="flex items-center gap-3 cursor-pointer">
+                    <input type="checkbox" id="chkVoorlezen" class="w-4 h-4 accent-gkin-green">
+                    <div>
+                        <span class="text-sm font-medium text-gray-800">Vertaling Mededelingen.docx</span>
+                        <span class="text-xs text-gray-400 ml-2">Voorlees versie</span>
+                    </div>
+                </label>
+            </div>
+        </div>
+
         <!-- Action buttons -->
         <div class="flex gap-3 mb-10">
             <button type="button" id="resetBtn"
@@ -277,22 +303,6 @@
             </button>
         </div>
 
-        <!-- Document type selector -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4">
-            <p class="text-sm font-semibold text-gray-700 mb-3">Te genereren documenten:</p>
-            <div class="flex flex-col gap-2">
-                <label class="flex items-center gap-3 cursor-pointer">
-                    <input type="checkbox" id="chkGedrukt" checked
-                           class="w-4 h-4 rounded border-gray-300 text-gkin-green focus:ring-gkin-green">
-                    <span class="text-sm text-gray-700">Mededelingen (gedrukte versie)</span>
-                </label>
-                <label class="flex items-center gap-3 cursor-pointer">
-                    <input type="checkbox" id="chkVoorlezen"
-                           class="w-4 h-4 rounded border-gray-300 text-gkin-green focus:ring-gkin-green">
-                    <span class="text-sm text-gray-700">Mededelingen (voorlees versie)</span>
-                </label>
-            </div>
-        </div>
         <div id="statusMsg" class="hidden mb-8 text-center text-sm rounded-lg p-3"></div>
 
         </form>
