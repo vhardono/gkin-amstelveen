@@ -14,6 +14,10 @@ from datetime import datetime
 from flask import Flask, render_template, request, send_file, jsonify
 from werkzeug.utils import secure_filename
 
+import re
+import requests as _requests
+from bs4 import BeautifulSoup as _BS
+
 from data_sources.dropbox_reader import DropboxExcelReader
 from data_sources.scipio_scraper import ScipioScraper
 from data_sources.preekroster_scraper import PreekrosterScraper
@@ -29,6 +33,54 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 # Cache takenrooster on startup
 _takenrooster_cache = None
+
+# Cache bijbelbasics KND data (slug -> {title, verse, date_day, date_month})
+_knd_cache = None
+_KND_DUTCH_MONTHS = {
+    'januari':1,'februari':2,'maart':3,'april':4,'mei':5,'juni':6,
+    'juli':7,'augustus':8,'september':9,'oktober':10,'november':11,'december':12
+}
+
+
+def _load_knd_cache():
+    global _knd_cache
+    if _knd_cache is not None:
+        return _knd_cache
+    try:
+        r = _requests.get('https://www.bijbelbasics.nl/programma/', timeout=10)
+        soup = _BS(r.text, 'html.parser')
+        lines = [l.strip() for l in soup.get_text(separator='\n').split('\n') if l.strip()]
+        date_pat = re.compile(
+            r'^(?:zondag|zaterdag|vrijdag)\s+(\d+)\s+(\w+)\s+(\d{4})$', re.I)
+        verse_start = re.compile(r'^([A-Z][a-zA-Zë]+)\s+(\d+:\d+)$')
+        verse_end   = re.compile(r'^-\s*(\d+:\d+)$')
+        entries = []
+        for i, line in enumerate(lines):
+            m = date_pat.match(line)
+            if not m:
+                continue
+            day       = int(m.group(1))
+            month_num = _KND_DUTCH_MONTHS.get(m.group(2).lower(), 0)
+            year      = int(m.group(3))
+            if not month_num:
+                continue
+            # title is the line before the date
+            title = lines[i - 1] if i > 0 else ''
+            # verse: next two lines are "Book X:Y" and "- X:Z"
+            verse = ''
+            if i + 2 < len(lines):
+                ms = verse_start.match(lines[i + 1])
+                me = verse_end.match(lines[i + 2])
+                if ms and me:
+                    verse = f"{ms.group(1)} {ms.group(2)} - {me.group(1)}"
+                elif ms:
+                    verse = f"{ms.group(1)} {ms.group(2)}"
+            entries.append({'title': title, 'verse': verse,
+                            'day': day, 'month': month_num, 'year': year})
+        _knd_cache = entries
+    except Exception:
+        _knd_cache = []
+    return _knd_cache
 
 
 def _get_takenrooster():
@@ -84,6 +136,124 @@ def home():
 @app.route('/mededelingen')
 def mededelingen_index():
     return _get_takenrooster_and_render_page()
+
+
+@app.route('/preekbevestiging')
+def preekbevestiging_index():
+    taken = _get_takenrooster()
+    dutch_months = [
+        'januari', 'februari', 'maart', 'april', 'mei', 'juni',
+        'juli', 'augustus', 'september', 'oktober', 'november', 'december'
+    ]
+    dutch_days = ['maandag', 'dinsdag', 'woensdag', 'donderdag',
+                  'vrijdag', 'zaterdag', 'zondag']
+    today = datetime.now().date()
+    dates = []
+    for entry in taken['entries']:
+        d = entry['date']
+        d_date = d.date() if hasattr(d, 'date') else d
+        if d_date < today:
+            continue
+        label = (f"{dutch_days[d.weekday()].capitalize()} {d.day} {dutch_months[d.month - 1]} {d.year}"
+                 f"  —  {entry['predikant']}")
+        opm = entry.get('opmerking', '')
+        if opm:
+            opm_clean = opm.split('OLE')[0].strip().rstrip(',').strip()
+            if opm_clean:
+                label += f" ({opm_clean})"
+            elif 'OLE' in opm:
+                label += " (OLE)"
+        dates.append({
+            'value':        d.strftime('%Y-%m-%d'),
+            'label':        label,
+            'predikant':    entry['predikant'],
+            'ovd':          entry.get('ovd', ''),
+            'ovd_email':    entry.get('ovd_email', ''),
+            '1eo':          entry.get('1eo', ''),
+            '1eo_email':    entry.get('1eo_email', ''),
+            'beamer':       entry.get('beamer', ''),
+            'beamer_email': entry.get('beamer_email', ''),
+            'dag':          entry.get('dag', ''),
+            'tijd':            entry.get('tijd', '10:30') or '10:30',
+            'opmerking':       opm,
+            'predikant_email': entry.get('predikant_email', ''),
+            'muziek':          entry.get('muziek', ''),
+            'voorzangers':  entry.get('voorzangers', ''),
+            'multimedia':   entry.get('multimedia', ''),
+            'knd':          entry.get('knd', ''),
+            'tieners':      entry.get('tieners', ''),
+        })
+    return render_template('preekbevestiging.html', dates=dates)
+
+
+@app.route('/generate-preekbevestiging', methods=['POST'])
+def generate_preekbevestiging():
+    from preekbevestiging_generator import generate as gen_doc
+    data     = request.get_json(force=True)
+    iso_date = data.get('date', '')
+    if not iso_date:
+        return jsonify({'error': 'no date'}), 400
+    taken = _get_takenrooster()
+    entry = next((e for e in taken['entries']
+                  if e['date'].strftime('%Y-%m-%d') == iso_date), None)
+    if not entry:
+        return jsonify({'error': 'date not found'}), 404
+    d = datetime.strptime(iso_date, '%Y-%m-%d')
+    filename = f"Preekbevestiging_{d.strftime('%Y%m%d')}_{entry.get('predikant','').replace(' ','_')}.docx"
+    out_path = os.path.join(UPLOAD_DIR, filename)
+    songs = data.get('songs', [])
+    gen_doc(entry, iso_date, out_path, songs=songs)
+    return send_file(out_path, as_attachment=True,
+                     download_name=filename,
+                     mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+
+
+@app.route('/fetch-language', methods=['POST'])
+def fetch_language():
+    from data_sources.preekroster_scraper import PreekrosterScraper
+    data     = request.get_json(force=True)
+    iso_date = data.get('date', '')
+    if not iso_date:
+        return jsonify({'error': 'no date'}), 400
+    try:
+        d = datetime.strptime(iso_date, '%Y-%m-%d')
+    except ValueError:
+        return jsonify({'error': 'invalid date'}), 400
+
+    dutch_months_short = ['jan','feb','mrt','apr','mei','jun',
+                          'jul','aug','sep','okt','nov','dec']
+    date_key = f"{d.day} {dutch_months_short[d.month - 1]}"  # e.g. "17 mei"
+
+    try:
+        from datetime import timedelta
+        scraper = PreekrosterScraper()
+        # Use d - 6 days as mededelingen_date so d always falls inside the window
+        roster  = scraper.get_preekroster(mededelingen_date=d - timedelta(days=6))
+        for entry in roster.get('am_table', []):
+            raw = entry.get('date', '')
+            # raw may be "28 jun" or "28 jun (Pinksteren)"
+            if raw.startswith(date_key):
+                return jsonify({'language': entry.get('language', '')})
+    except Exception:
+        pass
+    return jsonify({'language': ''})
+
+
+@app.route('/fetch-knd-thema', methods=['POST'])
+def fetch_knd_thema():
+    data = request.get_json(force=True)
+    date_str = data.get('date', '')
+    if not date_str:
+        return jsonify({'error': 'no date'}), 400
+    try:
+        d = datetime.strptime(date_str, '%Y-%m-%d')
+    except ValueError:
+        return jsonify({'error': 'invalid date'}), 400
+    entries = _load_knd_cache()
+    for entry in entries:
+        if entry['day'] == d.day and entry['month'] == d.month:
+            return jsonify({'title': entry['title'], 'verse': entry['verse']})
+    return jsonify({'title': '', 'verse': ''})
 
 
 @app.route('/uploads/<path:filename>')

@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GKIN Amstelveen – Preekbevestiging</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: { extend: { colors: { gkin: { green: '#3A7C22', dark: '#2d6119' } } } }
+        }
+    </script>
+    <style>
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .spinner { animation: spin 1s linear infinite; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+    <!-- Header -->
+    <header class="bg-gkin-green shadow-md">
+        <div class="max-w-2xl mx-auto px-6 py-5 flex items-center gap-4">
+            <a href="/"><img src="/static/logo2.png" alt="GKIN Logo" class="h-12 w-12 object-contain shrink-0"></a>
+            <div>
+                <h1 class="text-white text-2xl font-bold tracking-tight">GKIN Amstelveen</h1>
+                <p class="text-green-100 text-sm mt-0.5">Preekbevestiging</p>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main -->
+    <main class="max-w-2xl mx-auto px-6 py-8">
+        <a href="/" class="inline-flex items-center gap-1 text-sm text-gkin-green hover:text-gkin-dark mb-5">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+            Terug
+        </a>
+
+        <!-- 1. Datum -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-5">
+            <h2 class="text-base font-semibold text-gkin-green mb-4 flex items-center gap-2">
+                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+                Eredienst datum
+            </h2>
+            <label for="date" class="block text-sm font-medium text-gray-700 mb-1">Datum</label>
+            <select id="date"
+                    class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-gkin-green">
+                <option value="" disabled selected>— Kies een datum —</option>
+                {% for d in dates %}
+                <option value="{{ d.value }}"
+                        data-predikant="{{ d.predikant }}"
+                        data-ovd="{{ d.ovd }}"
+                        data-dag="{{ d.dag }}"
+                        data-tijd="{{ d.tijd }}"
+                        data-opmerking="{{ d.opmerking }}">{{ d.label }}</option>
+                {% endfor %}
+            </select>
+            <!-- Info card -->
+            <div id="infoCard" class="hidden mt-4 bg-green-50 border border-green-200 rounded-lg p-4">
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div><p class="text-gray-500 text-xs uppercase tracking-wide mb-0.5">Predikant</p><p id="infoPred" class="font-semibold text-gray-800">—</p></div>
+                    <div><p class="text-gray-500 text-xs uppercase tracking-wide mb-0.5">Ouderling van Dienst</p><p id="infoOvd" class="font-semibold text-gray-800">—</p></div>
+                </div>
+            </div>
+            <!-- Missing email warning -->
+            <div id="emailWarning" class="hidden mt-3 bg-amber-50 border border-amber-300 rounded-lg p-4">
+                <p class="text-sm font-semibold text-amber-800 mb-2 flex items-center gap-1">
+                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+                    E-mailadres niet gevonden in People tab:
+                </p>
+                <ul id="emailWarningList" class="text-sm text-amber-700 space-y-1 list-disc list-inside"></ul>
+                <p class="text-xs text-amber-600 mt-2">Vul het e-mailadres handmatig in het CC-veld in.</p>
+            </div>
+        </div>
+
+        <!-- 2. Ontvangers -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-5">
+            <h2 class="text-base font-semibold text-gkin-green mb-4 flex items-center gap-2">
+                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                </svg>
+                Ontvangers
+            </h2>
+            <div class="mb-3">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Aan (To)</label>
+                <input type="text" id="emailTo" placeholder="predikant@example.com"
+                       class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gkin-green">
+            </div>
+            <div class="mb-3">
+                <label class="block text-sm font-medium text-gray-700 mb-1">CC</label>
+                <textarea id="emailCc" rows="3"
+                       class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gkin-green font-mono"></textarea>
+                <p class="text-xs text-gray-400 mt-1">OvD, 1eO en Beamer worden automatisch toegevoegd op basis van datum.</p>
+            </div>
+        </div>
+
+        <!-- 3. Liederen -->
+        <div id="liedSection" class="hidden bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-5">
+            <h2 class="text-base font-semibold text-gkin-green mb-4 flex items-center gap-2">
+                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
+                </svg>
+                Liederen
+            </h2>
+            <p class="text-xs text-gray-400 mb-3">Optioneel — laat leeg voor automatische invulling door Team Liederen.</p>
+            <div class="space-y-2">
+                <div class="flex items-center gap-3">
+                    <span class="text-sm text-gray-600 w-36 shrink-0">1e lied (Intochtslied)</span>
+                    <input type="text" id="lied1" placeholder="…" class="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green">
+                </div>
+                <div class="flex items-center gap-3">
+                    <span class="text-sm text-gray-600 w-36 shrink-0">2e lied</span>
+                    <input type="text" id="lied2" placeholder="…" class="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green">
+                </div>
+                <div class="flex items-center gap-3">
+                    <span class="text-sm text-gray-600 w-36 shrink-0">3e lied</span>
+                    <input type="text" id="lied3" placeholder="…" class="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green">
+                </div>
+                <div class="flex items-center gap-3">
+                    <span class="text-sm text-gray-600 w-36 shrink-0">4e lied</span>
+                    <input type="text" id="lied4" placeholder="…" class="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green">
+                </div>
+                <div class="flex items-center gap-3">
+                    <span class="text-sm text-gray-600 w-36 shrink-0">5e lied</span>
+                    <input type="text" id="lied5" placeholder="…" class="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green">
+                </div>
+                <div class="flex items-center gap-3">
+                    <span class="text-sm text-gray-600 w-36 shrink-0">6e lied (Dankoffer)</span>
+                    <input type="text" id="lied6" placeholder="…" class="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green">
+                </div>
+                <div class="flex items-center gap-3">
+                    <span class="text-sm text-gray-600 w-36 shrink-0">7e lied (Slotlied)</span>
+                    <input type="text" id="lied7" placeholder="…" class="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green">
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. E-mail inhoud -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-5">
+            <h2 class="text-base font-semibold text-gkin-green mb-4 flex items-center gap-2">
+                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                </svg>
+                E-mail inhoud
+            </h2>
+            <div class="mb-3">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Onderwerp</label>
+                <input type="text" id="emailSubject" placeholder="Preekbevestiging — zondag DD maand JJJJ"
+                       class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gkin-green">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Inhoud</label>
+                <textarea id="emailBody" rows="22"
+                          class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gkin-green font-mono resize-y"></textarea>
+            </div>
+        </div>
+
+        <!-- Download checkbox (guest only) -->
+        <div id="downloadRow" class="hidden bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-5 flex items-center gap-3">
+            <input type="checkbox" id="downloadDocx" class="w-4 h-4 accent-gkin-green cursor-pointer">
+            <label for="downloadDocx" class="text-sm text-gray-700 cursor-pointer">
+                Download <strong>Preekbevestiging.docx</strong> bijlage voor gastpredikant
+            </label>
+        </div>
+
+        <!-- Action buttons -->
+        <div class="flex gap-3 mb-5">
+            <button type="button" id="resetBtn"
+                    class="flex-1 flex items-center justify-center gap-2 border-2 border-gray-300 hover:border-gray-400 text-gray-600 hover:text-gray-800 font-semibold py-3.5 px-6 rounded-xl transition-colors">
+                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+                Opnieuw
+            </button>
+            <button type="button" id="draftBtn"
+                    class="flex-[2] flex items-center justify-center gap-2 bg-gkin-green hover:bg-gkin-dark text-white font-semibold py-3.5 px-6 rounded-xl shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                </svg>
+                Maak e-mail concept
+            </button>
+        </div>
+        <div id="statusMsg" class="hidden mb-8 text-center text-sm rounded-lg p-3"></div>
+
+        <p class="text-center text-xs text-gray-400 mb-8">
+            Data bronnen: Dropbox Takenrooster &middot; GKIN Preekrooster
+        </p>
+    </main>
+
+    <script>
+        const dateData = {{ dates | tojson }};
+        const dateSelect = document.getElementById('date');
+
+        const DUTCH_MONTHS = ['januari','februari','maart','april','mei','juni',
+                              'juli','augustus','september','oktober','november','december'];
+        const DUTCH_DAYS   = ['maandag','dinsdag','woensdag','donderdag','vrijdag','zaterdag','zondag'];
+
+        function formatDate(isoStr) {
+            const d = new Date(isoStr + 'T00:00:00');
+            return `${DUTCH_DAYS[d.getDay() === 0 ? 6 : d.getDay()-1]} ${d.getDate()} ${DUTCH_MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+        }
+
+        function formatDateShort(isoStr) {
+            const d = new Date(isoStr + 'T00:00:00');
+            return `${d.getDate()} ${DUTCH_MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+        }
+
+        // Compute deadline dates: Tuesday before and Thursday before service
+        function deadlineDays(isoStr) {
+            const d = new Date(isoStr + 'T00:00:00');
+            // Tuesday = d - (days until Sunday) - 5
+            const dow = d.getDay(); // 0=Sun
+            // days back to Tuesday of same week (service is Sunday)
+            const toTue = (dow === 0 ? 5 : (dow + 6) % 7 === 6 ? 5 : 5); // Sun - 5 = Tue
+            const toThu = 3; // Sun - 3 = Thu
+            const tue = new Date(d); tue.setDate(d.getDate() - toTue);
+            const thu = new Date(d); thu.setDate(d.getDate() - toThu);
+            const fmt = dt => `${DUTCH_DAYS[dt.getDay() === 0 ? 6 : dt.getDay()-1]} ${dt.getDate()} ${DUTCH_MONTHS[dt.getMonth()]}`;
+            return { tue: fmt(tue), tueDate: tue.getDate(), thuDate: thu.getDate(),
+                     thu: fmt(thu), month: DUTCH_MONTHS[d.getMonth()] };
+        }
+
+        const INTERNAL_PREDIKANTS = [
+            'ds. c. gunawan',
+            'ds. j. linandi',
+            'ds. s. tjahjadi',
+            'ds. s.m. winckler-huliselan',
+        ];
+
+        function getLiedLines() {
+            const labels = ['1e lied (Intochtslied)','2e lied','3e lied','4e lied','5e lied','6e lied (Dankoffer)','7e lied (Slotlied)'];
+            return [1,2,3,4,5,6,7].map((i,idx) => {
+                const v = document.getElementById('lied'+i)?.value.trim() || '';
+                return v ? `${labels[idx]}: ${v}` : `${labels[idx]}: ……………………………`;
+            }).join('\n');
+        }
+
+        function buildEmailBody(entry, isoDate, kndThema = '', language = '', songs = []) {
+            const predikant = entry.predikant || '';
+            const dateStr   = formatDate(isoDate);
+            const tijd      = entry.tijd || '10:30';
+            const dl        = deadlineDays(isoDate);
+
+            // Bijzonderheden: clean opmerking — strip OLE URL, keep description
+            const opm = entry.opmerking || '';
+            const opmClean = opm
+                .replace(/https?:\/\/\S+/g, '')
+                .replace(/OLE:\s*/i, 'OLE')
+                .replace(/,\s*$/, '')
+                .trim();
+
+            // Gegevens eredienst rows
+            const gegevensRows = [
+                ['Ouderling van Dienst', entry.ovd],
+                ['Eerste ontvangst',     entry['1eo']],
+                ['Muzikanten',           entry.muziek],
+                ['Voorzangers',          entry.voorzangers],
+                ['Beamer',               entry.beamer],
+                ['Geluid',               entry.multimedia],
+                ['KND',                  entry.knd],
+                ['Tieners',              entry.tieners || '-'],
+            ];
+
+            const isInternal = INTERNAL_PREDIKANTS.includes(predikant.toLowerCase().trim());
+
+            if (isInternal) {
+                // ── Internal predikant template ──
+                const gegevens = gegevensRows
+                    .filter(([, v]) => v && v.trim())
+                    .map(([k, v]) => `- ${k}: ${v}`)
+                    .join('\n');
+
+                return `Beste ${predikant},
+
+Bijgaand ontvangt u de preekbevestiging voor de Eredienst in Amstelveen van as. ${dateStr}.
+De Eredienst begint om ${tijd}u.
+
+
+
+BIJZONDERHEDEN:
+${opmClean || '—'}
+
+GEGEVENS EREDIENST:
+${gegevens}
+
+De volgende liederen zijn door Team liederen uitgekozen:
+${getLiedLines()}
+
+Het thema van de KND (ter voorbereiding van het gesprek met de kinderen na het dankoffer): ${kndThema}
+
+Kunt u de Liturgie informatie uiterlijk ${dl.tue} en de preek met vertaling uiterlijk ${dl.thu} per e-mail opsturen ?
+
+
+Alvast hartelijk dank en we zien uw antwoord tegemoet.
+
+Gods zegen gewenst met de voorbereidingen.
+
+Met vriendelijke groet in Christus,
+Namens de kerkenraad regio Amstelveen,`;
+
+            } else {
+                // ── Guest predikant: derive greeting name ──
+                const parts = predikant.trim().split(/\s+/);
+                const lastName = parts[parts.length - 1];
+                const greetName = lastName.charAt(0).toUpperCase() + lastName.slice(1);
+                const title = parts[0] || '';
+                const greeting = `${title} ${greetName}`.trim();
+
+                if (language === 'I+N') {
+                    // ── English template for I+N ──
+                    const ENGLISH_MONTHS = ['January','February','March','April','May','June',
+                                            'July','August','September','October','November','December'];
+                    const dObj = new Date(isoDate + 'T00:00:00');
+                    const dateEn = `${dObj.getDate()} ${ENGLISH_MONTHS[dObj.getMonth()]} ${dObj.getFullYear()}`;
+                    // Ordinal suffix
+                    const ord = n => { const s=['th','st','nd','rd'], v=n%100; return n+(s[(v-20)%10]||s[v]||s[0]); };
+                    const dateEnOrd = `${ord(dObj.getDate())} ${ENGLISH_MONTHS[dObj.getMonth()]}, ${dObj.getFullYear()}`;
+                    // English gegevens
+                    const gegevensEn = [
+                        ['Ouderling van Dienst', entry.ovd],
+                        ['Eerste ontvangst',     entry['1eo']],
+                        ['Muzikanten',           entry.muziek],
+                        ['Voorzangers',          entry.voorzangers],
+                        ['Beamer',               entry.beamer],
+                        ['Geluid',               entry.multimedia],
+                        ['KND',                  entry.knd],
+                        ['Tieners',              entry.tieners || '-'],
+                    ].map(([k, v]) => `${k}: ${v || '-'}`).join('\n');
+                    // English deadlines
+                    const tueEn = new Date(dObj); tueEn.setDate(dObj.getDate() - 5);
+                    const thuEn = new Date(dObj); thuEn.setDate(dObj.getDate() - 3);
+                    const ENGLISH_DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+                    const fmtEn = dt => `${ENGLISH_DAYS[dt.getDay()]} ${ENGLISH_MONTHS[dt.getMonth()]} ${ord(dt.getDate())}`;
+                    return `Dear ${greeting},
+
+Hereby we send you the confirmation of the church service${opmClean ? ' (' + opmClean + ')' : ''} that will be held in Amstelveen, Sunday ${dateEnOrd}.
+
+Location of the church service:
+Bouwerij 52,
+1185 XX Amstelveen
+Time: ${tijd} pm
+
+People with a task during the service:
+${gegevensEn}
+
+
+Bible verses and songs:
+The bible verses and the songs can be sent with "reply all", before ${fmtEn(tueEn)}. (Please send back the completed form of the Preekbevestiging, that you find attached in this email)
+
+Note that some of the songs will be selected by Team Liederen.
+
+Translation of the sermon:
+- If your sermon needs to be translated from Indonesian to Dutch, please send us the text, before ${fmtEn(tueEn)}.
+- If you already have a Dutch translation and want it to be beamed simultaneously, please send us the text in Indonesian and in Dutch, before ${fmtEn(thuEn)}.
+
+Please let us know, when there are any questions.
+
+May God bless you with your preparations.
+
+Kind regards,
+On behalf of the church council of GKIN Amstelveen,`;
+
+                } else {
+                    // ── Dutch template for N+I / unknown ──
+                    const gegevens = gegevensRows
+                        .map(([k, v]) => `${k}: ${v || '-'}`)
+                        .join('\n');
+                    return `Geachte ${greeting},
+
+Allereerst het verzoek ons een bevestiging te mailen, dat u deze e-mail heeft ontvangen. Alvast hartelijk dank.
+
+Hierbij ontvangt u de preekbevestiging voor de eredienst van GKIN Amstelveen op ${dateStr}.
+De eredienst zal gehouden worden in ons kerkgebouw:
+"Bouwerij 52, 1185 XX Amstelveen"
+Tijdstip: ${tijd} uur
+
+BIJZONDERHEDEN:
+${opmClean ? `- ${opmClean}` : '-'}
+
+GEGEVENS EREDIENST:
+${gegevens}
+
+Invulformulier
+Graag ontvangen wij de liederen en teksten uiterlijk aanstaande
+${dl.tue} met een ingevuld formulier met een reply all en de preek met vertaling uiterlijk aanstaande ${dl.thu}.
+
+Gods zegen gewenst met alle voorbereidingen voor deze eredienst. Wanneer u nog vragen heeft, horen we dit graag.
+
+Met broederlijke groet in Christus,
+Namens de kerkenraad GKIN regio Amstelveen,`;
+                }
+            }
+        }
+
+        dateSelect.addEventListener('change', async () => {
+            const isoDate = dateSelect.value;
+            const entry = dateData.find(d => d.value === isoDate);
+            if (!entry) return;
+
+            // Show info card
+            document.getElementById('infoPred').textContent = entry.predikant;
+            document.getElementById('infoOvd').textContent = entry.ovd;
+            document.getElementById('infoCard').classList.remove('hidden');
+
+            // Auto-fill predikant email
+            if (entry.predikant_email) {
+                document.getElementById('emailTo').value = entry.predikant_email;
+            }
+
+            // Check for missing emails and show warning
+            const missingEmails = [];
+            if (!entry.predikant_email) missingEmails.push(`Predikant: ${entry.predikant}`);
+            if (!entry.ovd_email)       missingEmails.push(`OvD: ${entry.ovd}`);
+            if (!entry['1eo_email'])    missingEmails.push(`1eO: ${entry['1eo']}`);
+            if (!entry.beamer_email)    missingEmails.push(`Beamer: ${entry.beamer}`);
+            const warningEl = document.getElementById('emailWarning');
+            const warningList = document.getElementById('emailWarningList');
+            if (missingEmails.length > 0) {
+                warningList.innerHTML = missingEmails.map(m => `<li>${m}</li>`).join('');
+                warningEl.classList.remove('hidden');
+            } else {
+                warningEl.classList.add('hidden');
+            }
+
+            // Build CC: static list + OvD/1eO/Beamer emails
+            const STATIC_CC = [
+                'vega.hardono@outlook.com',
+                'rosalia-bld@hotmail.com',
+                'esiemyoe@gmail.com',
+                'fokkedj@gmail.com',
+                'lisa.lie@gmail.com',
+                'aveenbeamer@gmail.com',
+                'aveenmultimedia@gmail.com',
+                'aveenliederen@gmail.com',
+                'aveenmuziek@gmail.com',
+                'fsitumeang@gmail.com',
+                'elhamras@gmail.com',
+            ];
+            const staticEmailSet = new Set(STATIC_CC.map(e => e.toLowerCase()));
+            const dynamicCc = [
+                entry.ovd_email,
+                entry['1eo_email'],
+                entry.beamer_email,
+            ].filter(e => e && !staticEmailSet.has(e.toLowerCase().trim()));
+            document.getElementById('emailCc').value =
+                [...STATIC_CC, ...dynamicCc].join(', ');
+
+            const isInternal = INTERNAL_PREDIKANTS.includes(entry.predikant.toLowerCase().trim());
+
+            // Fetch KND thema + language in parallel
+            let kndThema = '', language = '';
+            try {
+                const [kndResp, langResp] = await Promise.all([
+                    fetch('/fetch-knd-thema', {
+                        method: 'POST', headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ date: isoDate })
+                    }),
+                    isInternal ? Promise.resolve(null) : fetch('/fetch-language', {
+                        method: 'POST', headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ date: isoDate })
+                    })
+                ]);
+                const knd = await kndResp.json();
+                if (knd.title && knd.verse)  kndThema = `${knd.title} uit ${knd.verse}`;
+                else if (knd.title)          kndThema = knd.title;
+                if (langResp) {
+                    const langData = await langResp.json();
+                    language = langData.language || '';
+                }
+            } catch(e) { /* leave blank if fetch fails */ }
+
+            // Set subject — English subject for I+N guest
+            const d = new Date(isoDate + 'T00:00:00');
+            const ENGLISH_MONTHS_S = ['January','February','March','April','May','June',
+                                      'July','August','September','October','November','December'];
+            if (!isInternal && language === 'I+N') {
+                document.getElementById('emailSubject').value =
+                    `GKIN Amstelveen: Confirmation forms, Church service Sunday - ${ENGLISH_MONTHS_S[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()} (${entry.predikant})`;
+            } else {
+                document.getElementById('emailSubject').value =
+                    `Preekbevestiging — ${formatDate(isoDate)}`;
+            }
+
+            // Collect songs
+            const songs = [1,2,3,4,5,6,7].map(i => document.getElementById('lied'+i).value.trim());
+
+            // Build body
+            document.getElementById('emailBody').value = buildEmailBody(entry, isoDate, kndThema, language, songs);
+
+            // Show liederen section always when a date is selected
+            document.getElementById('liedSection').classList.remove('hidden');
+
+            // Show download checkbox only for guest predikants
+            const dlRow = document.getElementById('downloadRow');
+            if (isInternal) {
+                dlRow.classList.add('hidden');
+                document.getElementById('downloadDocx').checked = false;
+            } else {
+                dlRow.classList.remove('hidden');
+                document.getElementById('downloadDocx').checked = true;
+            }
+        });
+
+        document.getElementById('draftBtn').addEventListener('click', () => {
+            const to      = document.getElementById('emailTo').value.trim();
+            const cc      = document.getElementById('emailCc').value.trim();
+            const subject = document.getElementById('emailSubject').value.trim();
+            const body    = document.getElementById('emailBody').value;
+
+            if (!to) { alert('Vul het e-mailadres van de predikant in.'); return; }
+            if (!subject) { alert('Selecteer eerst een datum.'); return; }
+
+            const mailto = 'mailto:' + encodeURIComponent(to)
+                + '?cc=' + encodeURIComponent(cc)
+                + '&subject=' + encodeURIComponent(subject)
+                + '&body=' + encodeURIComponent(body);
+
+            // Download docx if checkbox checked
+            if (document.getElementById('downloadDocx').checked) {
+                const isoDate = document.getElementById('date').value;
+                const songVals = [1,2,3,4,5,6,7].map(i => document.getElementById('lied'+i).value.trim());
+                fetch('/generate-preekbevestiging', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ date: isoDate, songs: songVals })
+                }).then(r => {
+                    if (!r.ok) { alert('Fout bij genereren document.'); return; }
+                    return r.blob();
+                }).then(blob => {
+                    if (!blob) return;
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    const d = new Date(isoDate + 'T00:00:00');
+                    a.download = `Preekbevestiging_${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}.docx`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                }).catch(() => alert('Fout bij downloaden document.'));
+            }
+
+            window.location.href = mailto;
+
+            const msg = document.getElementById('statusMsg');
+            msg.textContent = '✓ E-mail concept geopend in uw e-mailprogramma.';
+            msg.className = 'mb-8 text-center text-sm rounded-lg p-3 bg-green-50 text-green-700 border border-green-200';
+            msg.classList.remove('hidden');
+        });
+
+        // Re-render body when songs are typed
+        [1,2,3,4,5,6,7].forEach(i => {
+            document.getElementById('lied'+i).addEventListener('input', () => {
+                const isoDate = dateSelect.value;
+                const entry = dateData.find(d => d.value === isoDate);
+                if (!entry || !document.getElementById('emailBody').value) return;
+                const body = document.getElementById('emailBody').value;
+                const songs = [1,2,3,4,5,6,7].map(j => document.getElementById('lied'+j).value.trim());
+                // Only re-render; preserve current kndThema/language by extracting from existing body
+                const kndMatch = body.match(/KND.*?: (.+)/);
+                const kndThema = kndMatch ? kndMatch[1].trim() : '';
+                const isInt = INTERNAL_PREDIKANTS.includes(entry.predikant.toLowerCase().trim());
+                document.getElementById('emailBody').value =
+                    buildEmailBody(entry, isoDate, kndThema, isInt ? '' : (body.includes('Dear ') ? 'I+N' : ''), songs);
+            });
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            dateSelect.value = '';
+            document.getElementById('infoCard').classList.add('hidden');
+            document.getElementById('emailTo').value = '';
+            document.getElementById('emailSubject').value = '';
+            document.getElementById('emailBody').value = '';
+            document.getElementById('statusMsg').classList.add('hidden');
+            document.getElementById('downloadRow').classList.add('hidden');
+            document.getElementById('downloadDocx').checked = false;
+            document.getElementById('emailWarning').classList.add('hidden');
+            document.getElementById('liedSection').classList.add('hidden');
+            [1,2,3,4,5,6,7].forEach(i => { document.getElementById('lied'+i).value = ''; });
+        });
+    </script>
+</body>
+</html>

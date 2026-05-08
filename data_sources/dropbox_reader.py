@@ -112,20 +112,30 @@ class DropboxExcelReader:
     # ------------------------------------------------------------------
 
     def _build_people_map(self, df: pd.DataFrame) -> None:
-        """Build a lookup dict: short_name -> {first, last, title}."""
+        """Build a lookup dict: short_name -> {first, last, title}.
+        Also builds _predikant_email_map: full_name -> email from rows
+        where Short Name is empty but col F (index 5) has a full name.
+        """
         self._people_map = {}
+        self._predikant_email_map = {}
         for _, row in df.iterrows():
-            short = str(row.get('Short Name', '')).strip()
-            if not short or short.lower() == 'nan':
-                continue
             def _s(col):
-                v = row.get(col, '')
+                v = row.get(col, '') if isinstance(col, str) else (row.iloc[col] if col < len(row) else '')
                 s = str(v).strip() if pd.notna(v) else ''
                 return '' if s.lower() == 'nan' else s
+            short = _s('Short Name')
+            email = _s('Email') or _s(3)
+            full  = _s(5)   # col F = full predikant name (may exist even with short name)
+            # Index col F full name -> email for predikant lookup regardless of short name
+            if full and email:
+                self._predikant_email_map[full.lower()] = email
+            if not short:
+                continue
             self._people_map[short] = {
                 'first_name': _s('First Name'),
                 'last_name':  _s('Last Name'),
                 'title':      _s('Title'),
+                'email':      email,
             }
 
     def _resolve_name(self, short_name: str) -> str:
@@ -138,6 +148,14 @@ class DropboxExcelReader:
             parts = [person['title'], person['first_name'], person['last_name']]
             return ' '.join(p for p in parts if p and p.lower() != 'nan')
         return short_name
+
+    def _resolve_email(self, short_name: str) -> str:
+        """Return email for a short name from People tab."""
+        short_name = short_name.strip()
+        if not short_name or not self._people_map:
+            return ''
+        person = self._people_map.get(short_name)
+        return person.get('email', '') if person else ''
 
     def _parse_current_sheet(self, df: pd.DataFrame) -> List[Dict[str, Any]]:
         """Parse the CURRENT sheet into a list of service entries."""
@@ -196,15 +214,59 @@ class DropboxExcelReader:
             opmerking = _cell('OPMERKING', 3)
             eo1_short    = _cell('1EO', 6)    # G = index 6 (1e ONTV)
             beamer_short = _cell('BEAMER', 9)  # J = index 9 (BEAMER)
+            # Parse TIJD: may be a time object or string like '10:30:00'
+            tijd_raw = _cell('TIJD', 2)
+            import datetime as _dt
+            if hasattr(tijd_raw, 'strftime'):
+                tijd = tijd_raw.strftime('%H:%M')
+            elif tijd_raw:
+                try:
+                    t = _dt.time.fromisoformat(str(tijd_raw).split('.')[0])
+                    tijd = t.strftime('%H:%M')
+                except Exception:
+                    tijd = str(tijd_raw)[:5]
+            else:
+                tijd = '10:30'
+
+            def _resolve_list(key, default_col):
+                raw = _cell(key, default_col)
+                if not raw or raw == '-':
+                    return ''
+                names = [n.strip() for n in raw.split(',') if n.strip() and n.strip() != '-']
+                return ', '.join(self._resolve_name(n) or n for n in names)
+
+            muziek      = _resolve_list('MUZIEK', 10)
+            voorzangers = _resolve_list('VOORZANGERS', 11)
+            multimedia  = _resolve_list('MULTIMEDIA', 12)
+            knd_raw     = _cell('KND', 7)
+            tieners_raw = _cell('TIENERS', 8)
+            knd         = knd_raw if knd_raw and knd_raw != '-' else ''
+            tieners     = tieners_raw if tieners_raw and tieners_raw != '-' else ''
+
+            # Resolve predikant email from People tab
+            pred_email  = self._predikant_email_map.get(predikant.lower(), '')
+            ovd_email   = self._resolve_email(ovd_short)
+            eo1_email   = self._resolve_email(eo1_short)
+            beamer_email = self._resolve_email(beamer_short)
 
             entries.append({
-                'date':      date_obj,
-                'dag':       dag,
-                'predikant': predikant,
-                'ovd':       self._resolve_name(ovd_short) or ovd_short,
-                '1eo':       self._resolve_name(eo1_short) or eo1_short,
-                'beamer':    self._resolve_name(beamer_short) or beamer_short,
-                'opmerking': opmerking,
+                'date':            date_obj,
+                'dag':             dag,
+                'predikant':       predikant,
+                'predikant_email': pred_email,
+                'ovd':             self._resolve_name(ovd_short) or ovd_short,
+                'ovd_email':       ovd_email,
+                '1eo':             self._resolve_name(eo1_short) or eo1_short,
+                '1eo_email':       eo1_email,
+                'beamer':          self._resolve_name(beamer_short) or beamer_short,
+                'beamer_email':    beamer_email,
+                'opmerking':       opmerking,
+                'tijd':            tijd,
+                'muziek':          muziek,
+                'voorzangers':     voorzangers,
+                'multimedia':      multimedia,
+                'knd':             knd,
+                'tieners':         tieners,
             })
 
         return entries
