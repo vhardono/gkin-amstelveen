@@ -562,10 +562,11 @@ class OutlookCollecteReader:
         for i, pat in enumerate(SONG_PATTERNS):
             for line in lines:
                 if re.search(pat, line, re.IGNORECASE):
-                    # Extract value after the label+colon/dash
-                    val = re.split(r'[:–\-]', line, maxsplit=1)
-                    if len(val) > 1:
-                        songs[i] = _clean_song(val[1].strip())
+                    # Split only on the first colon or em-dash that follows the label
+                    # Use a precise pattern: match label then separator then rest
+                    m = re.match(pat + r'\s*[:(–\u2013]+(.*)', line, re.IGNORECASE)
+                    if m:
+                        songs[i] = _clean_song(m.group(1).strip())
                     else:
                         # Label takes up whole line — value is on next line
                         idx = lines.index(line)

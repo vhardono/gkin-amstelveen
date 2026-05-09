@@ -481,6 +481,9 @@ Namens de kerkenraad GKIN regio Amstelveen,`;
                 // Fill song fields from liederen email
                 const liedData = await liedResp.json();
                 const fetchedSongs = liedData.songs || [];
+                const notFound = liedData.not_found && liedData.not_found.length;
+                // Always clear all fields first, then fill with fetched values
+                [1,2,3,4,5,6,7].forEach(i => { document.getElementById('lied'+i).value = ''; });
                 let anyFilled = false;
                 fetchedSongs.forEach((s, i) => {
                     if (s) {
@@ -488,12 +491,12 @@ Namens de kerkenraad GKIN regio Amstelveen,`;
                         anyFilled = true;
                     }
                 });
-                if (liedData.not_found && liedData.not_found.length && !anyFilled) {
-                    const liedWarn = document.getElementById('liedFetchWarn');
+                const liedWarn = document.getElementById('liedFetchWarn');
+                if (notFound && !anyFilled) {
                     liedWarn.textContent = '⚠ ' + liedData.not_found[0];
                     liedWarn.classList.remove('hidden');
-                } else if (anyFilled) {
-                    document.getElementById('liedFetchWarn').classList.add('hidden');
+                } else {
+                    liedWarn.classList.add('hidden');
                 }
             } catch(e) { /* leave blank if fetch fails */ }
 
