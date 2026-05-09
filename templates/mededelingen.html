@@ -310,6 +310,17 @@
                         Maak concept
                     </button>
                 </div>
+                <!-- Mededelingen Voorlezen -->
+                <div class="flex items-center justify-between gap-3 p-3 rounded-lg border border-gray-100 bg-gray-50">
+                    <div>
+                        <p class="text-sm font-medium text-gray-800">Mededelingen Voorlezen</p>
+                        <p class="text-xs text-gray-500 mt-0.5">Naar 1eO + Beamer</p>
+                    </div>
+                    <button type="button" id="draftVoorlBtn"
+                            class="shrink-0 text-sm bg-gkin-green hover:bg-gkin-dark text-white font-medium px-4 py-2 rounded-lg transition-colors">
+                        Maak concept
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -402,6 +413,7 @@
                 // Missing email warnings
                 const missing = [];
                 if (!sel.predikant_email) missing.push(`Predikant: ${sel.predikant}`);
+                if (!sel['1eo_email'])    missing.push(`1eO: ${sel['1eo']}`);
                 if (!sel.beamer_email)    missing.push(`Beamer: ${sel.beamer}`);
                 const warnEl   = document.getElementById('mededWarning');
                 const warnList = document.getElementById('mededWarningList');
@@ -418,6 +430,44 @@
                 document.getElementById('emailDraftSection').classList.remove('hidden');
             }
             statusMsg.classList.add('hidden');
+        });
+
+        function shortName(fullName) {
+            // Strip title prefix (br., zr., ds., etc.) and return rest
+            return fullName.replace(/^(br\.|zr\.|ds\.|mw\.|drs\.|dr\.)/i, '').trim();
+        }
+
+        document.getElementById('draftVoorlBtn').addEventListener('click', () => {
+            const sel = dateSelect._currentSel;
+            if (!sel) { alert('Selecteer eerst een datum.'); return; }
+            const iso       = sel.value;
+            const dateLong  = formatDateLong(iso);
+            const eo1       = sel['1eo']       || '';
+            const eo1Email  = sel['1eo_email'] || '';
+            const beamer     = sel.beamer      || '';
+            const beamerEmail = sel.beamer_email || '';
+
+            const missing = [];
+            if (!eo1Email)    missing.push(`1eO: ${eo1}`);
+            if (!beamerEmail) missing.push(`Beamer: ${beamer}`);
+            if (missing.length) {
+                alert('⚠ Ontbrekende e-mailadressen:\n' + missing.join('\n'));
+            }
+
+            const salut1 = shortName(eo1);
+            const salut2 = shortName(beamer);
+            const salutation = [salut1, salut2].filter(Boolean).join(' en ');
+
+            const to  = [eo1Email, beamerEmail].filter(Boolean).join(', ');
+            const cc  = 'vega.hardono@outlook.com';
+            const subject = `Mededelingen - Voorlezen - ${dateLong}`;
+            const body = `Beste ${salutation},\n\nHierbij stuur ik de mededelingen voor aanstaande zondag die hardop zullen worden voorgelezen, inclusief de vertaalde versie en de flyers voor de beamer.\n\nLaat het me weten als jullie nog vragen hebben.\n\nMet vriendelijke groet,`;
+
+            const mailto = 'mailto:' + encodeURIComponent(to)
+                + '?cc='      + encodeURIComponent(cc)
+                + '&subject=' + encodeURIComponent(subject)
+                + '&body='    + encodeURIComponent(body);
+            window.location.href = mailto;
         });
 
         document.getElementById('draftDefBtn').addEventListener('click', () => {

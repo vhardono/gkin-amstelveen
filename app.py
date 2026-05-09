@@ -154,6 +154,8 @@ def _get_takenrooster_and_render_page():
             'predikant_email': entry.get('predikant_email', ''),
             'beamer_email':    entry.get('beamer_email', ''),
             'beamer':          entry.get('beamer', ''),
+            '1eo':             entry.get('1eo', ''),
+            '1eo_email':       entry.get('1eo_email', ''),
         })
 
     return render_template('mededelingen.html', dates=dates)
