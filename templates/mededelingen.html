@@ -485,7 +485,7 @@
             const cc        = (dateSelect._currentCc || []).join(', ');
             const dObj = new Date(iso + 'T00:00:00');
             const dagNaamDef = DUTCH_DAYS_LONG[dObj.getDay() === 0 ? 6 : dObj.getDay()-1];
-            const subject   = `Definitieve mededelingen ${dagNaamDef} ${dateShort}`;
+            const subject   = `Definitieve mededelingen ${dateLong}`;
             const body = `Beste allen,\n\nIn de bijlage de definitieve mededelingen van a.s. ${dateLong} in twee bestandsformaten (Word en PDF).\nBeide bestanden zijn identiek.\n\nOverige verzoeken / nieuwe berichten behoren tot de nagekomen mededelingen.`;
             if (!to) {
                 alert(`Geen e-mailadres gevonden voor predikant ${sel.predikant}. Vul het To-veld handmatig in.`);
