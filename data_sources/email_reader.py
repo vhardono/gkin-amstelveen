@@ -567,7 +567,7 @@ class OutlookCollecteReader:
                 if re.search(pat, line, re.IGNORECASE):
                     # Split only on the first colon or em-dash that follows the label
                     # Use a precise pattern: match label then separator then rest
-                    m = re.match(pat + r'\s*[:(–\u2013]+(.*)', line, re.IGNORECASE)
+                    m = re.match(pat + r'[^:(–\u2013]*[:(–\u2013]+(.*)', line, re.IGNORECASE)
                     if m:
                         songs[i] = _clean_song(m.group(1).strip())
                     else:
