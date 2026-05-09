@@ -553,11 +553,10 @@ class OutlookCollecteReader:
         ]
 
         def _clean_song(raw: str) -> str:
-            """Strip URLs and treat 'pending' as empty."""
-            raw = re.sub(r'https?://\S+', '', raw).strip()
-            if re.fullmatch(r'pending\.?', raw, re.IGNORECASE):
+            """Treat 'pending' as empty, keep everything else including URLs."""
+            if re.fullmatch(r'pending\.?', raw.strip(), re.IGNORECASE):
                 return ''
-            return raw
+            return raw.strip()
 
         songs = [''] * 7
         for i, pat in enumerate(SONG_PATTERNS):
