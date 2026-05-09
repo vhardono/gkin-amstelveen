@@ -552,6 +552,13 @@ class OutlookCollecteReader:
             r'7[ée]\s*lied',
         ]
 
+        def _clean_song(raw: str) -> str:
+            """Strip URLs and treat 'pending' as empty."""
+            raw = re.sub(r'https?://\S+', '', raw).strip()
+            if re.fullmatch(r'pending\.?', raw, re.IGNORECASE):
+                return ''
+            return raw
+
         songs = [''] * 7
         for i, pat in enumerate(SONG_PATTERNS):
             for line in lines:
@@ -559,12 +566,12 @@ class OutlookCollecteReader:
                     # Extract value after the label+colon/dash
                     val = re.split(r'[:–\-]', line, maxsplit=1)
                     if len(val) > 1:
-                        songs[i] = val[1].strip()
+                        songs[i] = _clean_song(val[1].strip())
                     else:
                         # Label takes up whole line — value is on next line
                         idx = lines.index(line)
                         if idx + 1 < len(lines):
-                            songs[i] = lines[idx + 1].strip()
+                            songs[i] = _clean_song(lines[idx + 1].strip())
                     break
 
         result['songs'] = songs
