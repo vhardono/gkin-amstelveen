@@ -464,7 +464,9 @@
             const to  = [eo1Email, beamerEmail].filter(Boolean).join(', ');
             const cc  = 'vega.hardono@outlook.com';
             const subject = `Mededelingen - Voorlezen - ${dateLong}`;
-            const body = `Beste ${salutation},\n\nHierbij stuur ik de mededelingen voor aanstaande zondag die hardop zullen worden voorgelezen, inclusief de vertaalde versie en de flyers voor de beamer.\n\nLaat het me weten als jullie nog vragen hebben.\n\nMet vriendelijke groet,`;
+            const d = new Date(iso + 'T00:00:00');
+            const dagNaam = DUTCH_DAYS_LONG[d.getDay() === 0 ? 6 : d.getDay()-1];
+            const body = `Beste ${salutation},\n\nHierbij stuur ik de mededelingen voor aanstaande ${dagNaam} die hardop zullen worden voorgelezen, inclusief de vertaalde versie en de flyers voor de beamer.\n\nLaat het me weten als jullie nog vragen hebben.\n\nMet vriendelijke groet,`;
 
             const mailto = 'mailto:' + encodeURIComponent(to)
                 + '?cc='      + encodeURIComponent(cc)
@@ -481,7 +483,9 @@
             const dateLong  = formatDateLong(iso);
             const to        = sel.predikant_email || '';
             const cc        = (dateSelect._currentCc || []).join(', ');
-            const subject   = `Definitieve mededelingen zondag ${dateShort}`;
+            const dObj = new Date(iso + 'T00:00:00');
+            const dagNaamDef = DUTCH_DAYS_LONG[dObj.getDay() === 0 ? 6 : dObj.getDay()-1];
+            const subject   = `Definitieve mededelingen ${dagNaamDef} ${dateShort}`;
             const body = `Beste allen,\n\nIn de bijlage de definitieve mededelingen van a.s. ${dateLong} in twee bestandsformaten (Word en PDF).\nBeide bestanden zijn identiek.\n\nOverige verzoeken / nieuwe berichten behoren tot de nagekomen mededelingen.`;
             if (!to) {
                 alert(`Geen e-mailadres gevonden voor predikant ${sel.predikant}. Vul het To-veld handmatig in.`);
