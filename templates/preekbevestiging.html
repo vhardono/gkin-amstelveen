@@ -238,7 +238,9 @@
             const labels = ['1e lied (Intochtslied)','2e lied','3e lied','4e lied','5e lied','6e lied (Dankoffer)','7e lied (Slotlied)'];
             return [1,2,3,4,5,6,7].map((i,idx) => {
                 const v = document.getElementById('lied'+i)?.value.trim() || '';
-                return v ? `${labels[idx]}: ${v}` : `${labels[idx]}: ……………………………`;
+                // Strip URLs for plain-text email body
+                const vClean = v.replace(/https?:\/\/\S+/g, '').trim();
+                return vClean ? `${labels[idx]}: ${vClean}` : `${labels[idx]}: ……………………………`;
             }).join('\n');
         }
 
