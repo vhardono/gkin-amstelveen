@@ -106,7 +106,10 @@
                 </svg>
                 Liederen
             </h2>
-            <p class="text-xs text-gray-400 mb-3">Optioneel — laat leeg voor automatische invulling door Team Liederen.</p>
+            <div class="flex items-center justify-between mb-3">
+                <p class="text-xs text-gray-400">Automatisch ingevuld vanuit e-mail indien beschikbaar.</p>
+                <div id="liedFetchWarn" class="hidden text-xs text-amber-600 font-medium"></div>
+            </div>
             <div class="space-y-2">
                 <div class="flex items-center gap-3">
                     <span class="text-sm text-gray-600 w-36 shrink-0">1e lied (Intochtslied)</span>
@@ -451,15 +454,19 @@ Namens de kerkenraad GKIN regio Amstelveen,`;
 
             const isInternal = INTERNAL_PREDIKANTS.includes(entry.predikant.toLowerCase().trim());
 
-            // Fetch KND thema + language in parallel
+            // Fetch KND thema + language + liederen in parallel
             let kndThema = '', language = '';
             try {
-                const [kndResp, langResp] = await Promise.all([
+                const [kndResp, langResp, liedResp] = await Promise.all([
                     fetch('/fetch-knd-thema', {
                         method: 'POST', headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify({ date: isoDate })
                     }),
                     isInternal ? Promise.resolve(null) : fetch('/fetch-language', {
+                        method: 'POST', headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ date: isoDate })
+                    }),
+                    fetch('/fetch-liederen', {
                         method: 'POST', headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify({ date: isoDate })
                     })
@@ -470,6 +477,23 @@ Namens de kerkenraad GKIN regio Amstelveen,`;
                 if (langResp) {
                     const langData = await langResp.json();
                     language = langData.language || '';
+                }
+                // Fill song fields from liederen email
+                const liedData = await liedResp.json();
+                const fetchedSongs = liedData.songs || [];
+                let anyFilled = false;
+                fetchedSongs.forEach((s, i) => {
+                    if (s) {
+                        document.getElementById('lied' + (i+1)).value = s;
+                        anyFilled = true;
+                    }
+                });
+                if (liedData.not_found && liedData.not_found.length && !anyFilled) {
+                    const liedWarn = document.getElementById('liedFetchWarn');
+                    liedWarn.textContent = '⚠ ' + liedData.not_found[0];
+                    liedWarn.classList.remove('hidden');
+                } else if (anyFilled) {
+                    document.getElementById('liedFetchWarn').classList.add('hidden');
                 }
             } catch(e) { /* leave blank if fetch fails */ }
 
@@ -579,6 +603,7 @@ Namens de kerkenraad GKIN regio Amstelveen,`;
             document.getElementById('emailWarning').classList.add('hidden');
             document.getElementById('liedSection').classList.add('hidden');
             [1,2,3,4,5,6,7].forEach(i => { document.getElementById('lied'+i).value = ''; });
+            document.getElementById('liedFetchWarn').classList.add('hidden');
         });
     </script>
 </body>

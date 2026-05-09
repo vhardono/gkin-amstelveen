@@ -243,6 +243,27 @@ def generate_preekbevestiging():
                      mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
 
 
+@app.route('/fetch-liederen', methods=['POST'])
+def fetch_liederen():
+    from data_sources.email_reader import OutlookCollecteReader
+    data     = request.get_json(force=True)
+    iso_date = data.get('date', '')
+    if not iso_date:
+        return jsonify({'error': 'no date'}), 400
+    try:
+        d = datetime.strptime(iso_date, '%Y-%m-%d')
+    except ValueError:
+        return jsonify({'error': 'invalid date'}), 400
+    try:
+        reader = OutlookCollecteReader()
+        if not reader.is_authenticated():
+            return jsonify({'error': 'not_authenticated', 'songs': ['','','','','','',''], 'not_found': ['Niet ingelogd bij Outlook']}), 200
+        result = reader.fetch_liederen(target_date=d)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'error': str(e), 'songs': ['','','','','','',''], 'not_found': [str(e)]}), 200
+
+
 @app.route('/fetch-language', methods=['POST'])
 def fetch_language():
     from data_sources.preekroster_scraper import PreekrosterScraper

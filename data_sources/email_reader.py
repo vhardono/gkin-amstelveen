@@ -465,6 +465,111 @@ class OutlookCollecteReader:
 
         return result
 
+    def fetch_liederen(self, target_date: datetime = None, since_days: int = 60) -> Dict[str, Any]:
+        """Fetch liederen from aveenliederen@gmail.com, subject contains 'Liederen'.
+        Parses the email body for 7 song lines matching labels like '1e lied', '2e lied', etc.
+        Returns dict with songs (list of 7 strings), source_subject, not_found.
+        """
+        NL_MONTHS = ['','januari','februari','maart','april','mei','juni',
+                     'juli','augustus','september','oktober','november','december']
+
+        since = (datetime.utcnow() - timedelta(days=since_days)).strftime('%Y-%m-%dT00:00:00Z')
+
+        result: Dict[str, Any] = {
+            'songs': ['', '', '', '', '', '', ''],
+            'source_subject': '',
+            'not_found': [],
+        }
+
+        date_variants = []
+        if target_date:
+            d, m, y = target_date.day, target_date.month, target_date.year
+            date_variants = [
+                f"{d}-{m}-{y}",
+                f"{d:02d}-{m:02d}-{y}",
+                f"{d} {NL_MONTHS[m]}",
+                f"{d} {NL_MONTHS[m]} {y}",
+                f"{d}/{m}/{y}",
+            ]
+
+        def _date_matches(text: str) -> bool:
+            if not date_variants:
+                return True
+            tl = text.lower()
+            return any(v.lower() in tl for v in date_variants)
+
+        try:
+            msgs = self._graph_get('/me/messages', params={
+                '$filter': f"receivedDateTime ge {since} and contains(subject,'Liederen')",
+                '$top': 20,
+                '$select': 'id,subject,from,body,receivedDateTime',
+                '$orderby': 'receivedDateTime desc',
+            }).get('value', [])
+        except Exception as e:
+            result['not_found'].append(f'Fout bij ophalen e-mails: {e}')
+            return result
+
+        sender_msgs = [
+            m for m in msgs
+            if 'aveenliederen@gmail.com' in
+               m.get('from', {}).get('emailAddress', {}).get('address', '').lower()
+        ]
+
+        # Find email matching target date (subject or body)
+        match_msg = None
+        for msg in sender_msgs:
+            subject = msg.get('subject', '')
+            body_html = msg.get('body', {}).get('content', '')
+            body_text = re.sub(r'<[^>]+>', ' ', body_html)
+            body_text = body_text.replace('&nbsp;', ' ').replace('&amp;', '&')
+            body_text = re.sub(r'\s+', ' ', body_text)
+            if _date_matches(subject) or _date_matches(body_text):
+                match_msg = msg
+                break
+
+        if not match_msg:
+            result['not_found'].append('Liederen e-mail niet gevonden voor deze datum')
+            return result
+
+        result['source_subject'] = match_msg.get('subject', '')
+
+        # Parse body — strip HTML, preserve line structure
+        body_html = match_msg.get('body', {}).get('content', '')
+        # Replace block-level tags with newlines before stripping
+        body_text = re.sub(r'<br\s*/?>|</p>|</div>|</li>|</tr>', '\n', body_html, flags=re.IGNORECASE)
+        body_text = re.sub(r'<[^>]+>', '', body_text)
+        body_text = body_text.replace('&nbsp;', ' ').replace('&amp;', '&').replace('&gt;', '>').replace('&lt;', '<')
+        lines = [l.strip() for l in body_text.splitlines() if l.strip()]
+
+        # Labels to search for (flexible matching)
+        SONG_PATTERNS = [
+            r'1[ée]\s*lied',        # 1e lied / 1ée lied
+            r'2[ée]\s*lied',
+            r'3[ée]\s*lied',
+            r'4[ée]\s*lied',
+            r'5[ée]\s*lied',
+            r'6[ée]\s*lied',
+            r'7[ée]\s*lied',
+        ]
+
+        songs = [''] * 7
+        for i, pat in enumerate(SONG_PATTERNS):
+            for line in lines:
+                if re.search(pat, line, re.IGNORECASE):
+                    # Extract value after the label+colon/dash
+                    val = re.split(r'[:–\-]', line, maxsplit=1)
+                    if len(val) > 1:
+                        songs[i] = val[1].strip()
+                    else:
+                        # Label takes up whole line — value is on next line
+                        idx = lines.index(line)
+                        if idx + 1 < len(lines):
+                            songs[i] = lines[idx + 1].strip()
+                    break
+
+        result['songs'] = songs
+        return result
+
     def fetch_overdenking(self, target_date: datetime = None, since_days: int = 14) -> Dict[str, Any]:
         """Fetch overdenking from scribagkin@gmail.com, subject contains 'Overdenking'.
         Attachment is a .docx with structure:
