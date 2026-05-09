@@ -433,8 +433,11 @@
         });
 
         function shortName(fullName) {
-            // Strip title prefix (br., zr., ds., etc.) and return rest
-            return fullName.replace(/^(br\.|zr\.|ds\.|mw\.|drs\.|dr\.)/i, '').trim();
+            // Keep title prefix + first name only: "br. Frederik Situmeang" → "br. Frederik"
+            const m = fullName.match(/^(br\.|zr\.|ds\.|mw\.|drs\.|dr\.)\s*(\S+)/i);
+            if (m) return `${m[1]} ${m[2]}`;
+            // No title: just return first word
+            return fullName.split(' ')[0];
         }
 
         document.getElementById('draftVoorlBtn').addEventListener('click', () => {
