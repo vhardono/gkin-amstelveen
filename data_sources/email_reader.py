@@ -538,7 +538,8 @@ class OutlookCollecteReader:
         # Replace block-level tags with newlines before stripping
         body_text = re.sub(r'<br\s*/?>|</p>|</div>|</li>|</tr>', '\n', body_html, flags=re.IGNORECASE)
         body_text = re.sub(r'<[^>]+>', '', body_text)
-        body_text = body_text.replace('&nbsp;', ' ').replace('&amp;', '&').replace('&gt;', '>').replace('&lt;', '<')
+        import html as _html
+        body_text = _html.unescape(body_text)
         lines = [l.strip() for l in body_text.splitlines() if l.strip()]
 
         # Labels to search for (flexible matching)
@@ -553,10 +554,12 @@ class OutlookCollecteReader:
         ]
 
         def _clean_song(raw: str) -> str:
-            """Treat 'pending' as empty, keep everything else including URLs."""
-            if re.fullmatch(r'pending\.?', raw.strip(), re.IGNORECASE):
+            """Decode HTML entities, treat values starting with 'pending' as empty."""
+            import html
+            raw = html.unescape(raw.strip())
+            if re.match(r'pending', raw, re.IGNORECASE):
                 return ''
-            return raw.strip()
+            return raw
 
         songs = [''] * 7
         for i, pat in enumerate(SONG_PATTERNS):
