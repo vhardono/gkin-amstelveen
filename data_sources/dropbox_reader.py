@@ -240,8 +240,8 @@ class DropboxExcelReader:
             multimedia  = _resolve_list('MULTIMEDIA', 12)
             knd_raw     = _cell('KND', 7)
             tieners_raw = _cell('TIENERS', 8)
-            knd         = knd_raw if knd_raw and knd_raw != '-' else ''
-            tieners     = tieners_raw if tieners_raw and tieners_raw != '-' else ''
+            knd         = self._resolve_name(knd_raw) or knd_raw if knd_raw and knd_raw != '-' else ''
+            tieners     = self._resolve_name(tieners_raw) or tieners_raw if tieners_raw and tieners_raw != '-' else ''
 
             # Resolve predikant email from People tab
             pred_email  = self._predikant_email_map.get(predikant.lower(), '')

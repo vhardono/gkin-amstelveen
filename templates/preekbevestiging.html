@@ -156,7 +156,10 @@
                        class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gkin-green">
             </div>
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Inhoud</label>
+                <div class="flex items-center justify-between mb-1">
+                    <label class="block text-sm font-medium text-gray-700">Inhoud</label>
+                    <div id="kndFetchWarn" class="hidden text-xs text-amber-600 font-medium"></div>
+                </div>
                 <textarea id="emailBody" rows="22"
                           class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gkin-green font-mono resize-y"></textarea>
             </div>
@@ -472,8 +475,17 @@ Namens de kerkenraad GKIN regio Amstelveen,`;
                     })
                 ]);
                 const knd = await kndResp.json();
-                if (knd.title && knd.verse)  kndThema = `${knd.title} uit ${knd.verse}`;
-                else if (knd.title)          kndThema = knd.title;
+                const kndWarn = document.getElementById('kndFetchWarn');
+                if (knd.title && knd.verse) {
+                    kndThema = `${knd.title} uit ${knd.verse}`;
+                    kndWarn.classList.add('hidden');
+                } else if (knd.title) {
+                    kndThema = knd.title;
+                    kndWarn.classList.add('hidden');
+                } else {
+                    kndWarn.textContent = '⚠ KND thema niet geladen (bijbelbasics.nl)';
+                    kndWarn.classList.remove('hidden');
+                }
                 if (langResp) {
                     const langData = await langResp.json();
                     language = langData.language || '';
@@ -612,6 +624,7 @@ Namens de kerkenraad GKIN regio Amstelveen,`;
             document.getElementById('liedSection').classList.add('hidden');
             [1,2,3,4,5,6,7].forEach(i => { document.getElementById('lied'+i).value = ''; });
             document.getElementById('liedFetchWarn').classList.add('hidden');
+            document.getElementById('kndFetchWarn').classList.add('hidden');
         });
     </script>
 </body>
