@@ -30,10 +30,15 @@ TOKEN_CACHE_PATH  = os.path.join(os.path.dirname(__file__), '..', '.msal_token_c
 UPLOAD_DIR        = os.path.join(os.path.dirname(__file__), '..', 'output', '_uploads')
 
 # Google Sheets fallback for liederen
-# Sheet: https://docs.google.com/spreadsheets/d/17Noo_ivoU3JubLHseIvPUm4VSQYGt2FK
-# Uses ROOSTER tab: D=Date, F=1e lied, G=2e lied, H=3e lied, I=6e lied (4 songs total)
-_GOOGLE_SHEETS_ID = '17Noo_ivoU3JubLHseIvPUm4VSQYGt2FK'
-_GOOGLE_SHEETS_RANGE = 'ROOSTER!D:I'  # Columns D through I
+# Excel file in Google Drive: https://docs.google.com/spreadsheets/d/17Noo_ivoU3JubLHseIvPUm4VSQYGt2FK
+# Uses ROOSTER tab: D=Date, F=1e lied, G=2e lied, H=3e lied, I=6e lied (4 songs expected)
+_GOOGLE_FILE_ID = '17Noo_ivoU3JubLHseIvPUm4VSQYGt2FK'
+_GOOGLE_SHEET_NAME = 'ROOSTER'  # Sheet name in Excel file
+
+# Cache for Google Drive Excel data (values + timestamp)
+_google_excel_cache = None
+_google_excel_cache_time = None
+_GOOGLE_EXCEL_CACHE_TTL = 3600  # 1 hour in seconds
 
 # In-memory store for device flow (avoids filesystem writes on Railway)
 _device_flow_store: Dict[str, Any] = {}
@@ -636,10 +641,12 @@ class OutlookCollecteReader:
         try:
             from google.oauth2 import service_account
             from googleapiclient.discovery import build
+            import pandas as pd
+            import io
             print("[SHEETS] Google imports successful")
         except ImportError as e:
             print(f"[SHEETS] Import error: {e}")
-            result['not_found'].append('Google Sheets API niet beschikbaar')
+            result['not_found'].append('Google API of pandas niet beschikbaar')
             return result
 
         # Check for service account credentials
@@ -654,34 +661,60 @@ class OutlookCollecteReader:
         print("[SHEETS] Credentials found, proceeding...")
 
         try:
-            if creds_json:
-                print("[SHEETS] Loading credentials from JSON...")
-                creds_info = json.loads(creds_json)
-                credentials = service_account.Credentials.from_service_account_info(
-                    creds_info,
-                    scopes=['https://www.googleapis.com/auth/spreadsheets.readonly']
-                )
+            global _google_excel_cache, _google_excel_cache_time
+
+            # Check cache first (1 hour TTL)
+            now = datetime.now()
+            if _google_excel_cache is not None and _google_excel_cache_time is not None:
+                age = (now - _google_excel_cache_time).total_seconds()
+                if age < _GOOGLE_EXCEL_CACHE_TTL:
+                    print(f"[SHEETS] Using cached Excel data ({age:.0f}s old)")
+                    values = _google_excel_cache
+                else:
+                    print(f"[SHEETS] Cache expired ({age:.0f}s old), refreshing...")
+                    values = None
             else:
-                print("[SHEETS] Loading credentials from file...")
-                credentials = service_account.Credentials.from_service_account_file(
-                    creds_path,
-                    scopes=['https://www.googleapis.com/auth/spreadsheets.readonly']
-                )
-            print("[SHEETS] Credentials loaded, building service...")
+                print("[SHEETS] No cache, downloading...")
+                values = None
 
-            service = build('sheets', 'v4', credentials=credentials)
-            sheet = service.spreadsheets()
-            print("[SHEETS] Service built, fetching data...")
+            # Download if no cache
+            if values is None:
+                if creds_json:
+                    print("[SHEETS] Loading credentials from JSON...")
+                    creds_info = json.loads(creds_json)
+                    credentials = service_account.Credentials.from_service_account_info(
+                        creds_info,
+                        scopes=['https://www.googleapis.com/auth/drive.readonly']
+                    )
+                else:
+                    print("[SHEETS] Loading credentials from file...")
+                    credentials = service_account.Credentials.from_service_account_file(
+                        creds_path,
+                        scopes=['https://www.googleapis.com/auth/drive.readonly']
+                    )
+                print("[SHEETS] Credentials loaded, building Drive service...")
 
-            # Fetch data from ROOSTER tab (columns D through I)
-            print(f"[SHEETS] Sheet ID: {_GOOGLE_SHEETS_ID}, Range: {_GOOGLE_SHEETS_RANGE}")
-            response = sheet.values().get(
-                spreadsheetId=_GOOGLE_SHEETS_ID,
-                range=_GOOGLE_SHEETS_RANGE
-            ).execute()
-            print("[SHEETS] Data fetched successfully")
+                # Use Drive API to download the Excel file
+                drive_service = build('drive', 'v3', credentials=credentials)
+                print(f"[SHEETS] Downloading Excel file: {_GOOGLE_FILE_ID}")
 
-            values = response.get('values', [])
+                request = drive_service.files().get_media(fileId=_GOOGLE_FILE_ID)
+                file_content = request.execute()
+                print(f"[SHEETS] Downloaded {len(file_content)} bytes")
+
+                # Parse Excel with pandas
+                print("[SHEETS] Parsing Excel file...")
+                df = pd.read_excel(io.BytesIO(file_content), sheet_name=_GOOGLE_SHEET_NAME, header=None)
+                print(f"[SHEETS] Parsed {len(df)} rows, {len(df.columns)} columns")
+
+                # Convert dataframe to list of lists (like values from Sheets API)
+                # We're reading columns D:I which are indices 3-8 in 0-based
+                values = df.iloc[:, 3:9].values.tolist()  # D=3, E=4, F=5, G=6, H=7, I=8
+
+                # Store in cache
+                _google_excel_cache = values
+                _google_excel_cache_time = now
+                print("[SHEETS] Data cached for 1 hour")
             print(f"[SHEETS DEBUG] Total rows fetched: {len(values)}")
             if len(values) > 0:
                 print(f"[SHEETS DEBUG] First row (header?): {values[0]}")
