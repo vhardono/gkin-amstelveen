@@ -106,9 +106,10 @@ def _load_knd_cache():
             entries.append({'title': title, 'verse': verse,
                             'day': day, 'month': month_num, 'year': year})
         _knd_cache = entries
-    except Exception:
-        _knd_cache = []
-    return _knd_cache
+    except Exception as e:
+        # Don't cache on error - allow retry on next request
+        print(f'[KND] Error loading from bijbelbasics.nl: {e}')
+        return []
 
 
 def _get_takenrooster():
