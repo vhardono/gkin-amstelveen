@@ -110,6 +110,7 @@ def _load_knd_cache():
         # Don't cache on error - allow retry on next request
         print(f'[KND] Error loading from bijbelbasics.nl: {e}')
         return []
+    return _knd_cache
 
 
 def _get_takenrooster():
