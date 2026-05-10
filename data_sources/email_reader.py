@@ -669,6 +669,11 @@ class OutlookCollecteReader:
             ).execute()
 
             values = response.get('values', [])
+            print(f"[SHEETS DEBUG] Total rows fetched: {len(values)}")
+            if len(values) > 0:
+                print(f"[SHEETS DEBUG] First row (header?): {values[0]}")
+            if len(values) > 1:
+                print(f"[SHEETS DEBUG] Second row: {values[1]}")
             if not values or len(values) < 2:
                 result['not_found'].append('Google Sheets leeg of geen data')
                 return result
@@ -676,15 +681,19 @@ class OutlookCollecteReader:
             # Find matching date row
             # ROOSTER tab: D=Date, F=1e lied, G=2e lied, H=3e lied, I=6e lied
             # In D:I range: index 0=Date(D), 1=?, 2=1e(F), 3=2e(G), 4=3e(H), 5=6e(I)
-            date_str_iso = target_date.strftime('%Y-%m-%d')  # 2026-05-24
-            date_str_short = f"{target_date.day}-{target_date.month}-{target_date.year}"  # 24-5-2026
-            date_str_dutch = f"{target_date.day} {self._NL_MONTHS[target_date.month]} {target_date.year}"  # 24 mei 2026
-            date_str_dutch_short = f"{target_date.day} {self._NL_MONTHS[target_date.month]}"  # 24 mei
+            date_str_iso = target_date.strftime('%Y-%m-%d')  # 2026-06-07
+            date_str_short = f"{target_date.day}-{target_date.month}-{target_date.year}"  # 7-6-2026
+            date_str_dutch = f"{target_date.day} {self._NL_MONTHS[target_date.month]} {target_date.year}"  # 7 juni 2026
+            date_str_dutch_short = f"{target_date.day} {self._NL_MONTHS[target_date.month]}"  # 7 juni
 
+            print(f"[SHEETS DEBUG] Target date object: {target_date}, month={target_date.month}")
+            print(f"[SHEETS DEBUG] Looking for date: '{date_str_iso}' or '{date_str_short}' or '{date_str_dutch}' or '{date_str_dutch_short}'")
             for row in values[1:]:  # Skip header
                 if not row or len(row) < 1:
                     continue
                 row_date = str(row[0]).strip() if row[0] else ''
+                if row_date and ('juni' in row_date.lower() or 'juli' in row_date.lower() or '2026' in row_date):
+                    print(f"[SHEETS DEBUG] Checking row date: '{row_date}' vs target '{date_str_iso}' / '{date_str_short}' / '{date_str_dutch}'")
 
                 # Match various date formats
                 if (row_date == date_str_iso or
@@ -694,6 +703,7 @@ class OutlookCollecteReader:
                     (target_date.day < 10 and row_date == f"0{target_date.day}-{target_date.month}-{target_date.year}") or
                     (target_date.month < 10 and row_date == f"{target_date.day}-0{target_date.month}-{target_date.year}") or
                     (target_date.day < 10 and target_date.month < 10 and row_date == f"0{target_date.day}-0{target_date.month}-{target_date.year}")):
+                    print(f"[SHEETS DEBUG] MATCH FOUND! Row: {row}")
 
                     # Found matching date - extract 4 songs from columns F, G, H, I
                     # Map to positions: 1e=idx0, 2e=idx1, 3e=idx2, 6e=idx5 (0-based)
