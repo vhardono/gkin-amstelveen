@@ -31,7 +31,7 @@ UPLOAD_DIR        = os.path.join(os.path.dirname(__file__), '..', 'output', '_up
 
 # Google Sheets fallback for liederen
 # Excel file in Google Drive: https://docs.google.com/spreadsheets/d/17Noo_ivoU3JubLHseIvPUm4VSQYGt2FK
-# Uses ROOSTER tab: D=Date, F=1e lied, G=2e lied, H=3e lied, I=6e lied (4 songs expected)
+# Uses ROOSTER tab: A=Date, F=1e lied, G=2e lied, H=3e lied, I=6e lied (4 songs expected)
 _GOOGLE_FILE_ID = '17Noo_ivoU3JubLHseIvPUm4VSQYGt2FK'
 _GOOGLE_SHEET_NAME = 'ROOSTER'  # Sheet name in Excel file
 
@@ -708,48 +708,36 @@ class OutlookCollecteReader:
                 print(f"[SHEETS] Parsed {len(df)} rows, {len(df.columns)} columns")
 
                 # Convert dataframe to list of lists (like values from Sheets API)
-                # We're reading columns D:I which are indices 3-8 in 0-based
-                values = df.iloc[:, 3:9].values.tolist()  # D=3, E=4, F=5, G=6, H=7, I=8
+                # We're reading columns A through I which are indices 0-8 in 0-based
+                values = df.iloc[:, 0:9].values.tolist()  # A=0, B=1, C=2, D=3, E=4, F=5, G=6, H=7, I=8
+                print(f"[SHEETS] Loaded {len(values)} rows from Excel")
+                if not values or len(values) < 2:
+                    result['not_found'].append('Google Sheets leeg of geen data')
+                    return result
 
                 # Store in cache
                 _google_excel_cache = values
                 _google_excel_cache_time = now
                 print("[SHEETS] Data cached for 1 hour")
-            print(f"[SHEETS DEBUG] Total rows fetched: {len(values)}")
-            if len(values) > 0:
-                print(f"[SHEETS DEBUG] First row (header?): {values[0]}")
-            if len(values) > 1:
-                print(f"[SHEETS DEBUG] Second row: {values[1]}")
-            if not values or len(values) < 2:
-                result['not_found'].append('Google Sheets leeg of geen data')
-                return result
+            print(f"[SHEETS] Using {len(values)} rows from Excel cache")
 
             # Find matching date row
-            # ROOSTER tab: D=Date, F=1e lied, G=2e lied, H=3e lied, I=6e lied
-            # In D:I range: index 0=Date(D), 1=?, 2=1e(F), 3=2e(G), 4=3e(H), 5=6e(I)
+            # ROOSTER tab: A=Date, F=1e lied, G=2e lied, H=3e lied, I=6e lied
+            # In A:I range: index 0=Date(A), 5=1e(F), 6=2e(G), 7=3e(H), 8=6e(I)
             date_str_iso = target_date.strftime('%Y-%m-%d')  # 2026-06-07
             date_str_short = f"{target_date.day}-{target_date.month}-{target_date.year}"  # 7-6-2026
             date_str_dutch = f"{target_date.day} {self._NL_MONTHS[target_date.month]} {target_date.year}"  # 7 juni 2026
             date_str_dutch_short = f"{target_date.day} {self._NL_MONTHS[target_date.month]}"  # 7 juni
 
-            print(f"[SHEETS DEBUG] Target date object: {target_date}, month={target_date.month}")
-            print(f"[SHEETS DEBUG] Looking for date: '{date_str_iso}' or '{date_str_short}' or '{date_str_dutch}' or '{date_str_dutch_short}'")
             for idx, row in enumerate(values[1:], start=2):  # Skip header, start counting from row 2
                 if not row or len(row) < 1:
                     continue
                 row_date_raw = row[0]
                 # Handle pandas Timestamp/datetime or string
                 if hasattr(row_date_raw, 'strftime'):
-                    # It's a datetime/Timestamp object from pandas
                     row_date = row_date_raw.strftime('%Y-%m-%d')
                 else:
                     row_date = str(row_date_raw).strip() if row_date_raw else ''
-
-                # Debug: print all June rows to see what's in the data
-                if row_date and ('-06-' in str(row_date) or (hasattr(row_date_raw, 'month') and row_date_raw.month == 6)):
-                    print(f"[SHEETS DEBUG] JUNE ROW {idx}: date='{row_date}', data={row}")
-                if row_date and ('juni' in str(row_date).lower() or 'juli' in str(row_date).lower() or '2026' in str(row_date)):
-                    print(f"[SHEETS DEBUG] Checking row date: '{row_date}' (raw: {row_date_raw}) vs target '{date_str_iso}'")
 
                 # Match various date formats
                 if (row_date == date_str_iso or
@@ -759,33 +747,29 @@ class OutlookCollecteReader:
                     (target_date.day < 10 and row_date == f"0{target_date.day}-{target_date.month}-{target_date.year}") or
                     (target_date.month < 10 and row_date == f"{target_date.day}-0{target_date.month}-{target_date.year}") or
                     (target_date.day < 10 and target_date.month < 10 and row_date == f"0{target_date.day}-0{target_date.month}-{target_date.year}")):
-                    print(f"[SHEETS DEBUG] MATCH FOUND at Excel row {idx}! Row: {row}")
 
                     # Found matching date - extract 4 songs from columns F, G, H, I
                     # Map to positions: 1e=idx0, 2e=idx1, 3e=idx2, 6e=idx5 (0-based)
                     songs = [''] * 7
-                    # Column F (index 2 in D:I range) = 1e lied -> songs[0]
-                    # Column G (index 3 in D:I range) = 2e lied -> songs[1]
-                    # Column H (index 4 in D:I range) = 3e lied -> songs[2]
-                    # Column I (index 5 in D:I range) = 6e lied -> songs[5]
+                    # Column F (index 5 in A:I range) = 1e lied -> songs[0]
+                    # Column G (index 6 in A:I range) = 2e lied -> songs[1]
+                    # Column H (index 7 in A:I range) = 3e lied -> songs[2]
+                    # Column I (index 8 in A:I range) = 6e lied -> songs[5]
                     song_mapping = [
-                        (2, 0),  # F -> 1e lied (index 0)
-                        (3, 1),  # G -> 2e lied (index 1)
-                        (4, 2),  # H -> 3e lied (index 2)
-                        (5, 5),  # I -> 6e lied (index 5)
+                        (5, 0),  # F -> 1e lied (index 0)
+                        (6, 1),  # G -> 2e lied (index 1)
+                        (7, 2),  # H -> 3e lied (index 2)
+                        (8, 5),  # I -> 6e lied (index 5)
                     ]
 
                     valid_songs_count = 0
-                    print(f"[SHEETS DEBUG] Extracting songs from Excel row {idx} with {len(row)} columns")
                     for col_idx, song_idx in song_mapping:
                         if col_idx < len(row):
                             val = str(row[col_idx]).strip()
-                            print(f"[SHEETS DEBUG] Column {col_idx} -> song[{song_idx}]: '{val[:50]}...'" if len(val) > 50 else f"[SHEETS DEBUG] Column {col_idx} -> song[{song_idx}]: '{val}'")
                             # Treat 'pending' as empty
                             if val and not re.match(r'pending', val, re.IGNORECASE):
                                 songs[song_idx] = val
                                 valid_songs_count += 1
-                    print(f"[SHEETS DEBUG] Total valid songs: {valid_songs_count}")
 
                     # Check if we have at least 4 songs
                     if valid_songs_count < 4:
@@ -799,14 +783,6 @@ class OutlookCollecteReader:
                     result['source_note'] = 'Liederen e-mail niet gevonden, gebruik Google Sheets'
                     return result
 
-            # Debug: print summary of June rows found
-            print(f"[SHEETS DEBUG] SUMMARY: Searched for {date_str_iso}, no match found")
-            print(f"[SHEETS DEBUG] All June dates in sheet:")
-            for idx2, row2 in enumerate(values[1:], start=2):
-                if row2 and len(row2) > 0:
-                    d = row2[0]
-                    if hasattr(d, 'month') and d.month == 6:
-                        print(f"  Row {idx2}: {d.strftime('%Y-%m-%d')}")
             result['not_found'].append(f'Datum {date_str_iso} niet gevonden in Google Sheets')
             return result
 
