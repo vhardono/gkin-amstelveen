@@ -67,8 +67,10 @@
                 </div>
                 <!-- Unresolved names warning -->
                 <div id="namesWarning" class="hidden mt-3 pt-3 border-t border-green-200">
-                    <p class="text-xs font-medium text-amber-700 mb-1">Namen niet gevonden in People tab:</p>
-                    <ul id="namesWarningList" class="text-xs text-amber-600 space-y-0.5 list-disc list-inside"></ul>
+                    <div class="text-xs rounded-lg p-2 border bg-amber-50 text-amber-700 border-amber-200">
+                        <p class="font-medium mb-1">Namen niet gevonden in People tab:</p>
+                        <ul id="namesWarningList" class="space-y-0.5 list-disc list-inside"></ul>
+                    </div>
                 </div>
             </div>
         </div>
@@ -93,9 +95,9 @@
                 <p class="text-xs text-gray-400 mt-1">OvD, 1eO en Beamer worden automatisch toegevoegd op basis van datum.</p>
             </div>
             <!-- Missing email warning -->
-            <div id="emailWarning" class="hidden mt-3 bg-amber-50 border border-amber-300 rounded-lg p-3">
-                <p class="text-sm font-medium text-amber-800 mb-1">Ontbrekende e-mailadressen:</p>
-                <ul id="emailWarningList" class="text-sm text-amber-700 space-y-0.5 list-disc list-inside"></ul>
+            <div id="emailWarning" class="hidden mt-3 text-xs rounded-lg p-2 border bg-amber-50 text-amber-700 border-amber-200">
+                <p class="font-medium mb-1">Ontbrekende e-mailadressen:</p>
+                <ul id="emailWarningList" class="space-y-0.5 list-disc list-inside"></ul>
             </div>
         </div>
 
@@ -109,7 +111,7 @@
             </h2>
             <div class="flex items-center justify-between mb-3">
                 <p class="text-xs text-gray-400">Automatisch ingevuld vanuit e-mail indien beschikbaar.</p>
-                <div id="liedFetchWarn" class="hidden text-xs text-amber-600 font-medium"></div>
+                <div id="liedFetchWarn" class="hidden text-xs rounded-lg p-2 border"></div>
             </div>
             <div class="space-y-2">
                 <div class="flex items-center gap-3">
@@ -159,7 +161,7 @@
             <div>
                 <div class="flex items-center justify-between mb-1">
                     <label class="block text-sm font-medium text-gray-700">Inhoud</label>
-                    <div id="kndFetchWarn" class="hidden text-xs text-amber-600 font-medium"></div>
+                    <div id="kndFetchWarn" class="hidden text-xs rounded-lg p-2 border"></div>
                 </div>
                 <textarea id="emailBody" rows="22"
                           class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gkin-green font-mono resize-y"></textarea>
@@ -495,7 +497,8 @@ Namens de kerkenraad GKIN regio Amstelveen,`;
                     kndThema = knd.title;
                     kndWarn.classList.add('hidden');
                 } else {
-                    kndWarn.textContent = '⚠ KND thema niet geladen (bijbelbasics.nl)';
+                    kndWarn.textContent = 'KND thema niet geladen (bijbelbasics.nl)';
+                    kndWarn.className = 'hidden text-xs rounded-lg p-2 border bg-amber-50 text-amber-700 border-amber-200';
                     kndWarn.classList.remove('hidden');
                 }
                 if (langResp) {
@@ -523,11 +526,13 @@ Namens de kerkenraad GKIN regio Amstelveen,`;
                 if (sourceNote) {
                     // Show info/warning about source (email not found, using sheets)
                     const isWarning = sourceNote.includes('niet compleet') || sourceNote.includes('Geen liederen');
-                    liedWarn.textContent = (isWarning ? '⚠ ' : 'ℹ ') + sourceNote;
-                    liedWarn.classList.remove('hidden');
+                    liedWarn.textContent = sourceNote;
+                    liedWarn.className = isWarning
+                        ? 'text-xs rounded-lg p-2 border bg-amber-50 text-amber-700 border-amber-200'
+                        : 'text-xs rounded-lg p-2 border bg-green-50 text-green-700 border-green-200';
                 } else if (notFound && !anyFilled) {
-                    liedWarn.textContent = '⚠ ' + liedData.not_found[0];
-                    liedWarn.classList.remove('hidden');
+                    liedWarn.textContent = liedData.not_found[0];
+                    liedWarn.className = 'text-xs rounded-lg p-2 border bg-amber-50 text-amber-700 border-amber-200';
                 } else {
                     liedWarn.classList.add('hidden');
                 }
