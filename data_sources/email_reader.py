@@ -765,7 +765,12 @@ class OutlookCollecteReader:
                     valid_songs_count = 0
                     for col_idx, song_idx in song_mapping:
                         if col_idx < len(row):
-                            val = str(row[col_idx]).strip()
+                            val = row[col_idx]
+                            # Handle pandas NaN/null values
+                            if pd.isna(val):
+                                val = ''
+                            else:
+                                val = str(val).strip()
                             # Treat 'pending' as empty
                             if val and not re.match(r'pending', val, re.IGNORECASE):
                                 songs[song_idx] = val
