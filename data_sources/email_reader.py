@@ -655,25 +655,31 @@ class OutlookCollecteReader:
 
         try:
             if creds_json:
+                print("[SHEETS] Loading credentials from JSON...")
                 creds_info = json.loads(creds_json)
                 credentials = service_account.Credentials.from_service_account_info(
                     creds_info,
                     scopes=['https://www.googleapis.com/auth/spreadsheets.readonly']
                 )
             else:
+                print("[SHEETS] Loading credentials from file...")
                 credentials = service_account.Credentials.from_service_account_file(
                     creds_path,
                     scopes=['https://www.googleapis.com/auth/spreadsheets.readonly']
                 )
+            print("[SHEETS] Credentials loaded, building service...")
 
             service = build('sheets', 'v4', credentials=credentials)
             sheet = service.spreadsheets()
+            print("[SHEETS] Service built, fetching data...")
 
             # Fetch data from ROOSTER tab (columns D through I)
+            print(f"[SHEETS] Sheet ID: {_GOOGLE_SHEETS_ID}, Range: {_GOOGLE_SHEETS_RANGE}")
             response = sheet.values().get(
                 spreadsheetId=_GOOGLE_SHEETS_ID,
                 range=_GOOGLE_SHEETS_RANGE
             ).execute()
+            print("[SHEETS] Data fetched successfully")
 
             values = response.get('values', [])
             print(f"[SHEETS DEBUG] Total rows fetched: {len(values)}")
@@ -751,6 +757,9 @@ class OutlookCollecteReader:
             return result
 
         except Exception as e:
+            import traceback
+            print(f"[SHEETS] ERROR: {e}")
+            print(f"[SHEETS] Traceback: {traceback.format_exc()}")
             result['not_found'].append(f'Fout bij lezen Google Sheets: {e}')
             return result
 
