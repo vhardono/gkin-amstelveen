@@ -29,6 +29,12 @@ _GRAPH_BASE       = 'https://graph.microsoft.com/v1.0'
 TOKEN_CACHE_PATH  = os.path.join(os.path.dirname(__file__), '..', '.msal_token_cache.json')
 UPLOAD_DIR        = os.path.join(os.path.dirname(__file__), '..', 'output', '_uploads')
 
+# Google Sheets fallback for liederen
+# Sheet: https://docs.google.com/spreadsheets/d/17Noo_ivoU3JubLHseIvPUm4VSQYGt2FK
+# Uses ROOSTER tab: D=Date, F=1e lied, G=2e lied, H=3e lied, I=6e lied (4 songs total)
+_GOOGLE_SHEETS_ID = '17Noo_ivoU3JubLHseIvPUm4VSQYGt2FK'
+_GOOGLE_SHEETS_RANGE = 'ROOSTER!D:I'  # Columns D through I
+
 # In-memory store for device flow (avoids filesystem writes on Railway)
 _device_flow_store: Dict[str, Any] = {}
 
@@ -528,8 +534,39 @@ class OutlookCollecteReader:
                 break
 
         if not match_msg:
-            result['not_found'].append('Liederen e-mail niet gevonden voor deze datum')
-            return result
+            # Try Google Sheets fallback (2nd layer)
+            sheets_result = self._fetch_liederen_from_sheets(target_date)
+
+            # Check if Sheets has at least 4 songs
+            sheets_songs = sheets_result.get('songs', [])
+            valid_sheets_count = sum(1 for s in sheets_songs if s and not re.match(r'pending', s, re.IGNORECASE))
+
+            if valid_sheets_count >= 4:
+                # Sheets has sufficient data - use it with alert
+                return {
+                    'songs': sheets_songs,
+                    'source_subject': '',
+                    'source_note': 'Liederen e-mail niet gevonden, gebruik Google Sheets',
+                    'not_found': sheets_result.get('not_found', []),
+                }
+            elif valid_sheets_count > 0:
+                # Sheets has some data but incomplete
+                return {
+                    'songs': sheets_songs,
+                    'source_subject': '',
+                    'source_note': 'Liederen e-mail niet gevonden, Google Sheets niet compleet',
+                    'not_found': sheets_result.get('not_found', []) or ['Google Sheets heeft niet alle 4 verwachte liederen'],
+                }
+            else:
+                # Neither email nor sheets has data
+                all_errors = ['Geen liederen gevonden in e-mail en Google Sheets']
+                all_errors.extend(sheets_result.get('not_found', []))
+                return {
+                    'songs': ['', '', '', '', '', '', ''],
+                    'source_subject': '',
+                    'source_note': '',
+                    'not_found': all_errors,
+                }
 
         result['source_subject'] = match_msg.get('subject', '')
 
@@ -579,6 +616,130 @@ class OutlookCollecteReader:
 
         result['songs'] = songs
         return result
+
+    def _fetch_liederen_from_sheets(self, target_date: datetime) -> Dict[str, Any]:
+        """Fallback: fetch liederen from Google Sheets (ROOSTER tab) when email not found.
+        Sheet: https://docs.google.com/spreadsheets/d/17Noo_ivoU3JubLHseIvPUm4VSQYGt2FK
+        ROOSTER tab columns: D=Date, F=1e lied, G=2e lied, H=3e lied, I=6e lied (4 songs expected)
+        Returns dict with songs (list of 7), source_subject, source_note, not_found.
+        source_note is for frontend display about the source used.
+        """
+        result: Dict[str, Any] = {
+            'songs': ['', '', '', '', '', '', ''],
+            'source_subject': '',
+            'source_note': '',  # For alert: 'Email not found, using Google Sheets'
+            'not_found': [],
+        }
+
+        try:
+            from google.oauth2 import service_account
+            from googleapiclient.discovery import build
+        except ImportError:
+            result['not_found'].append('Google Sheets API niet beschikbaar')
+            return result
+
+        # Check for service account credentials
+        creds_path = os.path.join(os.path.dirname(__file__), '..', '.google_service_account.json')
+        creds_json = os.environ.get('GOOGLE_SERVICE_ACCOUNT_JSON', '')
+
+        if not os.path.exists(creds_path) and not creds_json:
+            result['not_found'].append('Google Sheets credentials niet geconfigureerd')
+            return result
+
+        try:
+            if creds_json:
+                creds_info = json.loads(creds_json)
+                credentials = service_account.Credentials.from_service_account_info(
+                    creds_info,
+                    scopes=['https://www.googleapis.com/auth/spreadsheets.readonly']
+                )
+            else:
+                credentials = service_account.Credentials.from_service_account_file(
+                    creds_path,
+                    scopes=['https://www.googleapis.com/auth/spreadsheets.readonly']
+                )
+
+            service = build('sheets', 'v4', credentials=credentials)
+            sheet = service.spreadsheets()
+
+            # Fetch data from ROOSTER tab (columns D through I)
+            response = sheet.values().get(
+                spreadsheetId=_GOOGLE_SHEETS_ID,
+                range=_GOOGLE_SHEETS_RANGE
+            ).execute()
+
+            values = response.get('values', [])
+            if not values or len(values) < 2:
+                result['not_found'].append('Google Sheets leeg of geen data')
+                return result
+
+            # Find matching date row
+            # ROOSTER tab: D=Date, F=1e lied, G=2e lied, H=3e lied, I=6e lied
+            # In D:I range: index 0=Date(D), 1=?, 2=1e(F), 3=2e(G), 4=3e(H), 5=6e(I)
+            date_str_iso = target_date.strftime('%Y-%m-%d')  # 2026-05-24
+            date_str_short = f"{target_date.day}-{target_date.month}-{target_date.year}"  # 24-5-2026
+            date_str_dutch = f"{target_date.day} {self._NL_MONTHS[target_date.month]} {target_date.year}"  # 24 mei 2026
+            date_str_dutch_short = f"{target_date.day} {self._NL_MONTHS[target_date.month]}"  # 24 mei
+
+            for row in values[1:]:  # Skip header
+                if not row or len(row) < 1:
+                    continue
+                row_date = str(row[0]).strip() if row[0] else ''
+
+                # Match various date formats
+                if (row_date == date_str_iso or
+                    row_date == date_str_short or
+                    row_date.lower() == date_str_dutch.lower() or
+                    row_date.lower() == date_str_dutch_short.lower() or
+                    (target_date.day < 10 and row_date == f"0{target_date.day}-{target_date.month}-{target_date.year}") or
+                    (target_date.month < 10 and row_date == f"{target_date.day}-0{target_date.month}-{target_date.year}") or
+                    (target_date.day < 10 and target_date.month < 10 and row_date == f"0{target_date.day}-0{target_date.month}-{target_date.year}")):
+
+                    # Found matching date - extract 4 songs from columns F, G, H, I
+                    # Map to positions: 1e=idx0, 2e=idx1, 3e=idx2, 6e=idx5 (0-based)
+                    songs = [''] * 7
+                    # Column F (index 2 in D:I range) = 1e lied -> songs[0]
+                    # Column G (index 3 in D:I range) = 2e lied -> songs[1]
+                    # Column H (index 4 in D:I range) = 3e lied -> songs[2]
+                    # Column I (index 5 in D:I range) = 6e lied -> songs[5]
+                    song_mapping = [
+                        (2, 0),  # F -> 1e lied (index 0)
+                        (3, 1),  # G -> 2e lied (index 1)
+                        (4, 2),  # H -> 3e lied (index 2)
+                        (5, 5),  # I -> 6e lied (index 5)
+                    ]
+
+                    valid_songs_count = 0
+                    for col_idx, song_idx in song_mapping:
+                        if col_idx < len(row):
+                            val = str(row[col_idx]).strip()
+                            # Treat 'pending' as empty
+                            if val and not re.match(r'pending', val, re.IGNORECASE):
+                                songs[song_idx] = val
+                                valid_songs_count += 1
+
+                    # Check if we have at least 4 songs
+                    if valid_songs_count < 4:
+                        result['not_found'].append(f'Google Sheets heeft maar {valid_songs_count} van 4 verwachte liederen (1e, 2e, 3e, 6e)')
+                        result['source_note'] = 'Liederen e-mail niet gevonden, Google Sheets niet compleet'
+                        result['songs'] = songs
+                        return result
+
+                    # Success - 4 songs found
+                    result['songs'] = songs
+                    result['source_note'] = 'Liederen e-mail niet gevonden, gebruik Google Sheets'
+                    return result
+
+            result['not_found'].append(f'Datum {date_str_iso} niet gevonden in Google Sheets')
+            return result
+
+        except Exception as e:
+            result['not_found'].append(f'Fout bij lezen Google Sheets: {e}')
+            return result
+
+    # NL months helper for sheets fallback
+    _NL_MONTHS = ['','januari','februari','maart','april','mei','juni',
+                  'juli','augustus','september','oktober','november','december']
 
     def fetch_overdenking(self, target_date: datetime = None, since_days: int = 14) -> Dict[str, Any]:
         """Fetch overdenking from scribagkin@gmail.com, subject contains 'Overdenking'.
