@@ -636,17 +636,22 @@ class OutlookCollecteReader:
         try:
             from google.oauth2 import service_account
             from googleapiclient.discovery import build
-        except ImportError:
+            print("[SHEETS] Google imports successful")
+        except ImportError as e:
+            print(f"[SHEETS] Import error: {e}")
             result['not_found'].append('Google Sheets API niet beschikbaar')
             return result
 
         # Check for service account credentials
         creds_path = os.path.join(os.path.dirname(__file__), '..', '.google_service_account.json')
         creds_json = os.environ.get('GOOGLE_SERVICE_ACCOUNT_JSON', '')
+        print(f"[SHEETS] creds_path exists: {os.path.exists(creds_path)}, creds_json length: {len(creds_json) if creds_json else 0}")
 
         if not os.path.exists(creds_path) and not creds_json:
+            print("[SHEETS] No credentials found!")
             result['not_found'].append('Google Sheets credentials niet geconfigureerd')
             return result
+        print("[SHEETS] Credentials found, proceeding...")
 
         try:
             if creds_json:
