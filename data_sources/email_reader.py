@@ -734,7 +734,7 @@ class OutlookCollecteReader:
 
             print(f"[SHEETS DEBUG] Target date object: {target_date}, month={target_date.month}")
             print(f"[SHEETS DEBUG] Looking for date: '{date_str_iso}' or '{date_str_short}' or '{date_str_dutch}' or '{date_str_dutch_short}'")
-            for row in values[1:]:  # Skip header
+            for idx, row in enumerate(values[1:], start=2):  # Skip header, start counting from row 2
                 if not row or len(row) < 1:
                     continue
                 row_date_raw = row[0]
@@ -756,7 +756,7 @@ class OutlookCollecteReader:
                     (target_date.day < 10 and row_date == f"0{target_date.day}-{target_date.month}-{target_date.year}") or
                     (target_date.month < 10 and row_date == f"{target_date.day}-0{target_date.month}-{target_date.year}") or
                     (target_date.day < 10 and target_date.month < 10 and row_date == f"0{target_date.day}-0{target_date.month}-{target_date.year}")):
-                    print(f"[SHEETS DEBUG] MATCH FOUND! Row: {row}")
+                    print(f"[SHEETS DEBUG] MATCH FOUND at Excel row {idx}! Row: {row}")
 
                     # Found matching date - extract 4 songs from columns F, G, H, I
                     # Map to positions: 1e=idx0, 2e=idx1, 3e=idx2, 6e=idx5 (0-based)
@@ -773,7 +773,7 @@ class OutlookCollecteReader:
                     ]
 
                     valid_songs_count = 0
-                    print(f"[SHEETS DEBUG] Extracting songs from row with {len(row)} columns")
+                    print(f"[SHEETS DEBUG] Extracting songs from Excel row {idx} with {len(row)} columns")
                     for col_idx, song_idx in song_mapping:
                         if col_idx < len(row):
                             val = str(row[col_idx]).strip()
