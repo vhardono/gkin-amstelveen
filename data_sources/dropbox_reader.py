@@ -247,6 +247,17 @@ class DropboxExcelReader:
                     resolved.append(r or n)
                 return ', '.join(resolved)
 
+            def _resolve_name_list(raw_value):
+                """Resolve a comma-separated list of names like _resolve_list but returns individual unresolved tracking."""
+                if not raw_value or raw_value == '-':
+                    return ''
+                names = [n.strip() for n in raw_value.split(',') if n.strip() and n.strip() != '-']
+                resolved = []
+                for n in names:
+                    r = self._resolve_name(n)
+                    resolved.append(r or n)
+                return ', '.join(resolved)
+
             # Track unresolved names for this entry
             self._unresolved_names = []
 
@@ -255,10 +266,8 @@ class DropboxExcelReader:
             multimedia  = _resolve_list('MULTIMEDIA', 12)
             knd_raw     = _cell('KND', 7)
             tieners_raw = _cell('TIENERS', 8)
-            print(f"[DEBUG] KND raw: '{knd_raw}', People keys: {list(self._people_map.keys())[:10]}...")
-            knd         = self._resolve_name(knd_raw) or knd_raw if knd_raw and knd_raw != '-' else ''
-            tieners     = self._resolve_name(tieners_raw) or tieners_raw if tieners_raw and tieners_raw != '-' else ''
-            print(f"[DEBUG] KND resolved: '{knd}', unresolved list: {self._unresolved_names}")
+            knd         = _resolve_name_list(knd_raw) if knd_raw and knd_raw != '-' else ''
+            tieners     = _resolve_name_list(tieners_raw) if tieners_raw and tieners_raw != '-' else ''
 
             # Resolve OVD/1EO/Beamer names (tracks unresolved)
             ovd_full    = self._resolve_name(ovd_short) or ovd_short
