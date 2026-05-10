@@ -218,6 +218,7 @@ def preekbevestiging_index():
             'multimedia':   entry.get('multimedia', ''),
             'knd':          entry.get('knd', ''),
             'tieners':      entry.get('tieners', ''),
+            'unresolved_names': entry.get('unresolved_names', []),
         })
     return render_template('preekbevestiging.html', dates=dates)
 
