@@ -534,6 +534,7 @@ class OutlookCollecteReader:
                 break
 
         if not match_msg:
+            print(f"[EMAIL] No email found for {target_date}, trying Google Sheets fallback...")
             # Try Google Sheets fallback (2nd layer)
             sheets_result = self._fetch_liederen_from_sheets(target_date)
 
@@ -624,6 +625,7 @@ class OutlookCollecteReader:
         Returns dict with songs (list of 7), source_subject, source_note, not_found.
         source_note is for frontend display about the source used.
         """
+        print(f"[SHEETS] Entering _fetch_liederen_from_sheets for date: {target_date}")
         result: Dict[str, Any] = {
             'songs': ['', '', '', '', '', '', ''],
             'source_subject': '',
