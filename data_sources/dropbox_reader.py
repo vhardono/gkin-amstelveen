@@ -131,7 +131,7 @@ class DropboxExcelReader:
                 self._predikant_email_map[full.lower()] = email
             if not short:
                 continue
-            self._people_map[short] = {
+            self._people_map[short.lower()] = {
                 'first_name': _s('First Name'),
                 'last_name':  _s('Last Name'),
                 'title':      _s('Title'),
@@ -140,13 +140,14 @@ class DropboxExcelReader:
 
     def _resolve_name(self, short_name: str) -> str:
         """Convert a short name to 'title First Last' using People tab.
-        Tracks unresolved names in _unresolved_names list."""
+        Tracks unresolved names in _unresolved_names list.
+        Lookup is case-insensitive."""
         short_name = short_name.strip()
         if not short_name or not self._people_map:
             if short_name and hasattr(self, '_unresolved_names'):
                 self._unresolved_names.append(short_name)
             return short_name
-        person = self._people_map.get(short_name)
+        person = self._people_map.get(short_name.lower())
         if person:
             parts = [person['title'], person['first_name'], person['last_name']]
             return ' '.join(p for p in parts if p and p.lower() != 'nan')
@@ -156,11 +157,12 @@ class DropboxExcelReader:
         return short_name
 
     def _resolve_email(self, short_name: str) -> str:
-        """Return email for a short name from People tab."""
+        """Return email for a short name from People tab.
+        Lookup is case-insensitive."""
         short_name = short_name.strip()
         if not short_name or not self._people_map:
             return ''
-        person = self._people_map.get(short_name)
+        person = self._people_map.get(short_name.lower())
         return person.get('email', '') if person else ''
 
     def _parse_current_sheet(self, df: pd.DataFrame) -> List[Dict[str, Any]]:
