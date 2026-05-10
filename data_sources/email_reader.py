@@ -737,9 +737,16 @@ class OutlookCollecteReader:
             for row in values[1:]:  # Skip header
                 if not row or len(row) < 1:
                     continue
-                row_date = str(row[0]).strip() if row[0] else ''
-                if row_date and ('juni' in row_date.lower() or 'juli' in row_date.lower() or '2026' in row_date):
-                    print(f"[SHEETS DEBUG] Checking row date: '{row_date}' vs target '{date_str_iso}' / '{date_str_short}' / '{date_str_dutch}'")
+                row_date_raw = row[0]
+                # Handle pandas Timestamp/datetime or string
+                if hasattr(row_date_raw, 'strftime'):
+                    # It's a datetime/Timestamp object from pandas
+                    row_date = row_date_raw.strftime('%Y-%m-%d')
+                else:
+                    row_date = str(row_date_raw).strip() if row_date_raw else ''
+
+                if row_date and ('juni' in str(row_date).lower() or 'juli' in str(row_date).lower() or '2026' in str(row_date)):
+                    print(f"[SHEETS DEBUG] Checking row date: '{row_date}' (raw: {row_date_raw}) vs target '{date_str_iso}'")
 
                 # Match various date formats
                 if (row_date == date_str_iso or
