@@ -773,13 +773,16 @@ class OutlookCollecteReader:
                     ]
 
                     valid_songs_count = 0
+                    print(f"[SHEETS DEBUG] Extracting songs from row with {len(row)} columns")
                     for col_idx, song_idx in song_mapping:
                         if col_idx < len(row):
                             val = str(row[col_idx]).strip()
+                            print(f"[SHEETS DEBUG] Column {col_idx} -> song[{song_idx}]: '{val[:50]}...'" if len(val) > 50 else f"[SHEETS DEBUG] Column {col_idx} -> song[{song_idx}]: '{val}'")
                             # Treat 'pending' as empty
                             if val and not re.match(r'pending', val, re.IGNORECASE):
                                 songs[song_idx] = val
                                 valid_songs_count += 1
+                    print(f"[SHEETS DEBUG] Total valid songs: {valid_songs_count}")
 
                     # Check if we have at least 4 songs
                     if valid_songs_count < 4:
