@@ -68,13 +68,16 @@
             </div>
             <!-- Missing email warning -->
             <div id="emailWarning" class="hidden mt-3 bg-amber-50 border border-amber-300 rounded-lg p-4">
-                <p class="text-sm font-semibold text-amber-800 mb-2 flex items-center gap-1">
-                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
-                    E-mailadres niet gevonden in People tab:
-                </p>
+                <p class="text-sm font-medium text-amber-800 mb-2">Ontbrekende e-mailadressen:</p>
                 <ul id="emailWarningList" class="text-sm text-amber-700 space-y-1 list-disc list-inside"></ul>
-                <p class="text-xs text-amber-600 mt-2">Vul het e-mailadres handmatig in het CC-veld in.</p>
             </div>
+
+            <!-- Unresolved names warning -->
+            <div id="namesWarning" class="hidden mt-3 bg-amber-50 border border-amber-300 rounded-lg p-4">
+                <p class="text-sm font-medium text-amber-800 mb-2">Namen niet gevonden in People tab (voeg toe voor volledige naam):</p>
+                <ul id="namesWarningList" class="text-sm text-amber-700 space-y-1 list-disc list-inside"></ul>
+            </div>
+
         </div>
 
         <!-- 2. Ontvangers -->
@@ -432,6 +435,17 @@ Namens de kerkenraad GKIN regio Amstelveen,`;
                 warningEl.classList.add('hidden');
             }
 
+            // Show unresolved names warning
+            const namesWarningEl = document.getElementById('namesWarning');
+            const namesWarningList = document.getElementById('namesWarningList');
+            const unresolved = entry.unresolved_names || [];
+            if (unresolved.length > 0) {
+                namesWarningList.innerHTML = unresolved.map(n => `<li>${n}</li>`).join('');
+                namesWarningEl.classList.remove('hidden');
+            } else {
+                namesWarningEl.classList.add('hidden');
+            }
+
             // Build CC: static list + OvD/1eO/Beamer emails
             const STATIC_CC = [
                 'vega.hardono@outlook.com',
@@ -625,6 +639,7 @@ Namens de kerkenraad GKIN regio Amstelveen,`;
             [1,2,3,4,5,6,7].forEach(i => { document.getElementById('lied'+i).value = ''; });
             document.getElementById('liedFetchWarn').classList.add('hidden');
             document.getElementById('kndFetchWarn').classList.add('hidden');
+            document.getElementById('namesWarning').classList.add('hidden');
         });
     </script>
 </body>

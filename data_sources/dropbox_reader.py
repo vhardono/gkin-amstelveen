@@ -139,14 +139,20 @@ class DropboxExcelReader:
             }
 
     def _resolve_name(self, short_name: str) -> str:
-        """Convert a short name to 'title First Last' using People tab."""
+        """Convert a short name to 'title First Last' using People tab.
+        Tracks unresolved names in _unresolved_names list."""
         short_name = short_name.strip()
         if not short_name or not self._people_map:
+            if short_name and hasattr(self, '_unresolved_names'):
+                self._unresolved_names.append(short_name)
             return short_name
         person = self._people_map.get(short_name)
         if person:
             parts = [person['title'], person['first_name'], person['last_name']]
             return ' '.join(p for p in parts if p and p.lower() != 'nan')
+        # Name not found in People tab
+        if hasattr(self, '_unresolved_names'):
+            self._unresolved_names.append(short_name)
         return short_name
 
     def _resolve_email(self, short_name: str) -> str:
@@ -233,7 +239,14 @@ class DropboxExcelReader:
                 if not raw or raw == '-':
                     return ''
                 names = [n.strip() for n in raw.split(',') if n.strip() and n.strip() != '-']
-                return ', '.join(self._resolve_name(n) or n for n in names)
+                resolved = []
+                for n in names:
+                    r = self._resolve_name(n)
+                    resolved.append(r or n)
+                return ', '.join(resolved)
+
+            # Track unresolved names for this entry
+            self._unresolved_names = []
 
             muziek      = _resolve_list('MUZIEK', 10)
             voorzangers = _resolve_list('VOORZANGERS', 11)
@@ -242,6 +255,14 @@ class DropboxExcelReader:
             tieners_raw = _cell('TIENERS', 8)
             knd         = self._resolve_name(knd_raw) or knd_raw if knd_raw and knd_raw != '-' else ''
             tieners     = self._resolve_name(tieners_raw) or tieners_raw if tieners_raw and tieners_raw != '-' else ''
+
+            # Resolve OVD/1EO/Beamer names (tracks unresolved)
+            ovd_full    = self._resolve_name(ovd_short) or ovd_short
+            eo1_full    = self._resolve_name(eo1_short) or eo1_short
+            beamer_full = self._resolve_name(beamer_short) or beamer_short
+
+            # Get unique unresolved names
+            unresolved = list(dict.fromkeys(self._unresolved_names))  # preserve order, remove duplicates
 
             # Resolve predikant email from People tab
             pred_email  = self._predikant_email_map.get(predikant.lower(), '')
@@ -254,11 +275,11 @@ class DropboxExcelReader:
                 'dag':             dag,
                 'predikant':       predikant,
                 'predikant_email': pred_email,
-                'ovd':             self._resolve_name(ovd_short) or ovd_short,
+                'ovd':             ovd_full,
                 'ovd_email':       ovd_email,
-                '1eo':             self._resolve_name(eo1_short) or eo1_short,
+                '1eo':             eo1_full,
                 '1eo_email':       eo1_email,
-                'beamer':          self._resolve_name(beamer_short) or beamer_short,
+                'beamer':          beamer_full,
                 'beamer_email':    beamer_email,
                 'opmerking':       opmerking,
                 'tijd':            tijd,
@@ -267,6 +288,7 @@ class DropboxExcelReader:
                 'multimedia':      multimedia,
                 'knd':             knd,
                 'tieners':         tieners,
+                'unresolved_names': unresolved,
             })
 
         return entries
