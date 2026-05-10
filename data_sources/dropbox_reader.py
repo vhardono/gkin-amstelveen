@@ -255,8 +255,10 @@ class DropboxExcelReader:
             multimedia  = _resolve_list('MULTIMEDIA', 12)
             knd_raw     = _cell('KND', 7)
             tieners_raw = _cell('TIENERS', 8)
+            print(f"[DEBUG] KND raw: '{knd_raw}', People keys: {list(self._people_map.keys())[:10]}...")
             knd         = self._resolve_name(knd_raw) or knd_raw if knd_raw and knd_raw != '-' else ''
             tieners     = self._resolve_name(tieners_raw) or tieners_raw if tieners_raw and tieners_raw != '-' else ''
+            print(f"[DEBUG] KND resolved: '{knd}', unresolved list: {self._unresolved_names}")
 
             # Resolve OVD/1EO/Beamer names (tracks unresolved)
             ovd_full    = self._resolve_name(ovd_short) or ovd_short
