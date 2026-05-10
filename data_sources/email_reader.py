@@ -745,6 +745,9 @@ class OutlookCollecteReader:
                 else:
                     row_date = str(row_date_raw).strip() if row_date_raw else ''
 
+                # Debug: print all June rows to see what's in the data
+                if row_date and ('-06-' in str(row_date) or (hasattr(row_date_raw, 'month') and row_date_raw.month == 6)):
+                    print(f"[SHEETS DEBUG] JUNE ROW {idx}: date='{row_date}', data={row}")
                 if row_date and ('juni' in str(row_date).lower() or 'juli' in str(row_date).lower() or '2026' in str(row_date)):
                     print(f"[SHEETS DEBUG] Checking row date: '{row_date}' (raw: {row_date_raw}) vs target '{date_str_iso}'")
 
@@ -796,6 +799,14 @@ class OutlookCollecteReader:
                     result['source_note'] = 'Liederen e-mail niet gevonden, gebruik Google Sheets'
                     return result
 
+            # Debug: print summary of June rows found
+            print(f"[SHEETS DEBUG] SUMMARY: Searched for {date_str_iso}, no match found")
+            print(f"[SHEETS DEBUG] All June dates in sheet:")
+            for idx2, row2 in enumerate(values[1:], start=2):
+                if row2 and len(row2) > 0:
+                    d = row2[0]
+                    if hasattr(d, 'month') and d.month == 6:
+                        print(f"  Row {idx2}: {d.strftime('%Y-%m-%d')}")
             result['not_found'].append(f'Datum {date_str_iso} niet gevonden in Google Sheets')
             return result
 
