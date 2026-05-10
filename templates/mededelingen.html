@@ -54,9 +54,10 @@
                 {% endfor %}
             </select>
             <div id="infoCard" class="hidden mt-4 bg-green-50 border border-green-200 rounded-lg p-4">
-                <div class="grid grid-cols-2 gap-4 text-sm">
+                <div class="grid grid-cols-3 gap-4 text-sm">
                     <div><p class="text-gray-500 text-xs uppercase tracking-wide mb-0.5">Predikant</p><p id="infoPred" class="font-semibold text-gray-800">—</p></div>
                     <div><p class="text-gray-500 text-xs uppercase tracking-wide mb-0.5">Ouderling van Dienst</p><p id="infoOvd" class="font-semibold text-gray-800">—</p></div>
+                    <div><p class="text-gray-500 text-xs uppercase tracking-wide mb-0.5">Eerste Ontvangst</p><p id="info1eo" class="font-semibold text-gray-800">—</p></div>
                 </div>
             </div>
         </div>
@@ -394,12 +395,13 @@
             return `${String(d.getDate()).padStart(2,'0')}-${String(d.getMonth()+1).padStart(2,'0')}-${d.getFullYear()}`;
         }
 
-        // Show predikant/OvD on date select
+        // Show predikant/OvD/1eO on date select
         dateSelect.addEventListener('change', () => {
             const sel = dateData.find(d => d.value === dateSelect.value);
             if (sel) {
                 infoPred.textContent = sel.predikant;
                 infoOvd.textContent = sel.ovd;
+                info1eo.textContent = sel['1eo'] || '—';
                 infoCard.classList.remove('hidden');
 
                 // Build CC: static + beamer, deduped
