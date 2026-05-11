@@ -74,6 +74,37 @@
                     <span id="excelNameText"></span>
                     <button type="button" id="excelClear" class="ml-auto text-gray-400 hover:text-red-500">✕</button>
                 </div>
+
+                <!-- Auto-fill button -->
+                <button type="button" id="autoFillBtn"
+                        class="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                    <svg id="autoFillIcon" class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                    </svg>
+                    <svg id="autoFillSpinner" class="w-4 h-4 spinner hidden shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10" stroke-width="3" stroke-dasharray="60" stroke-dashoffset="15"/>
+                    </svg>
+                    <span id="autoFillText">Auto-vullen gegevens (Takenrooster + Dankoffer)</span>
+                </button>
+                <p class="text-xs text-gray-400 mt-1 text-center">Vult automatisch Voorganger, OvD, Muzikanten, etc. en het Dankoffer Bijbelvers in</p>
+
+                <!-- Alert display section -->
+                <div id="autoFillAlerts" class="hidden mt-4">
+                    <div id="autoFillSuccess" class="hidden bg-green-50 border border-green-200 rounded-lg p-3 mb-2">
+                        <h4 class="text-sm font-semibold text-green-800 mb-1">Automatisch ingevuld:</h4>
+                        <ul id="autoFilledList" class="text-xs text-green-700 space-y-0.5"></ul>
+                    </div>
+                    <div id="autoFillWarning" class="hidden bg-amber-50 border border-amber-200 rounded-lg p-3">
+                        <h4 class="text-sm font-semibold text-amber-800 mb-1">Reeds ingevuld (niet gewijzigd):</h4>
+                        <ul id="alreadyFilledList" class="text-xs text-amber-700 space-y-0.5"></ul>
+                    </div>
+                    <div id="dankofferInfo" class="hidden mt-2 bg-blue-50 border border-blue-200 rounded-lg p-2">
+                        <p class="text-xs text-blue-700">
+                            <span class="font-semibold">Dankoffer vers:</span> <span id="dankofferVerseText"></span>
+                        </p>
+                    </div>
+                </div>
             </div>
 
             <!-- Preek.docx upload (optional) -->
@@ -190,6 +221,10 @@
                 input.value = '';
                 nameBox.classList.add('hidden');
                 drop.classList.remove('hidden');
+                // Also clear auto-fill alerts if this is the Excel file
+                if (input.id === 'excelFile') {
+                    hideAutoFillAlerts();
+                }
             });
 
             function showName(name) {
@@ -201,6 +236,94 @@
 
         setupDropZone('excelDrop', 'excelFile', 'excelName', 'excelNameText', 'excelClear');
         setupDropZone('preekDrop', 'preekFile', 'preekName', 'preekNameText', 'preekClear');
+
+        // --- Auto-fill functionality ---
+        document.getElementById('autoFillBtn').addEventListener('click', async () => {
+            const excelInput = document.getElementById('excelFile');
+            const excelFile = excelInput.files[0];
+            if (!excelFile) {
+                showStatus('Upload eerst het Excel bestand.', 'error');
+                return;
+            }
+
+            setAutoFillLoading(true);
+            hideAutoFillAlerts();
+
+            const fd = new FormData();
+            fd.append('excel_file', excelFile);
+
+            try {
+                const resp = await fetch('/liturgie/fill-data', { method: 'POST', body: fd });
+                const data = await resp.json();
+
+                if (resp.ok && data.excel_data) {
+                    // Create a new file from the returned data and replace the input
+                    const bytes = Uint8Array.from(atob(data.excel_data), c => c.charCodeAt(0));
+                    const newFile = new File([bytes], data.filename, { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+
+                    // Create a new DataTransfer to set the file
+                    const dt = new DataTransfer();
+                    dt.items.add(newFile);
+                    excelInput.files = dt.files;
+
+                    // Update the displayed filename
+                    document.getElementById('excelNameText').textContent = data.filename;
+
+                    // Show alerts
+                    showAutoFillAlerts(data.alerts, data.dankoffer_verse);
+
+                    showStatus(`✓ Gegevens ingevuld voor ${data.service_date}`, 'success');
+                } else {
+                    showStatus('Fout bij auto-vullen: ' + (data.error || 'Onbekende fout'), 'error');
+                }
+            } catch (err) {
+                showStatus('Netwerkfout bij auto-vullen: ' + err.message, 'error');
+            } finally {
+                setAutoFillLoading(false);
+            }
+        });
+
+        function setAutoFillLoading(on) {
+            document.getElementById('autoFillBtn').disabled = on;
+            document.getElementById('autoFillIcon').classList.toggle('hidden', on);
+            document.getElementById('autoFillSpinner').classList.toggle('hidden', !on);
+            document.getElementById('autoFillText').textContent = on ? 'Gegevens ophalen...' : 'Auto-vullen gegevens (Takenrooster + Dankoffer)';
+        }
+
+        function hideAutoFillAlerts() {
+            document.getElementById('autoFillAlerts').classList.add('hidden');
+            document.getElementById('autoFillSuccess').classList.add('hidden');
+            document.getElementById('autoFillWarning').classList.add('hidden');
+            document.getElementById('dankofferInfo').classList.add('hidden');
+        }
+
+        function showAutoFillAlerts(alerts, dankofferVerse) {
+            const alertsDiv = document.getElementById('autoFillAlerts');
+            const successDiv = document.getElementById('autoFillSuccess');
+            const warningDiv = document.getElementById('autoFillWarning');
+            const successList = document.getElementById('autoFilledList');
+            const warningList = document.getElementById('alreadyFilledList');
+
+            alertsDiv.classList.remove('hidden');
+
+            // Show auto-populated items
+            if (alerts.auto_populated && alerts.auto_populated.length > 0) {
+                successDiv.classList.remove('hidden');
+                successList.innerHTML = alerts.auto_populated.map(item => `<li>${item}</li>`).join('');
+            }
+
+            // Show already filled items
+            if (alerts.already_filled && alerts.already_filled.length > 0) {
+                warningDiv.classList.remove('hidden');
+                warningList.innerHTML = alerts.already_filled.map(item => `<li>${item}</li>`).join('');
+            }
+
+            // Show dankoffer verse info
+            if (dankofferVerse) {
+                document.getElementById('dankofferVerseText').textContent = dankofferVerse;
+                document.getElementById('dankofferInfo').classList.remove('hidden');
+            }
+        }
 
         // --- Form submit ---
         document.getElementById('genForm').addEventListener('submit', async (e) => {

@@ -11,12 +11,14 @@ import threading
 import traceback
 import uuid
 from datetime import datetime
+from typing import Dict, Optional
 from flask import Flask, render_template, request, send_file, jsonify, session, redirect, url_for
 from werkzeug.utils import secure_filename
 
 import re
 import requests as _requests
 from bs4 import BeautifulSoup as _BS
+import pandas as pd
 
 from data_sources.dropbox_reader import DropboxExcelReader
 from data_sources.scipio_scraper import ScipioScraper
@@ -975,6 +977,269 @@ def liturgie_generate():
         return jsonify({'error': str(e)}), 500
     finally:
         shutil.rmtree(work_dir, ignore_errors=True)
+
+
+# ---------------------------------------------------------------------------
+# Liturgie Auto-fill Endpoint
+# ---------------------------------------------------------------------------
+
+DANKOFFER_DROPBOX_PATH = '/working folder/Dankoffer.xlsx'
+
+# Track last used dankoffer row per year for rotation
+_dankoffer_rotation_cache: Dict[str, int] = {}
+
+
+def _get_dankoffer_verse(dbx, service_date: datetime) -> Optional[Dict]:
+    """
+    Read Dankoffer.xlsx from Dropbox and return the verse for the given date.
+    Uses rotational logic: cycles through rows, 1st row for 1st week, etc.
+    Returns dict with: book, chapter, verse_start, verse_end
+    """
+    global _dankoffer_rotation_cache
+
+    try:
+        _, resp = dbx.files_download(DANKOFFER_DROPBOX_PATH)
+        df = pd.read_excel(BytesIO(resp.content), header=None)
+
+        # Column A contains verses like "Psalmen 50:14-15" or "Psalmen 50:14"
+        verses = []
+        for idx, row in df.iterrows():
+            val = str(row.iloc[0]).strip() if pd.notna(row.iloc[0]) else ''
+            if val and val.lower() not in ('nan', 'none', ''):
+                verses.append(val)
+
+        if not verses:
+            return None
+
+        # Calculate which verse to use based on week number (rotational)
+        year_week = f"{service_date.year}-{service_date.isocalendar()[1]}"
+
+        # Check if we have a cached position for this year
+        cache_key = str(service_date.year)
+        last_idx = _dankoffer_rotation_cache.get(cache_key, -1)
+
+        # Calculate expected index based on week number
+        week_num = service_date.isocalendar()[1]
+        expected_idx = (week_num - 1) % len(verses)
+
+        # Use the calculated rotational index
+        verse_idx = expected_idx
+        _dankoffer_rotation_cache[cache_key] = verse_idx
+
+        verse_text = verses[verse_idx]
+
+        # Parse verse text like "Psalmen 50:14-15" or "Psalmen 50:14"
+        # Pattern: Book Chapter:Start[-End]
+        import re
+        match = re.match(r'^(.+?)\s+(\d+):(\d+)(?:-(\d+))?$', verse_text.strip())
+        if not match:
+            return None
+
+        book = match.group(1).strip()
+        chapter = match.group(2)
+        verse_start = match.group(3)
+        verse_end = match.group(4)  # None if single verse
+
+        return {
+            'book': book,
+            'chapter': chapter,
+            'verse_start': verse_start,
+            'verse_end': verse_end,
+            'full_text': verse_text,
+            'row_index': verse_idx + 1  # 1-indexed for user display
+        }
+
+    except Exception as e:
+        print(f'[Dankoffer] Error reading dankoffer file: {e}')
+        return None
+
+
+def _parse_verse_reference(verse_text: str) -> Optional[Dict]:
+    """Parse a verse reference like 'Psalmen 50:14-15' or 'Psalmen 50:14'."""
+    import re
+    match = re.match(r'^(.+?)\s+(\d+):(\d+)(?:-(\d+))?$', verse_text.strip())
+    if not match:
+        return None
+
+    return {
+        'book': match.group(1).strip(),
+        'chapter': match.group(2),
+        'verse_start': match.group(3),
+        'verse_end': match.group(4),  # None if single verse
+    }
+
+
+@app.route('/liturgie/fill-data', methods=['POST'])
+def liturgie_fill_data():
+    """
+    Auto-populate Main Liturgy file.xlsx with:
+    - People on duty from Takenrooster (B4-B12)
+    - Dankoffer verse from Dankoffer.xlsx (B21-E21)
+    - Tikkie link from email (if available)
+
+    Returns a new Excel file with populated data and alert info.
+    """
+    excel_file = request.files.get('excel_file')
+    if not excel_file or not excel_file.filename:
+        return jsonify({'error': 'Excel bestand is verplicht.'}), 400
+
+    excel_bytes = excel_file.read()
+
+    try:
+        # Read the Excel file to get current values
+        from io import BytesIO
+        df = pd.read_excel(BytesIO(excel_bytes), sheet_name='Data', header=None)
+
+        # Get date from B3 (row index 2, column index 1 - 0-indexed)
+        date_val = df.iloc[2, 1] if df.shape[0] > 2 and df.shape[1] > 1 else None
+        if pd.isna(date_val):
+            return jsonify({'error': 'Geen datum gevonden in cel B3.'}), 400
+
+        # Parse the date
+        if isinstance(date_val, datetime):
+            service_date = date_val
+        else:
+            try:
+                service_date = pd.to_datetime(str(date_val), dayfirst=True).to_pydatetime()
+            except Exception:
+                return jsonify({'error': f'Ongeldige datum in cel B3: {date_val}'}), 400
+
+        # Get takenrooster entry for this date
+        taken = _get_takenrooster()
+        entry = None
+        for e in taken.get('entries', []):
+            entry_date = e['date']
+            if hasattr(entry_date, 'date'):
+                entry_date = entry_date.date()
+            else:
+                entry_date = entry_date
+            if entry_date == service_date.date():
+                entry = e
+                break
+
+        if not entry:
+            return jsonify({
+                'error': f'Geen dienst gevonden in takenrooster voor {service_date.strftime("%d-%m-%Y")}'
+            }), 404
+
+        # Track what was already filled vs what we populated
+        alerts = {
+            'already_filled': [],
+            'auto_populated': []
+        }
+
+        # Define the fields to populate (row index, field name, takenrooster key)
+        field_mapping = [
+            (3, 'Voorganger', 'predikant'),      # B4
+            (4, 'OvD', 'ovd'),                   # B5
+            (5, '1e Ontvangst', '1eo'),          # B6
+            (6, 'Muzikanten', 'muziek'),         # B7
+            (7, 'Voorzangers', 'voorzangers'),   # B8
+            (8, 'Beamer', 'beamer'),             # B9
+            (9, 'Geluid', 'multimedia'),         # B10
+            (10, 'KND', 'knd'),                  # B11
+            (11, 'Tieners', 'tieners'),          # B12
+        ]
+
+        # Check and populate B4-B12
+        for row_idx, field_name, taken_key in field_mapping:
+            current_val = str(df.iloc[row_idx, 1]).strip() if df.shape[0] > row_idx and df.shape[1] > 1 else ''
+            new_val = str(entry.get(taken_key, '')).strip()
+
+            if current_val and current_val.lower() not in ('nan', 'none', ''):
+                alerts['already_filled'].append(f'{field_name}: {current_val}')
+            elif new_val:
+                df.iloc[row_idx, 1] = new_val
+                alerts['auto_populated'].append(f'{field_name}: {new_val}')
+
+        # Get dankoffer verse from Dropbox
+        dbx = _get_dbx_liturgie()
+        dankoffer = _get_dankoffer_verse(dbx, service_date)
+
+        # Row 21 is index 20 (0-indexed)
+        dankoffer_row = 20
+        if dankoffer:
+            # B21: Book name
+            current_book = str(df.iloc[dankoffer_row, 1]).strip() if df.shape[0] > dankoffer_row and df.shape[1] > 1 else ''
+            if current_book and current_book.lower() not in ('nan', 'none', ''):
+                alerts['already_filled'].append(f'Dankoffer boek (B21): {current_book}')
+            else:
+                df.iloc[dankoffer_row, 1] = dankoffer['book']
+                alerts['auto_populated'].append(f'Dankoffer boek (B21): {dankoffer["book"]} (rij {dankoffer["row_index"]} uit Dankoffer.xlsx)')
+
+            # C21: Chapter (H.S. / pasal)
+            current_chapter = str(df.iloc[dankoffer_row, 2]).strip() if df.shape[0] > dankoffer_row and df.shape[1] > 2 else ''
+            if current_chapter and current_chapter.lower() not in ('nan', 'none', ''):
+                alerts['already_filled'].append(f'Dankoffer hoofdstuk (C21): {current_chapter}')
+            else:
+                df.iloc[dankoffer_row, 2] = dankoffer['chapter']
+                alerts['auto_populated'].append(f'Dankoffer hoofdstuk (C21): {dankoffer["chapter"]}')
+
+            # D21: Start verse (ayat)
+            current_start = str(df.iloc[dankoffer_row, 3]).strip() if df.shape[0] > dankoffer_row and df.shape[1] > 3 else ''
+            if current_start and current_start.lower() not in ('nan', 'none', ''):
+                alerts['already_filled'].append(f'Dankoffer begin vers (D21): {current_start}')
+            else:
+                df.iloc[dankoffer_row, 3] = dankoffer['verse_start']
+                alerts['auto_populated'].append(f'Dankoffer begin vers (D21): {dankoffer["verse_start"]}')
+
+            # E21: End verse (ayat) - only if there's an end verse
+            if dankoffer['verse_end']:
+                current_end = str(df.iloc[dankoffer_row, 4]).strip() if df.shape[0] > dankoffer_row and df.shape[1] > 4 else ''
+                if current_end and current_end.lower() not in ('nan', 'none', ''):
+                    alerts['already_filled'].append(f'Dankoffer eind vers (E21): {current_end}')
+                else:
+                    df.iloc[dankoffer_row, 4] = dankoffer['verse_end']
+                    alerts['auto_populated'].append(f'Dankoffer eind vers (E21): {dankoffer["verse_end"]}')
+
+        # Try to get Tikkie link from email if available
+        try:
+            reader = OutlookCollecteReader()
+            if reader.is_authenticated():
+                email_data = reader.fetch_collecte_data(target_date=service_date, since_days=60)
+                tikkie_url = email_data.get('tikkie_url', '')
+                if tikkie_url:
+                    # Find Tikkie link row - typically around row 12-14 based on FIELD_MAP
+                    # We'll look for "Tikkie link" label in column A
+                    tikkie_row = None
+                    for idx, row in df.iterrows():
+                        label = str(row.iloc[0]).strip().lower() if pd.notna(row.iloc[0]) else ''
+                        if 'tikkie' in label or 'qr_link' in label:
+                            tikkie_row = idx
+                            break
+
+                    if tikkie_row is not None:
+                        current_tikkie = str(df.iloc[tikkie_row, 1]).strip() if df.shape[1] > 1 else ''
+                        if current_tikkie and current_tikkie.lower() not in ('nan', 'none', ''):
+                            alerts['already_filled'].append(f'Tikkie link: {current_tikkie}')
+                        else:
+                            df.iloc[tikkie_row, 1] = tikkie_url
+                            alerts['auto_populated'].append(f'Tikkie link: {tikkie_url}')
+        except Exception as e:
+            print(f'[Liturgie Fill] Could not fetch Tikkie link: {e}')
+            pass  # Non-critical, continue without Tikkie
+
+        # Save the modified Excel to a new file
+        output = BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, sheet_name='Data', index=False, header=False)
+        output.seek(0)
+
+        # Encode for response
+        excel_b64 = base64.b64encode(output.read()).decode('ascii')
+
+        return jsonify({
+            'excel_data': excel_b64,
+            'filename': f'Main_Liturgy_file_{service_date.strftime("%Y%m%d")}_filled.xlsx',
+            'alerts': alerts,
+            'service_date': service_date.strftime('%d-%m-%Y'),
+            'dankoffer_verse': dankoffer['full_text'] if dankoffer else None
+        })
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
 
 
 if __name__ == '__main__':
