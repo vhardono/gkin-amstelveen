@@ -1316,16 +1316,29 @@ def liturgie_fill_data():
         print(f'[Liturgie Fill] Dankoffer data: {dankoffer}')
 
         if dankoffer:
-            # Read Boeken sheet for validation
+            # Read Boeken sheet for validation (search all columns)
             valid_books = []
             if 'Boeken' in wb.sheetnames:
                 boeken_ws = wb['Boeken']
                 for row in range(1, boeken_ws.max_row + 1):
-                    book_name = boeken_ws.cell(row=row, column=1).value
-                    if book_name:
-                        valid_books.append(str(book_name).strip())
-                print(f'[Liturgie Fill] Found {len(valid_books)} valid books in Boeken sheet')
-                print(f'[Liturgie Fill] First 10 books: {valid_books[:10]}')
+                    # Check all columns (1-3) for book names
+                    for col in range(1, 4):
+                        book_name = boeken_ws.cell(row=row, column=col).value
+                        if book_name and isinstance(book_name, str):
+                            book_str = book_name.strip()
+                            if book_str and len(book_str) > 1:
+                                valid_books.append(book_str)
+                # Remove duplicates while preserving order
+                seen = set()
+                unique_books = []
+                for book in valid_books:
+                    book_lower = book.lower()
+                    if book_lower not in seen:
+                        seen.add(book_lower)
+                        unique_books.append(book)
+                valid_books = unique_books
+                print(f'[Liturgie Fill] Found {len(valid_books)} valid books in Boeken sheet (all columns)')
+                print(f'[Liturgie Fill] First 15 books: {valid_books[:15]}')
 
             # Validate dankoffer book name against Boeken list
             dankoffer_book = dankoffer['book']
