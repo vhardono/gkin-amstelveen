@@ -1024,35 +1024,52 @@ def _get_dankoffer_verse(dbx, service_date: datetime, mark_as_used: bool = True)
         if not verses_data:
             return None
 
-        # Find the first unused verse (blank date)
-        unused_verses = [v for v in verses_data if not v['date_used']]
+        # Format the service date for comparison (YYYY-MM-DD)
+        service_date_str = service_date.strftime('%Y-%m-%d')
 
-        if unused_verses:
-            # Use the first unused verse
-            selected = unused_verses[0]
+        # STEP 1: Check if this service date is already assigned to a verse
+        existing_assignment = None
+        for v in verses_data:
+            if v['date_used'] == service_date_str:
+                existing_assignment = v
+                break
+
+        if existing_assignment:
+            # This date already has a verse assigned - use it again
+            selected = existing_assignment
             reset_needed = False
+            already_assigned = True
         else:
-            # All verses are used - find the one with the OLDEST date
-            # Parse dates and find the minimum (oldest)
-            dated_verses = []
-            for v in verses_data:
-                try:
-                    if v['date_used']:
-                        parsed_date = datetime.strptime(v['date_used'], '%Y-%m-%d')
-                        dated_verses.append({**v, 'parsed_date': parsed_date})
-                except ValueError:
-                    # If date format is invalid, treat as very old
-                    dated_verses.append({**v, 'parsed_date': datetime(1900, 1, 1)})
+            # STEP 2: Find the first unused verse (blank date)
+            already_assigned = False
+            unused_verses = [v for v in verses_data if not v['date_used']]
 
-            if dated_verses:
-                # Sort by date and pick the oldest
-                dated_verses.sort(key=lambda x: x['parsed_date'])
-                selected = dated_verses[0]
-                reset_needed = True  # Indicates we're reusing an old verse
+            if unused_verses:
+                # Use the first unused verse
+                selected = unused_verses[0]
+                reset_needed = False
             else:
-                # Fallback - should not happen
-                selected = verses_data[0]
-                reset_needed = True
+                # STEP 3: All verses are used - find the one with the OLDEST date
+                # Parse dates and find the minimum (oldest)
+                dated_verses = []
+                for v in verses_data:
+                    try:
+                        if v['date_used']:
+                            parsed_date = datetime.strptime(v['date_used'], '%Y-%m-%d')
+                            dated_verses.append({**v, 'parsed_date': parsed_date})
+                    except ValueError:
+                        # If date format is invalid, treat as very old
+                        dated_verses.append({**v, 'parsed_date': datetime(1900, 1, 1)})
+
+                if dated_verses:
+                    # Sort by date and pick the oldest
+                    dated_verses.sort(key=lambda x: x['parsed_date'])
+                    selected = dated_verses[0]
+                    reset_needed = True  # Indicates we're reusing an old verse
+                else:
+                    # Fallback - should not happen
+                    selected = verses_data[0]
+                    reset_needed = True
 
         verse_text = selected['verse']
 
@@ -1067,6 +1084,12 @@ def _get_dankoffer_verse(dbx, service_date: datetime, mark_as_used: bool = True)
         verse_start = match.group(3)
         verse_end = match.group(4)  # None if single verse
 
+        # Calculate unused count (for display purposes)
+        if already_assigned:
+            unused_count = len([v for v in verses_data if not v['date_used']])
+        else:
+            unused_count = len(unused_verses) if not reset_needed else 0
+
         result = {
             'book': book,
             'chapter': chapter,
@@ -1075,11 +1098,13 @@ def _get_dankoffer_verse(dbx, service_date: datetime, mark_as_used: bool = True)
             'full_text': verse_text,
             'row_index': selected['row_idx'] + 1,  # 1-indexed for user display
             'total_count': len(verses_data),
-            'unused_count': len(unused_verses),
-            'reset_needed': reset_needed
+            'unused_count': unused_count,
+            'reset_needed': reset_needed,
+            'already_assigned': already_assigned,
+            'date_assigned': selected['date_used'] if already_assigned else None
         }
 
-        # Update the Dankoffer.xlsx to mark this verse as used
+        # Update the Dankoffer.xlsx to mark this verse as used (or update date if reusing)
         if mark_as_used:
             try:
                 _mark_dankoffer_verse_as_used(dbx, selected['row_idx'], service_date, reset_needed)
@@ -1318,7 +1343,9 @@ def liturgie_fill_data():
                 'total_count': dankoffer['total_count'],
                 'unused_count': dankoffer['unused_count'],
                 'reset_needed': dankoffer.get('reset_needed', False),
-                'marked_as_used': dankoffer.get('marked_as_used', False)
+                'marked_as_used': dankoffer.get('marked_as_used', False),
+                'already_assigned': dankoffer.get('already_assigned', False),
+                'date_assigned': dankoffer.get('date_assigned')
             }
 
         return jsonify({
