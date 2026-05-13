@@ -292,23 +292,30 @@ class OutlookCollecteReader:
         print(f'[email_reader] Found {len(tikkie_msgs)} Tikkie messages')
         for i, msg in enumerate(tikkie_msgs[:3]):
             print(f'[email_reader] Tikkie msg {i}: {msg.get("subject", "no subject")}')
-        tikkie_match = next((m for m in tikkie_msgs if _date_in_subject(m.get('subject',''))), None)
+        # Find Tikkie email that has date in subject AND contains a URL
+        tikkie_candidates = [m for m in tikkie_msgs if _date_in_subject(m.get('subject',''))]
+        print(f'[email_reader] Found {len(tikkie_candidates)} Tikkie candidates with matching date')
+        
+        tikkie_match = None
+        for candidate in tikkie_candidates:
+            raw_body = candidate.get('body', {})
+            body_content = raw_body.get('content', '')
+            body = re.sub(r'<[^>]+>', ' ', body_content)
+            url = _extract_url(body)
+            print(f'[email_reader] Checking: {candidate.get("subject", "no subject")} -> URL: {url[:50] if url else "NONE"}')
+            if url:
+                tikkie_match = candidate
+                result['dankoffer_url'] = url
+                break
+        
         if tikkie_match:
-            print(f'[email_reader] Matched Tikkie: {tikkie_match.get("subject", "no subject")}')
+            print(f'[email_reader] Matched Tikkie with URL: {tikkie_match.get("subject", "no subject")}')
             result['emails_found'] += 1
             result['source_subjects'].append(tikkie_match.get('subject',''))
-            raw_body = tikkie_match.get('body', {})
-            print(f'[email_reader] Body contentType: {raw_body.get("contentType", "unknown")}')
-            body_content = raw_body.get('content', '')
-            print(f'[email_reader] Raw body length: {len(body_content)}')
-            body = re.sub(r'<[^>]+>', ' ', body_content)
-            print(f'[email_reader] Body after HTML strip (first 300 chars): {body[:300]}')
-            result['dankoffer_url'] = _extract_url(body)
-            print(f'[email_reader] Extracted URL: {result["dankoffer_url"][:50] if result["dankoffer_url"] else "NONE"}')
             # Always try attachments — hasAttachments may miss inline images
             result['dankoffer_qr'] = _save_first_image(tikkie_match['id'], 'dankoffer')
         else:
-            print(f'[email_reader] No Tikkie match for date {target_date}')
+            print(f'[email_reader] No Tikkie match with URL found for date {target_date}')
             result['not_found'].append('Tikkie Collecte e-mail niet gevonden voor deze datum')
 
         # --- Fetch OLE QR email ---
