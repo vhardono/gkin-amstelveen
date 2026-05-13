@@ -208,12 +208,15 @@ class OutlookCollecteReader:
             NL_MONTHS = ['','januari','februari','maart','april','mei','juni',
                          'juli','augustus','september','oktober','november','december']
             d, m, y = target_date.day, target_date.month, target_date.year
+            y_short = str(y)[-2:]  # 2026 → 26
             date_variants = [
-                f"{d}-{m}-{y}",          # 10-5-2026
-                f"{d}-{m:02d}-{y}",      # 10-05-2026
-                f"{d}/{m}/{y}",           # 10/5/2026
-                f"{d} {NL_MONTHS[m]}",    # 10 mei
-                f"{d} {NL_MONTHS[m]} {y}", # 10 mei 2026
+                f"{d:02d}-{m:02d}-{y}",           # 10-05-2026
+                f"{d:02d}-{m:02d}-{y_short}",     # 10-05-26
+                f"{d}-{m}-{y}",                   # 10-5-2026 (no leading zeros)
+                f"{d}/{m}/{y_short}",              # 10/5/26 (no leading zeros)
+                f"{d:02d}/{m:02d}/{y_short}",     # 10/05/26
+                f"{d} {NL_MONTHS[m]}",            # 10 mei
+                f"{d} {NL_MONTHS[m]} {y}",        # 10 mei 2026
             ]
 
         def _date_in_subject(subject: str) -> bool:
