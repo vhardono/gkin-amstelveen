@@ -275,6 +275,26 @@ class BrevoCampaignGenerator:
 """
 
         if qr_image_url:
+            # If it's a local path, convert to base64
+            if qr_image_url.startswith('/uploads/'):
+                try:
+                    # Build full path
+                    upload_dir = os.environ.get('UPLOAD_DIR', '/app/uploads')
+                    filename = qr_image_url.replace('/uploads/', '')
+                    full_path = os.path.join(upload_dir, filename)
+                    
+                    if os.path.exists(full_path):
+                        with open(full_path, 'rb') as f:
+                            image_data = f.read()
+                            base64_data = base64.b64encode(image_data).decode('utf-8')
+                            # Determine mime type from extension
+                            ext = os.path.splitext(filename)[1].lower()
+                            mime_type = 'image/png' if ext == '.png' else 'image/jpeg' if ext in ['.jpg', '.jpeg'] else 'image/png'
+                            qr_image_url = f"data:{mime_type};base64,{base64_data}"
+                except Exception as e:
+                    # If conversion fails, keep original URL
+                    pass
+            
             html += f"""                                    <img src="{qr_image_url}" alt="QR Code voor collecte" style="max-width: 200px; height: auto; border-radius: 8px;">
 """
 
