@@ -1310,19 +1310,34 @@ def liturgie_fill_data():
 
         # Row 21 (dankoffer) - B21-E21
         dankoffer_row = 21
+        print(f'[Liturgie Fill] Dankoffer data: {dankoffer}')
+
         if dankoffer:
+            # Check current values in dankoffer cells
+            current_b21 = get_cell_value(dankoffer_row, 2)
+            current_c21 = get_cell_value(dankoffer_row, 3)
+            current_d21 = get_cell_value(dankoffer_row, 4)
+            current_e21 = get_cell_value(dankoffer_row, 5)
+            print(f'[Liturgie Fill] Current dankoffer values - B21: "{current_b21}", C21: "{current_c21}", D21: "{current_d21}", E21: "{current_e21}"')
+
             # B21: Book name
-            set_cell_value(dankoffer_row, 2, dankoffer['book'], f'Dankoffer boek (B21) (rij {dankoffer["row_index"]} uit Dankoffer.xlsx)')
+            result_b21 = set_cell_value(dankoffer_row, 2, dankoffer['book'], f'Dankoffer boek (B21) (rij {dankoffer["row_index"]} uit Dankoffer.xlsx)')
+            print(f'[Liturgie Fill] B21 set result: {result_b21}, value: {dankoffer["book"]}')
 
             # C21: Chapter (H.S. / pasal)
-            set_cell_value(dankoffer_row, 3, dankoffer['chapter'], 'Dankoffer hoofdstuk (C21)')
+            result_c21 = set_cell_value(dankoffer_row, 3, dankoffer['chapter'], 'Dankoffer hoofdstuk (C21)')
+            print(f'[Liturgie Fill] C21 set result: {result_c21}, value: {dankoffer["chapter"]}')
 
             # D21: Start verse (ayat)
-            set_cell_value(dankoffer_row, 4, dankoffer['verse_start'], 'Dankoffer begin vers (D21)')
+            result_d21 = set_cell_value(dankoffer_row, 4, dankoffer['verse_start'], 'Dankoffer begin vers (D21)')
+            print(f'[Liturgie Fill] D21 set result: {result_d21}, value: {dankoffer["verse_start"]}')
 
             # E21: End verse (ayat) - only if there's an end verse
             if dankoffer['verse_end']:
-                set_cell_value(dankoffer_row, 5, dankoffer['verse_end'], 'Dankoffer eind vers (E21)')
+                result_e21 = set_cell_value(dankoffer_row, 5, dankoffer['verse_end'], 'Dankoffer eind vers (E21)')
+                print(f'[Liturgie Fill] E21 set result: {result_e21}, value: {dankoffer["verse_end"]}')
+        else:
+            print(f'[Liturgie Fill] No dankoffer data returned!')
 
         # Try to get Tikkie link from email if available
         try:
