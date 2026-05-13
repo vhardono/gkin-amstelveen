@@ -1684,8 +1684,14 @@ def preview_liturgie_fill_data():
         
         # Get proposed values from sources
         try:
-            takenrooster = TakenroosterReader('/dbx/takenrooster/Takenrooster 2025-2026 GKIN.xlsx')
-            entry = takenrooster.get_entry(service_date)
+            takenrooster_data = _get_takenrooster()
+            takenrooster = takenrooster_data.get('entries', [])
+            entry = None
+            for tr_entry in takenrooster:
+                entry_date = tr_entry.get('date')
+                if entry_date and entry_date.date() == service_date.date():
+                    entry = tr_entry
+                    break
             
             if entry:
                 taken_mapping = {
