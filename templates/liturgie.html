@@ -48,7 +48,7 @@
         <!-- Upload form -->
         <form id="genForm">
 
-            <!-- Excel upload -->
+            <!-- Main Liturgy File Selection -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-5">
                 <h2 class="text-base font-semibold text-gkin-green mb-4 flex items-center gap-2">
                     <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -58,39 +58,128 @@
                     Main Liturgy file.xlsx <span class="text-red-500 ml-1">*</span>
                 </h2>
 
-                <!-- Auto-fill button -->
-                <button type="button" id="autoFillBtn"
-                        class="mb-4 w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-                    <svg id="autoFillIcon" class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                    </svg>
-                    <svg id="autoFillSpinner" class="w-4 h-4 spinner hidden shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <circle cx="12" cy="12" r="10" stroke-width="3" stroke-dasharray="60" stroke-dashoffset="15"/>
-                    </svg>
-                    <span id="autoFillText">Auto-vullen gegevens (Takenrooster, Tikkie, Dankoffer)</span>
-                </button>
-                <p class="text-xs text-gray-400 mb-4 text-center">Vult automatisch dienstgegevens in Main Liturgy file.xlsx in werkmap</p>
-
-                <input type="file" id="excelFile" accept=".xlsx,.xls" class="hidden">
-                <div id="excelDrop" class="drop-zone border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-gkin-green hover:bg-green-50">
-                    <svg class="w-10 h-10 mx-auto text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
-                    </svg>
-                    <p class="text-sm text-gray-500">Hier neerzetten of <span class="text-gkin-green font-medium underline">klik om te bladeren</span></p>
-                    <p class="text-xs text-gray-400 mt-1">.xlsx of .xls</p>
-                </div>
-                <div id="excelName" class="hidden mt-3 flex items-center gap-2 text-sm text-gray-700 bg-green-50 border border-green-200 rounded-lg px-4 py-2">
-                    <svg class="w-4 h-4 text-gkin-green shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                    </svg>
-                    <span id="excelNameText"></span>
-                    <button type="button" id="excelClear" class="ml-auto text-gray-400 hover:text-red-500">✕</button>
+                <!-- Source Selection -->
+                <div class="space-y-3 mb-5">
+                    <label class="flex items-start gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition">
+                        <input type="radio" name="excelSource" value="dropbox" class="mt-1" checked>
+                        <div>
+                            <div class="font-medium text-gray-700">Gebruik huidige week bestand</div>
+                            <div class="text-xs text-gray-500">Main Liturgy file.xlsx uit werkomap (Dropbox)</div>
+                        </div>
+                    </label>
+                    <label class="flex items-start gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition">
+                        <input type="radio" name="excelSource" value="upload" class="mt-1">
+                        <div>
+                            <div class="font-medium text-gray-700">Upload eigen bestand</div>
+                            <div class="text-xs text-gray-500">Selecteer een lokaal .xlsx bestand</div>
+                        </div>
+                    </label>
                 </div>
 
-                <!-- Working Folder Direct Access Section -->
-                <div class="mt-6 pt-4 border-t border-gray-200">
+                <!-- Upload Area (hidden by default) -->
+                <div id="uploadSection" class="hidden">
+                    <input type="file" id="excelFile" accept=".xlsx,.xls" class="hidden">
+                    <div id="excelDrop" class="drop-zone border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:border-gkin-green hover:bg-green-50 mb-3">
+                        <svg class="w-8 h-8 mx-auto text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                        </svg>
+                        <p class="text-sm text-gray-500">Sleep bestand hier of <span class="text-gkin-green font-medium underline">klik om te bladeren</span></p>
+                    </div>
+                    <div id="excelName" class="hidden flex items-center gap-2 text-sm text-gray-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+                        <svg class="w-4 h-4 text-gkin-green shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        <span id="excelNameText"></span>
+                        <button type="button" id="excelClear" class="ml-auto text-gray-400 hover:text-red-500">✕</button>
+                    </div>
+                </div>
+
+                <!-- Auto-update Section -->
+                <div class="mt-4 pt-4 border-t border-gray-200">
+                    <div class="flex items-center gap-2 mb-3">
+                        <input type="checkbox" id="autoUpdateValues" class="rounded border-gray-300">
+                        <label for="autoUpdateValues" class="text-sm text-gray-700">Automatisch bijwerken met laatste gegevens:</label>
+                    </div>
+                    <div class="ml-6 text-xs text-gray-500 space-y-1">
+                        <div>• Takenrooster (Voorganger, OvD, etc.)</div>
+                        <div>• Tikkie QR link</div>
+                        <div>• Dankoffer vers</div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="mt-4 flex gap-2">
+                        <button type="button" id="previewChangesBtn"
+                                class="flex-1 bg-white border border-gkin-green text-gkin-green hover:bg-green-50 font-medium py-2 px-3 rounded-lg text-sm transition">
+                            Wijzigingen bekijken
+                        </button>
+                        <button type="button" id="updateFileBtn"
+                                class="flex-1 bg-gkin-green hover:bg-green-700 text-white font-medium py-2 px-3 rounded-lg text-sm transition flex items-center justify-center gap-2">
+                            <svg id="updateSpinner" class="w-4 h-4 spinner hidden shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <circle cx="12" cy="12" r="10" stroke-width="3" stroke-dasharray="60" stroke-dashoffset="15"/>
+                            </svg>
+                            <span id="updateBtnText">Bestand bijwerken</span>
+                        </button>
+                    </div>
+                    <p id="updateHint" class="text-xs text-gray-400 mt-2 text-center">
+                        Dropbox bestand wordt direct bijgewerkt / Upload bestand wordt gedownload
+                    </p>
+                </div>
+            </div>
+
+            <!-- Preek.docx Section -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-5">
+                <h2 class="text-base font-semibold text-gkin-green mb-4 flex items-center gap-2">
+                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    Preek.docx <span class="text-gray-400 font-normal text-sm">(optioneel)</span>
+                </h2>
+
+                <!-- Source Selection -->
+                <div class="space-y-3">
+                    <label class="flex items-start gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition">
+                        <input type="radio" name="preekSource" value="dropbox" class="mt-1" checked>
+                        <div>
+                            <div class="font-medium text-gray-700">Gebruik huidige week bestand</div>
+                            <div class="text-xs text-gray-500">Preek.docx uit werkomap (Dropbox)</div>
+                        </div>
+                    </label>
+                    <label class="flex items-start gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition">
+                        <input type="radio" name="preekSource" value="upload" class="mt-1">
+                        <div>
+                            <div class="font-medium text-gray-700">Upload eigen bestand</div>
+                            <div class="text-xs text-gray-500">Selecteer een lokaal .docx bestand</div>
+                        </div>
+                    </label>
+                </div>
+
+                <!-- Upload Area (hidden by default) -->
+                <div id="preekUploadSection" class="hidden mt-3">
+                    <input type="file" id="preekFile" accept=".docx" class="hidden">
+                    <div id="preekDrop" class="drop-zone border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:border-gkin-green hover:bg-green-50 mb-2">
+                        <svg class="w-8 h-8 mx-auto text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                        </svg>
+                        <p class="text-sm text-gray-500">Sleep bestand hier of <span class="text-gkin-green font-medium underline">klik om te bladeren</span></p>
+                    </div>
+                    <div id="preekName" class="hidden flex items-center gap-2 text-sm text-gray-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+                        <svg class="w-4 h-4 text-gkin-green shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        <span id="preekNameText"></span>
+                        <button type="button" id="preekClear" class="ml-auto text-gray-400 hover:text-red-500">✕</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Document Generation Section -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-5">
+                <h2 class="text-base font-semibold text-gray-800 mb-4">Documenten Genereren</h2>
+                <p class="text-sm text-gray-500 mb-4">Selecteer welke documenten u wilt genereren:</p>
+
+                <!-- Original working folder buttons (now secondary) -->
+                <div class="hidden">
                     <h3 class="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
                         <svg class="w-4 h-4 shrink-0 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
@@ -143,7 +232,7 @@
 
                 <!-- Preview Modal -->
                 <div id="previewModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-                    <div class="bg-white rounded-xl shadow-lg max-w-lg w-full mx-4 max-h-[80vh] overflow-y-auto">
+                    <div class="bg-white rounded-xl shadow-lg w-full mx-4 max-h-[80vh] overflow-y-auto" style="max-width:480px">
                         <div class="p-6">
                             <h3 class="text-lg font-semibold text-gray-800 mb-4">Wijzigingen bekijken</h3>
                             <p class="text-sm text-gray-600 mb-4">Datum: <span id="previewDate" class="font-medium"></span></p>
@@ -153,16 +242,22 @@
                                 <ul id="previewNotFoundList" class="text-xs text-red-700 space-y-0.5"></ul>
                             </div>
                             
-                            <div class="mb-4 max-h-64 overflow-y-auto">
-                                <table class="w-full text-sm border-collapse">
+                            <div class="mb-4 max-h-56 overflow-y-auto">
+                                <table class="w-full border-collapse" style="font-size:11px;table-layout:fixed">
+                                    <colgroup>
+                                        <col style="width:24px">
+                                        <col style="width:90px">
+                                        <col style="width:50%">
+                                        <col style="width:50%">
+                                    </colgroup>
                                     <thead class="sticky top-0 bg-white">
                                         <tr class="border-b border-gray-300">
-                                            <th class="text-left py-2 px-2 font-semibold text-gray-700 w-8">
+                                            <th class="text-left py-1 px-1 font-semibold text-gray-700">
                                                 <input type="checkbox" id="selectAllChanges" checked class="rounded border-gray-300">
                                             </th>
-                                            <th class="text-left py-2 px-2 font-semibold text-gray-700">Veld</th>
-                                            <th class="text-left py-2 px-2 font-semibold text-gray-700">Huidig</th>
-                                            <th class="text-left py-2 px-2 font-semibold text-gray-700">Nieuw</th>
+                                            <th class="text-left py-1 px-1 font-semibold text-gray-700">Veld</th>
+                                            <th class="text-left py-1 px-1 font-semibold text-gray-700">Huidig</th>
+                                            <th class="text-left py-1 px-1 font-semibold text-gray-700">Nieuw</th>
                                         </tr>
                                     </thead>
                                     <tbody id="previewChangesTable">
@@ -186,35 +281,6 @@
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
-
-            <!-- Preek.docx upload (optional) -->
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-5">
-                <h2 class="text-base font-semibold text-gkin-green mb-1 flex items-center gap-2">
-                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                              d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
-                    </svg>
-                    Preek.docx
-                    <span class="text-xs font-normal text-gray-400 ml-1">(optioneel – voor beamer PPT)</span>
-                </h2>
-
-                <input type="file" id="preekFile" accept=".docx" class="hidden">
-                <div id="preekDrop" class="drop-zone border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-gkin-green hover:bg-green-50 mt-4">
-                    <svg class="w-10 h-10 mx-auto text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
-                    </svg>
-                    <p class="text-sm text-gray-500">Hier neerzetten of <span class="text-gkin-green font-medium underline">klik om te bladeren</span></p>
-                    <p class="text-xs text-gray-400 mt-1">.docx</p>
-                </div>
-                <div id="preekName" class="hidden mt-3 flex items-center gap-2 text-sm text-gray-700 bg-green-50 border border-green-200 rounded-lg px-4 py-2">
-                    <svg class="w-4 h-4 text-gkin-green shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                    </svg>
-                    <span id="preekNameText"></span>
-                    <button type="button" id="preekClear" class="ml-auto text-gray-400 hover:text-red-500">✕</button>
                 </div>
             </div>
 
@@ -316,109 +382,184 @@
             }
         }
 
+        // --- Radio button: Excel source ---
+        document.querySelectorAll('input[name="excelSource"]').forEach(radio => {
+            radio.addEventListener('change', () => {
+                const isUpload = document.querySelector('input[name="excelSource"]:checked').value === 'upload';
+                document.getElementById('uploadSection').classList.toggle('hidden', !isUpload);
+            });
+        });
+
+        // --- Radio button: Preek source ---
+        document.querySelectorAll('input[name="preekSource"]').forEach(radio => {
+            radio.addEventListener('change', () => {
+                const isUpload = document.querySelector('input[name="preekSource"]:checked').value === 'upload';
+                document.getElementById('preekUploadSection').classList.toggle('hidden', !isUpload);
+            });
+        });
+
         setupDropZone('excelDrop', 'excelFile', 'excelName', 'excelNameText', 'excelClear');
         setupDropZone('preekDrop', 'preekFile', 'preekName', 'preekNameText', 'preekClear');
 
         // --- Auto-fill functionality ---
-        let _filledExcelData = null;  // Store for download
+        let _filledExcelData = null;
         let _filledFilename = null;
-
-        // Store current file for later use
         let _currentExcelFile = null;
         let _previewData = null;
 
-        document.getElementById('autoFillBtn').addEventListener('click', async () => {
-            const excelInput = document.getElementById('excelFile');
-            const excelFile = excelInput.files[0];
-            if (!excelFile) {
-                showStatus('Upload eerst het Excel bestand.', 'error');
-                return;
+        function getExcelSource() {
+            return document.querySelector('input[name="excelSource"]:checked').value;
+        }
+
+        function populatePreviewModal(previewData) {
+            document.getElementById('previewDate').textContent = previewData.service_date;
+
+            const notFoundList = document.getElementById('previewNotFoundList');
+            const notFoundSection = document.getElementById('previewNotFound');
+            notFoundList.innerHTML = '';
+            if (previewData.alerts.not_found && previewData.alerts.not_found.length > 0) {
+                previewData.alerts.not_found.forEach(item => {
+                    const li = document.createElement('li');
+                    li.textContent = '⚠️ ' + item;
+                    notFoundList.appendChild(li);
+                });
+                notFoundSection.classList.remove('hidden');
+            } else {
+                notFoundSection.classList.add('hidden');
             }
 
-            setAutoFillLoading(true);
-            _currentExcelFile = excelFile;
+            const changesTable = document.getElementById('previewChangesTable');
+            changesTable.innerHTML = '';
+            for (const [field, currentVal] of Object.entries(previewData.current_values)) {
+                const newVal = previewData.proposed_changes[field];
+                const row = document.createElement('tr');
+                row.className = 'border-b border-gray-100 last:border-0';
+                const hasChange = newVal && newVal !== currentVal;
+                row.innerHTML = `
+                    <td class="py-1 px-1" style="text-align:center">
+                        <input type="checkbox" class="change-checkbox rounded border-gray-300" data-field="${field}" ${hasChange ? 'checked' : ''}>
+                    </td>
+                    <td class="py-1 px-1 text-gray-600" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${field}</td>
+                    <td class="py-1 px-1 ${currentVal ? 'text-gray-600' : 'text-gray-400 italic'}" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${currentVal || ''}">${currentVal || '(leeg)'}</td>
+                    <td class="py-1 px-1 ${hasChange ? 'text-green-600 font-medium' : 'text-gray-400'}" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${hasChange ? newVal : ''}">${hasChange ? newVal : '-'}</td>
+                `;
+                changesTable.appendChild(row);
+            }
 
-            const fd = new FormData();
-            fd.append('excel_data', excelFile);
+            document.getElementById('selectAllChanges').addEventListener('change', function() {
+                document.querySelectorAll('.change-checkbox').forEach(cb => cb.checked = this.checked);
+            });
+
+            const warningsList = document.getElementById('previewWarningsList');
+            const warningsSection = document.getElementById('previewWarnings');
+            warningsList.innerHTML = '';
+            if (previewData.alerts.warnings && previewData.alerts.warnings.length > 0) {
+                previewData.alerts.warnings.forEach(item => {
+                    const li = document.createElement('li');
+                    li.textContent = '⚠️ ' + item;
+                    warningsList.appendChild(li);
+                });
+                warningsSection.classList.remove('hidden');
+            } else {
+                warningsSection.classList.add('hidden');
+            }
+        }
+
+        // --- Wijzigingen bekijken button ---
+        document.getElementById('previewChangesBtn').addEventListener('click', async () => {
+            const source = getExcelSource();
+            setUpdateLoading(true);
 
             try {
-                // First call preview endpoint
-                const previewResp = await fetch('/liturgie/preview-fill-data', { method: 'POST', body: fd });
-                const previewData = await previewResp.json();
-
-                if (!previewResp.ok) {
-                    showStatus('Fout bij laden preview: ' + (previewData.error || 'Onbekende fout'), 'error');
-                    return;
+                let previewData;
+                if (source === 'dropbox') {
+                    const resp = await fetch('/liturgie/preview-working-file');
+                    previewData = await resp.json();
+                    if (!resp.ok) {
+                        showStatus('Fout bij laden preview: ' + (previewData.error || 'Onbekende fout'), 'error');
+                        return;
+                    }
+                } else {
+                    const excelFile = document.getElementById('excelFile').files[0];
+                    if (!excelFile) {
+                        showStatus('Upload eerst het Excel bestand.', 'error');
+                        return;
+                    }
+                    _currentExcelFile = excelFile;
+                    const fd = new FormData();
+                    fd.append('excel_data', excelFile);
+                    const resp = await fetch('/liturgie/preview-fill-data', { method: 'POST', body: fd });
+                    previewData = await resp.json();
+                    if (!resp.ok) {
+                        showStatus('Fout bij laden preview: ' + (previewData.error || 'Onbekende fout'), 'error');
+                        return;
+                    }
                 }
 
                 _previewData = previewData;
+                populatePreviewModal(previewData);
 
-                // Populate preview modal
-                document.getElementById('previewDate').textContent = previewData.service_date;
-                
-                // Show not found items
-                const notFoundList = document.getElementById('previewNotFoundList');
-                const notFoundSection = document.getElementById('previewNotFound');
-                notFoundList.innerHTML = '';
-                if (previewData.alerts.not_found && previewData.alerts.not_found.length > 0) {
-                    previewData.alerts.not_found.forEach(item => {
-                        const li = document.createElement('li');
-                        li.textContent = '⚠️ ' + item;
-                        notFoundList.appendChild(li);
-                    });
-                    notFoundSection.classList.remove('hidden');
-                } else {
-                    notFoundSection.classList.add('hidden');
-                }
+                // Wire apply button based on source
+                const applyBtn = document.getElementById('applyChangesBtn');
+                applyBtn.onclick = source === 'dropbox'
+                    ? applyDropboxChanges
+                    : applyUploadChanges;
 
-                // Show proposed changes
-                const changesTable = document.getElementById('previewChangesTable');
-                changesTable.innerHTML = '';
-                for (const [field, currentVal] of Object.entries(previewData.current_values)) {
-                    const newVal = previewData.proposed_changes[field];
-                    const row = document.createElement('tr');
-                    row.className = 'border-b border-gray-100 last:border-0';
-                    
-                    const hasChange = newVal && newVal !== currentVal;
-                    row.innerHTML = `
-                        <td class="py-2 px-2">
-                            <input type="checkbox" class="change-checkbox rounded border-gray-300" data-field="${field}" ${hasChange ? 'checked' : ''}>
-                        </td>
-                        <td class="py-2 px-2 text-gray-600">${field}</td>
-                        <td class="py-2 px-2 ${currentVal ? 'text-gray-600' : 'text-gray-400 italic'}">${currentVal || '(leeg)'}</td>
-                        <td class="py-2 px-2 ${hasChange ? 'text-green-600 font-medium' : 'text-gray-400'}">${hasChange ? newVal : '-'}</td>
-                    `;
-                    changesTable.appendChild(row);
-                }
-
-                // Handle Select All checkbox
-                document.getElementById('selectAllChanges').addEventListener('change', function() {
-                    const checkboxes = document.querySelectorAll('.change-checkbox');
-                    checkboxes.forEach(cb => cb.checked = this.checked);
-                });
-
-                // Show warnings
-                const warningsList = document.getElementById('previewWarningsList');
-                const warningsSection = document.getElementById('previewWarnings');
-                warningsList.innerHTML = '';
-                if (previewData.alerts.warnings && previewData.alerts.warnings.length > 0) {
-                    previewData.alerts.warnings.forEach(item => {
-                        const li = document.createElement('li');
-                        li.textContent = '⚠️ ' + item;
-                        warningsList.appendChild(li);
-                    });
-                    warningsSection.classList.remove('hidden');
-                } else {
-                    warningsSection.classList.add('hidden');
-                }
-
-                // Show modal
                 document.getElementById('previewModal').classList.remove('hidden');
-
             } catch (err) {
                 showStatus('Netwerkfout bij laden preview: ' + err.message, 'error');
             } finally {
-                setAutoFillLoading(false);
+                setUpdateLoading(false);
+            }
+        });
+
+        // --- Bestand bijwerken button (direct update without preview) ---
+        document.getElementById('updateFileBtn').addEventListener('click', async () => {
+            const source = getExcelSource();
+            setUpdateLoading(true);
+            hideAutoFillAlerts();
+
+            try {
+                if (source === 'dropbox') {
+                    const resp = await fetch('/liturgie/auto-fill-working-file', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ selected_changes: [] })
+                    });
+                    const data = await resp.json();
+                    if (resp.ok && data.success) {
+                        showAutoFillAlerts(data.alerts, data.dankoffer_info, false);
+                        showStatus(`✓ Bestand bijgewerkt op Dropbox voor ${data.service_date}`, 'success');
+                    } else {
+                        showStatus('Fout bij bijwerken: ' + (data.error || 'Onbekende fout'), 'error');
+                    }
+                } else {
+                    const excelFile = document.getElementById('excelFile').files[0];
+                    if (!excelFile) {
+                        showStatus('Upload eerst het Excel bestand.', 'error');
+                        return;
+                    }
+                    _currentExcelFile = excelFile;
+                    const fd = new FormData();
+                    fd.append('excel_file', excelFile);
+                    const resp = await fetch('/liturgie/fill-data', { method: 'POST', body: fd });
+                    const data = await resp.json();
+                    if (resp.ok && data.excel_data) {
+                        _filledExcelData = data.excel_data;
+                        _filledFilename = data.filename;
+                        document.getElementById('excelFile').value = '';
+                        document.getElementById('excelName').classList.add('hidden');
+                        document.getElementById('excelDrop').classList.remove('hidden');
+                        showAutoFillAlerts(data.alerts, data.dankoffer_info, true);
+                        showStatus(`✓ Gegevens ingevuld voor ${data.service_date}. Download het bestand en upload het opnieuw.`, 'success');
+                    } else {
+                        showStatus('Fout bij auto-vullen: ' + (data.error || 'Onbekende fout'), 'error');
+                    }
+                }
+            } catch (err) {
+                showStatus('Netwerkfout: ' + err.message, 'error');
+            } finally {
+                setUpdateLoading(false);
             }
         });
 
@@ -427,38 +568,51 @@
             document.getElementById('previewModal').classList.add('hidden');
         });
 
-        document.getElementById('applyChangesBtn').addEventListener('click', async () => {
+        async function applyDropboxChanges() {
             document.getElementById('previewModal').classList.add('hidden');
-            
+            setUpdateLoading(true);
+            const selectedChanges = [];
+            document.querySelectorAll('.change-checkbox:checked').forEach(cb => selectedChanges.push(cb.dataset.field));
+            try {
+                const resp = await fetch('/liturgie/auto-fill-working-file', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ selected_changes: selectedChanges })
+                });
+                const data = await resp.json();
+                if (resp.ok && data.success) {
+                    showAutoFillAlerts(data.alerts, data.dankoffer_info, false);
+                    showStatus(`✓ Bestand bijgewerkt op Dropbox voor ${data.service_date}`, 'success');
+                } else {
+                    showStatus('Fout bij bijwerken: ' + (data.error || 'Onbekende fout'), 'error');
+                }
+            } catch (err) {
+                showStatus('Netwerkfout: ' + err.message, 'error');
+            } finally {
+                setUpdateLoading(false);
+            }
+        }
+
+        async function applyUploadChanges() {
+            document.getElementById('previewModal').classList.add('hidden');
             if (!_currentExcelFile) {
                 showStatus('Geen Excel bestand geselecteerd.', 'error');
                 return;
             }
-
-            setAutoFillLoading(true);
+            setUpdateLoading(true);
             hideAutoFillAlerts();
-
             const fd = new FormData();
             fd.append('excel_file', _currentExcelFile);
-
             try {
                 const resp = await fetch('/liturgie/fill-data', { method: 'POST', body: fd });
                 const data = await resp.json();
-
                 if (resp.ok && data.excel_data) {
-                    // Store the filled data for download
                     _filledExcelData = data.excel_data;
                     _filledFilename = data.filename;
-
-                    // Clear the current upload
-                    const excelInput = document.getElementById('excelFile');
-                    excelInput.value = '';
+                    document.getElementById('excelFile').value = '';
                     document.getElementById('excelName').classList.add('hidden');
                     document.getElementById('excelDrop').classList.remove('hidden');
-
-                    // Show alerts with download section
                     showAutoFillAlerts(data.alerts, data.dankoffer_info, true);
-
                     showStatus(`✓ Gegevens ingevuld voor ${data.service_date}. Download het bestand en upload het opnieuw.`, 'success');
                 } else {
                     showStatus('Fout bij auto-vullen: ' + (data.error || 'Onbekende fout'), 'error');
@@ -466,14 +620,13 @@
             } catch (err) {
                 showStatus('Netwerkfout bij auto-vullen: ' + err.message, 'error');
             } finally {
-                setAutoFillLoading(false);
+                setUpdateLoading(false);
             }
-        });
+        }
 
         // Download filled file button handler
         document.getElementById('downloadFilledBtn').addEventListener('click', () => {
             if (!_filledExcelData || !_filledFilename) return;
-
             const bytes = Uint8Array.from(atob(_filledExcelData), c => c.charCodeAt(0));
             const blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
             const url = URL.createObjectURL(blob);
@@ -486,11 +639,15 @@
             URL.revokeObjectURL(url);
         });
 
-        function setAutoFillLoading(on) {
-            document.getElementById('autoFillBtn').disabled = on;
-            document.getElementById('autoFillIcon').classList.toggle('hidden', on);
-            document.getElementById('autoFillSpinner').classList.toggle('hidden', !on);
-            document.getElementById('autoFillText').textContent = on ? 'Gegevens ophalen...' : 'Auto-vullen gegevens (Takenrooster, Tikkie, Dankoffer)';
+        function setUpdateLoading(on) {
+            const previewBtn = document.getElementById('previewChangesBtn');
+            const updateBtn = document.getElementById('updateFileBtn');
+            const spinner = document.getElementById('updateSpinner');
+            const btnText = document.getElementById('updateBtnText');
+            previewBtn.disabled = on;
+            updateBtn.disabled = on;
+            if (spinner) spinner.classList.toggle('hidden', !on);
+            if (btnText) btnText.textContent = on ? 'Bezig...' : 'Bestand bijwerken';
         }
 
         function hideAutoFillAlerts() {
@@ -555,11 +712,16 @@
         document.getElementById('genForm').addEventListener('submit', async (e) => {
             e.preventDefault();
 
-            const excelInput = document.getElementById('excelFile');
-            const excelFile = excelInput.files[0];
-            if (!excelFile) {
-                showStatus('Excel bestand is verplicht.', 'error');
-                return;
+            const excelSource = getExcelSource();
+            const preekSource = document.querySelector('input[name="preekSource"]:checked').value;
+
+            // Validate Excel source
+            if (excelSource === 'upload') {
+                const excelFile = document.getElementById('excelFile').files[0];
+                if (!excelFile) {
+                    showStatus('Upload eerst het Excel bestand.', 'error');
+                    return;
+                }
             }
 
             setLoading(true);
@@ -571,13 +733,18 @@
 
             if (!wantA && !wantB && !wantP) {
                 showStatus('Selecteer minimaal één bestand om te genereren.', 'error');
+                setLoading(false);
                 return;
             }
 
             const fd = new FormData();
-            fd.append('excel_file', excelFile);
+            fd.append('excel_source', excelSource);
+            if (excelSource === 'upload') {
+                fd.append('excel_file', document.getElementById('excelFile').files[0]);
+            }
+            fd.append('preek_source', preekSource);
             const preekFile = document.getElementById('preekFile').files[0];
-            if (preekFile) fd.append('preek_file', preekFile);
+            if (preekSource === 'upload' && preekFile) fd.append('preek_file', preekFile);
             fd.append('want_a', wantA ? '1' : '0');
             fd.append('want_b', wantB ? '1' : '0');
             fd.append('want_p', wantP ? '1' : '0');
@@ -639,149 +806,6 @@
             document.getElementById('statusBox').classList.add('hidden');
         }
 
-        // Working Folder Direct Access button handler
-        document.getElementById('workingFolderPreviewBtn').addEventListener('click', async () => {
-            console.log('[Working Folder] Button clicked');
-            setWorkingFolderLoading(true);
-            hideAutoFillAlerts();
-
-            try {
-                console.log('[Working Folder] Fetching preview...');
-                const previewResp = await fetch('/liturgie/preview-working-file');
-                console.log('[Working Folder] Response status:', previewResp.status);
-                
-                const previewData = await previewResp.json();
-                console.log('[Working Folder] Preview data:', previewData);
-
-                if (!previewResp.ok) {
-                    showStatus('Fout bij laden preview: ' + (previewData.error || 'Onbekende fout'), 'error');
-                    console.error('[Working Folder] Error:', previewData.error);
-                    return;
-                }
-
-                _previewData = previewData;
-                document.getElementById('previewDate').textContent = previewData.service_date;
-                
-                const notFoundList = document.getElementById('previewNotFoundList');
-                const notFoundSection = document.getElementById('previewNotFound');
-                notFoundList.innerHTML = '';
-                if (previewData.alerts.not_found && previewData.alerts.not_found.length > 0) {
-                    previewData.alerts.not_found.forEach(item => {
-                        const li = document.createElement('li');
-                        li.textContent = '⚠️ ' + item;
-                        notFoundList.appendChild(li);
-                    });
-                    notFoundSection.classList.remove('hidden');
-                } else {
-                    notFoundSection.classList.add('hidden');
-                }
-
-                const changesTable = document.getElementById('previewChangesTable');
-                changesTable.innerHTML = '';
-                for (const [field, currentVal] of Object.entries(previewData.current_values)) {
-                    const newVal = previewData.proposed_changes[field];
-                    const row = document.createElement('tr');
-                    row.className = 'border-b border-gray-100 last:border-0';
-                    
-                    const hasChange = newVal && newVal !== currentVal;
-                    row.innerHTML = `
-                        <td class="py-2 px-2">
-                            <input type="checkbox" class="change-checkbox rounded border-gray-300" data-field="${field}" ${hasChange ? 'checked' : ''}>
-                        </td>
-                        <td class="py-2 px-2 text-gray-600">${field}</td>
-                        <td class="py-2 px-2 ${currentVal ? 'text-gray-600' : 'text-gray-400 italic'}">${currentVal || '(leeg)'}</td>
-                        <td class="py-2 px-2 ${hasChange ? 'text-green-600 font-medium' : 'text-gray-400'}">${hasChange ? newVal : '-'}</td>
-                    `;
-                    changesTable.appendChild(row);
-                }
-
-                // Handle Select All checkbox
-                document.getElementById('selectAllChanges').addEventListener('change', function() {
-                    const checkboxes = document.querySelectorAll('.change-checkbox');
-                    checkboxes.forEach(cb => cb.checked = this.checked);
-                });
-
-                const warningsList = document.getElementById('previewWarningsList');
-                const warningsSection = document.getElementById('previewWarnings');
-                warningsList.innerHTML = '';
-                if (previewData.alerts.warnings && previewData.alerts.warnings.length > 0) {
-                    previewData.alerts.warnings.forEach(item => {
-                        const li = document.createElement('li');
-                        li.textContent = '⚠️ ' + item;
-                        warningsList.appendChild(li);
-                    });
-                    warningsSection.classList.remove('hidden');
-                } else {
-                    warningsSection.classList.add('hidden');
-                }
-
-                // Change apply button to use working folder endpoint
-                const applyBtn = document.getElementById('applyChangesBtn');
-                applyBtn.onclick = async () => {
-                    document.getElementById('previewModal').classList.add('hidden');
-                    setWorkingFolderLoading(true);
-
-                    // Collect selected changes
-                    const selectedChanges = [];
-                    const checkboxes = document.querySelectorAll('.change-checkbox:checked');
-                    checkboxes.forEach(cb => {
-                        selectedChanges.push(cb.dataset.field);
-                    });
-                    console.log('[Apply] Selected changes:', selectedChanges);
-
-                    try {
-                        const resp = await fetch('/liturgie/auto-fill-working-file', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ selected_changes: selectedChanges })
-                        });
-                        const data = await resp.json();
-
-                        if (resp.ok && data.success) {
-                            showAutoFillAlerts(data.alerts, data.dankoffer_info, false);
-                            showStatus(`✓ Bestand bijgewerkt op Dropbox voor ${data.service_date}`, 'success');
-                        } else {
-                            showStatus('Fout bij bijwerken: ' + (data.error || 'Onbekende fout'), 'error');
-                        }
-                    } catch (err) {
-                        showStatus('Netwerkfout: ' + err.message, 'error');
-                    } finally {
-                        setWorkingFolderLoading(false);
-                    }
-                };
-
-                console.log('[Working Folder] Showing modal');
-                document.getElementById('previewModal').classList.remove('hidden');
-
-            } catch (err) {
-                console.error('[Working Folder] Full error:', err);
-                console.error('[Working Folder] Error stack:', err.stack);
-                showStatus('Netwerkfout bij laden preview: ' + err.message + ' (check console)', 'error');
-            } finally {
-                setWorkingFolderLoading(false);
-            }
-        });
-
-        function setWorkingFolderLoading(on) {
-            const btn = document.getElementById('workingFolderPreviewBtn');
-            btn.disabled = on;
-            if (on) {
-                btn.innerHTML = `
-                    <svg class="w-4 h-4 spinner shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <circle cx="12" cy="12" r="10" stroke-width="3" stroke-dasharray="60" stroke-dashoffset="15"/>
-                    </svg>
-                    <span>Laden...</span>
-                `;
-            } else {
-                btn.innerHTML = `
-                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                    </svg>
-                    <span>Wijzigingen bekijken (werkmap)</span>
-                `;
-            }
-        }
     </script>
 </body>
 </html>
