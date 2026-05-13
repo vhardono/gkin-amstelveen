@@ -1391,10 +1391,15 @@ def liturgie_fill_data():
             current_e21 = get_cell_value(dankoffer_row, 5)
             print(f'[Liturgie Fill] Current dankoffer values - B21: "{current_b21}", C21: "{current_c21}", D21: "{current_d21}", E21: "{current_e21}"')
 
+            # Set all dankoffer cells but only show one consolidated line in alerts
+            dankoffer_filled_parts = []
+            
             # B21: Book name (only if validation passed or no Boeken sheet)
             if book_valid or not valid_books:
                 result_b21 = set_cell_value(dankoffer_row, 2, dankoffer_book, f'Dankoffer boek (B21) (rij {dankoffer["row_index"]} uit Dankoffer.xlsx)')
                 print(f'[Liturgie Fill] B21 set result: {result_b21}, value: {dankoffer_book}')
+                if result_b21:
+                    dankoffer_filled_parts.append(dankoffer_book)
             else:
                 result_b21 = False
                 print(f'[Liturgie Fill] B21 NOT set - book validation failed')
@@ -1402,15 +1407,26 @@ def liturgie_fill_data():
             # C21: Chapter (H.S. / pasal)
             result_c21 = set_cell_value(dankoffer_row, 3, dankoffer['chapter'], 'Dankoffer hoofdstuk (C21)')
             print(f'[Liturgie Fill] C21 set result: {result_c21}, value: {dankoffer["chapter"]}')
+            if result_c21:
+                dankoffer_filled_parts.append(dankoffer['chapter'])
 
             # D21: Start verse (ayat)
             result_d21 = set_cell_value(dankoffer_row, 4, dankoffer['verse_start'], 'Dankoffer begin vers (D21)')
             print(f'[Liturgie Fill] D21 set result: {result_d21}, value: {dankoffer["verse_start"]}')
+            if result_d21:
+                verse_text = dankoffer['verse_start']
+                if dankoffer['verse_end']:
+                    verse_text += f'-{dankoffer["verse_end"]}'
+                dankoffer_filled_parts.append(verse_text)
 
             # E21: End verse (ayat) - only if there's an end verse
             if dankoffer['verse_end']:
                 result_e21 = set_cell_value(dankoffer_row, 5, dankoffer['verse_end'], 'Dankoffer eind vers (E21)')
                 print(f'[Liturgie Fill] E21 set result: {result_e21}, value: {dankoffer["verse_end"]}')
+
+            # Add simplified one-line dankoffer alert
+            if dankoffer_filled_parts:
+                alerts['auto_populated'].append(f'Dankoffer vers: {dankoffer["full_text"]}')
 
             # Store results for response
             dankoffer_cells = {
@@ -1459,6 +1475,18 @@ def liturgie_fill_data():
         # Prepare dankoffer info for response
         dankoffer_info = None
         if dankoffer:
+            # Build status detail message for blue box
+            status_parts = []
+            if dankoffer.get('already_assigned'):
+                status_parts.append('Dit vers was al toegewezen aan deze datum')
+            elif dankoffer.get('marked_as_used'):
+                status_parts.append('Nieuwe toewijzing toegevoegd aan Dankoffer.xlsx')
+            
+            if dankoffer.get('reset_needed'):
+                status_parts.append('Alle verzen waren gebruikt → oudste verzen worden hergebruikt')
+            
+            status_parts.append(f'Rij {dankoffer["row_index"]} van {dankoffer["total_count"]} ({dankoffer["unused_count"]} resterend)')
+            
             dankoffer_info = {
                 'verse': dankoffer['full_text'],
                 'row_index': dankoffer['row_index'],
@@ -1468,12 +1496,13 @@ def liturgie_fill_data():
                 'marked_as_used': dankoffer.get('marked_as_used', False),
                 'already_assigned': dankoffer.get('already_assigned', False),
                 'date_assigned': dankoffer.get('date_assigned'),
-                'cells': dankoffer_cells  # Include which cells were filled
+                'status_detail': ' • '.join(status_parts),
+                'cells': dankoffer_cells
             }
 
         return jsonify({
             'excel_data': excel_b64,
-            'filename': f'Main_Liturgy_file_{service_date.strftime("%Y%m%d")}_filled.xlsx',
+            'filename': 'Main Liturgy file.xlsx',
             'alerts': alerts,
             'service_date': service_date.strftime('%d-%m-%Y'),
             'dankoffer_verse': dankoffer['full_text'] if dankoffer else None,
