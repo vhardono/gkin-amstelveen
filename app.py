@@ -2053,7 +2053,13 @@ def preview_working_file():
         
         # Get proposed values from sources
         try:
-            entry = _get_takenrooster(service_date)
+            takenrooster = _get_takenrooster()
+            entry = None
+            for tr_entry in takenrooster:
+                entry_date = tr_entry.get('date')
+                if entry_date and entry_date.date() == service_date.date():
+                    entry = tr_entry
+                    break
             if entry:
                 for field, key in [('Voorganger', 'predikant'), ('OvD', 'ovd'), ('1e Ontvangst', '1eo'),
                                    ('2e Ontvangst', '2eo'), ('Voorzangers', 'voorzangers'), 
