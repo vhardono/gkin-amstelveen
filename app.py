@@ -1124,7 +1124,7 @@ def _mark_dankoffer_verse_as_used(dbx, row_idx: int, service_date: datetime, res
     """
     Update Dankoffer.xlsx in Dropbox to mark a verse as used (Column C).
     Updates just the selected row with the new date.
-    If reset_all=True, it means we're reusing an old verse (just updating its date).
+    Auto-detects if there's a header row based on first cell content.
     """
     try:
         from io import BytesIO
@@ -1135,11 +1135,29 @@ def _mark_dankoffer_verse_as_used(dbx, row_idx: int, service_date: datetime, res
         wb = openpyxl.load_workbook(BytesIO(resp.content))
         ws = wb.active
 
-        # Mark the selected verse as used (Column C = column 3)
-        # row_idx is 0-indexed, Excel rows are 1-indexed
-        excel_row = row_idx + 1  # Adjust if your file has a header row
+        # Detect if row 1 is a header by checking if A1 looks like a header
+        first_cell = str(ws.cell(row=1, column=1).value).strip().lower() if ws.cell(row=1, column=1).value else ''
+        # If A1 contains words like "verse", "bible", "text", "reference", it's likely a header
+        header_keywords = ['verse', 'bible', 'text', 'reference', 'ref', 'book', 'chapter', 'date', 'gebruikt']
+        has_header = any(keyword in first_cell for keyword in header_keywords)
+
+        # Calculate Excel row: if header exists, data starts at row 2
+        if has_header:
+            excel_row = row_idx + 2  # row_idx 0 -> Excel row 2 (first data row after header)
+            print(f'[Dankoffer] Header detected. Writing to row {excel_row} (row_idx={row_idx})')
+        else:
+            excel_row = row_idx + 1  # row_idx 0 -> Excel row 1
+            print(f'[Dankoffer] No header detected. Writing to row {excel_row} (row_idx={row_idx})')
+
         date_str = service_date.strftime('%Y-%m-%d')
+
+        # Read current value for logging
+        current_val = ws.cell(row=excel_row, column=3).value
+        print(f'[Dankoffer] Current value in row {excel_row}, col 3: {current_val}')
+
+        # Update the cell
         ws.cell(row=excel_row, column=3).value = date_str
+        print(f'[Dankoffer] Setting row {excel_row}, col 3 to: {date_str}')
 
         # Save to BytesIO
         output = BytesIO()
@@ -1148,10 +1166,12 @@ def _mark_dankoffer_verse_as_used(dbx, row_idx: int, service_date: datetime, res
 
         # Upload back to Dropbox
         dbx.files_upload(output.read(), DANKOFFER_DROPBOX_PATH, mode=dropbox.files.WriteMode('overwrite'))
-        print(f'[Dankoffer] Marked verse at row {excel_row}, column C as used on {date_str}')
+        print(f'[Dankoffer] Successfully marked verse at row {excel_row}, column C as used on {date_str}')
 
     except Exception as e:
         print(f'[Dankoffer] Error updating dankoffer file: {e}')
+        import traceback
+        traceback.print_exc()
         raise
 
 

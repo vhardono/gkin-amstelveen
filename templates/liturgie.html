@@ -123,10 +123,13 @@
                             ✓ Dit vers was al toegewezen aan deze datum
                         </p>
                         <p id="dankofferNewAssignment" class="hidden text-xs text-gray-500 mt-1 italic">
-                            Dit vers is nu gemarkeerd als "gebruikt" in Dankoffer.xlsx
+                            ✓ Dit vers is gemarkeerd als "gebruikt" in Dankoffer.xlsx
                         </p>
                         <p id="dankofferReused" class="hidden text-xs text-amber-600 mt-1">
                             🔄 Dit vers vervangt een ouder gebruik (hergebruik)
+                        </p>
+                        <p id="dankofferError" class="hidden text-xs text-red-600 mt-1 font-semibold">
+                            ⚠️ Kon Dankoffer.xlsx niet bijwerken (controleer logs)
                         </p>
                     </div>
                 </div>
@@ -340,6 +343,7 @@
             document.getElementById('dankofferAlreadyAssigned').classList.add('hidden');
             document.getElementById('dankofferNewAssignment').classList.add('hidden');
             document.getElementById('dankofferReused').classList.add('hidden');
+            document.getElementById('dankofferError').classList.add('hidden');
         }
 
         function showAutoFillAlerts(alerts, dankofferInfo, showDownload = false) {
@@ -391,8 +395,21 @@
                 const alreadyAssignedEl = document.getElementById('dankofferAlreadyAssigned');
                 const newAssignmentEl = document.getElementById('dankofferNewAssignment');
                 const reusedEl = document.getElementById('dankofferReused');
+                const errorEl = document.getElementById('dankofferError');
 
-                if (dankofferInfo.already_assigned) {
+                // Hide error by default
+                errorEl.classList.add('hidden');
+
+                // Check if update to Dankoffer.xlsx succeeded
+                const markedAsUsed = dankofferInfo.marked_as_used !== false;
+
+                if (!markedAsUsed) {
+                    // Show error if marking failed
+                    alreadyAssignedEl.classList.add('hidden');
+                    newAssignmentEl.classList.add('hidden');
+                    reusedEl.classList.add('hidden');
+                    errorEl.classList.remove('hidden');
+                } else if (dankofferInfo.already_assigned) {
                     alreadyAssignedEl.classList.remove('hidden');
                     newAssignmentEl.classList.add('hidden');
                     reusedEl.classList.add('hidden');
