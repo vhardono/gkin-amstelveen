@@ -1904,35 +1904,24 @@ def auto_fill_working_file():
             dankoffer_row = 21
             dankoffer_book = dankoffer['book']
             
-            # Validate book name against Boeken sheet
-            book_valid = False
-            valid_books = _get_valid_book_names(wb)
-            if valid_books:
-                norm_book = normalize_text(dankoffer_book)
-                book_valid = any(
-                    norm_book == normalize_text(valid) or norm_book in normalize_text(valid)
-                    for valid in valid_books
-                )
-            
-            if book_valid or not valid_books:
-                def set_dankoffer_cell(row, col, value):
-                    cell = ws.cell(row=row, column=col)
-                    current_val = str(cell.value).strip() if cell.value else ''
-                    if current_val and current_val.lower() not in ('nan', 'none', ''):
-                        return False
-                    elif value:
-                        cell.value = value
-                        return True
+            def set_dankoffer_cell(row, col, value):
+                cell = ws.cell(row=row, column=col)
+                current_val = str(cell.value).strip() if cell.value else ''
+                if current_val and current_val.lower() not in ('nan', 'none', ''):
                     return False
-                
-                set_dankoffer_cell(dankoffer_row, 2, dankoffer_book)
-                set_dankoffer_cell(dankoffer_row, 3, dankoffer['chapter'])
-                verse_text = dankoffer['verse_start']
-                if dankoffer['verse_end']:
-                    verse_text += f'-{dankoffer["verse_end"]}'
-                set_dankoffer_cell(dankoffer_row, 4, verse_text)
-                
-                alerts['auto_populated'].append(f'Dankoffer vers: {dankoffer["full_text"]}')
+                elif value:
+                    cell.value = value
+                    return True
+                return False
+            
+            set_dankoffer_cell(dankoffer_row, 2, dankoffer_book)
+            set_dankoffer_cell(dankoffer_row, 3, dankoffer['chapter'])
+            verse_text = dankoffer['verse_start']
+            if dankoffer['verse_end']:
+                verse_text += f'-{dankoffer["verse_end"]}'
+            set_dankoffer_cell(dankoffer_row, 4, verse_text)
+            
+            alerts['auto_populated'].append(f'Dankoffer vers: {dankoffer["full_text"]}')
             
             # Build status detail
             status_detail = f'Rij {dankoffer["row_index"]} van {dankoffer["total_count"]} ({dankoffer["unused_count"]} resterend)'
