@@ -2587,6 +2587,9 @@ def campaign_create():
             if result.get('response_text'):
                 error_msg += f" - Response: {result['response_text'][:200]}"
             
+            # Add raw request data for debugging
+            error_msg += f" - Request sender: {generator.sender_email}"
+            
             return jsonify({'success': False, 'error': error_msg}), 500
         
         campaign_id = result.get('data', {}).get('id', 'unknown')
