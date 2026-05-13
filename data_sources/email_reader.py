@@ -247,10 +247,14 @@ class OutlookCollecteReader:
                 return []
 
         def _extract_url(body: str) -> str:
+            print(f'[email_reader] Extracting URL from body (first 200 chars): {body[:200]}...')
             for pat in [TIKKIE_PAT, ING_PAT, URL_PAT]:
                 m = pat.search(body)
                 if m:
-                    return m.group(0).rstrip('.,)>')
+                    url = m.group(0).rstrip('.,)<>')
+                    print(f'[email_reader] Found URL with pattern {pat.pattern[:30]}: {url[:50]}')
+                    return url
+            print('[email_reader] No URL found in body')
             return ''
 
         def _save_first_image(msg_id: str, prefix: str) -> str:
