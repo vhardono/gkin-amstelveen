@@ -243,6 +243,27 @@
                 return;
             }
             
+            // Clear previous values
+            themeInput.value = '';
+            bibleVerseInput.value = '';
+            youtubeInput.value = '';
+            liturgieUrlInput.value = '';
+            collecteUrlInput.value = '';
+            qrUrlInput.value = '';
+            subjectLine.value = '';
+            campaignName.value = '';
+            
+            // Clear status messages
+            const qrStatus = document.getElementById('qrStatus');
+            const preekStatus = document.getElementById('preekStatus');
+            if (qrStatus) qrStatus.innerHTML = '';
+            if (preekStatus) preekStatus.innerHTML = '';
+            
+            // Clear window variables
+            window.oleLocation = '';
+            window.oleTime = '';
+            window.olePredikant = '';
+            
             // Auto-fetch OLE data from email (includes QR and Tikkie URL)
             await fetchOLEData(selectedDate);
             
@@ -493,6 +514,27 @@
                 setLoading(false);
             }
         });
+
+        // --- Clear All Fields Helper ---
+        function clearAllFields() {
+            themeInput.value = '';
+            bibleVerseInput.value = '';
+            youtubeInput.value = '';
+            liturgieUrlInput.value = '';
+            collecteUrlInput.value = '';
+            qrUrlInput.value = '';
+            subjectLine.value = '';
+            campaignName.value = '';
+            
+            const qrStatus = document.getElementById('qrStatus');
+            const preekStatus = document.getElementById('preekStatus');
+            if (qrStatus) qrStatus.innerHTML = '';
+            if (preekStatus) preekStatus.innerHTML = '';
+            
+            window.oleLocation = '';
+            window.oleTime = '';
+            window.olePredikant = '';
+        }
 
         // --- Helpers ---
         function escapeHtml(text) {

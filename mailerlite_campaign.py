@@ -245,7 +245,7 @@ class MailerLiteCampaignGenerator:
     <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=yes">
     <meta name="format-detection" content="telephone=no, date=no, address=no, email=no, url=no">
     <meta name="x-apple-disable-message-reformatting">
-    <title>GKIN ({service_type}){location_display}: Online Landelijke Eredienst Zondag {date_str}, {time_display}u</title>
+    <title>GKIN ({service_type}){location_display}: Online Landelijke Eredienst Zondag {date_str}, {time_clean}u</title>
     <style type="text/css">
         html, body {{ margin: 0 !important; padding: 0 !important; width: 100% !important; height: 100% !important; }}
         body {{ -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; font-family: 'Inter', sans-serif; background-color: #F4F7FA; }}

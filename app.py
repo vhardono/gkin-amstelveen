@@ -2416,8 +2416,8 @@ def campaign_preview():
         date_str = f"{selected_date.day} {months[selected_date.month - 1]} {selected_date.year}"
         short_date = selected_date.strftime('%y%m%d')
         
-        # Use dynamic time in subject (from OLE preekroster)
-        time_for_subject = ole_time if ole_time else '10:00'
+        # Use dynamic time in subject (from OLE preekroster) - remove u suffix if present
+        time_for_subject = (ole_time if ole_time else '10:00').replace('u', '').replace('U', '')
         
         preview = {
             'name': data.get('name') or f"GKIN OLE {short_date}",
@@ -2526,8 +2526,8 @@ def campaign_create():
                   'juli', 'augustus', 'september', 'oktober', 'november', 'december']
         date_str = f"{selected_date.day} {months[selected_date.month - 1]} {selected_date.year}"
         
-        # Use dynamic time in subject (from OLE preekroster)
-        time_for_subject = ole_time if ole_time else '10:00'
+        # Use dynamic time in subject (from OLE preekroster) - remove u suffix if present
+        time_for_subject = (ole_time if ole_time else '10:00').replace('u', '').replace('U', '')
         
         result = generator.create_campaign(
             name=name or f"GKIN OLE {selected_date.strftime('%y%m%d')}",
