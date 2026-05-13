@@ -9,6 +9,99 @@ from typing import Dict, List, Optional, Any
 import requests
 
 
+class MailerLiteFileManager:
+    """Handles file uploads to MailerLite for use in campaigns."""
+    
+    def __init__(self, api_key: Optional[str] = None):
+        self.api_key = api_key or os.environ.get('MAILERLITE_API_KEY')
+        self.base_url = "https://connect.mailerlite.com/api"
+        self.headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Accept": "application/json"
+        }
+    
+    def upload_file(self, file_path: str, name: Optional[str] = None) -> Dict:
+        """
+        Upload a file to MailerLite file manager.
+        
+        Args:
+            file_path: Local path to file
+            name: Optional custom name for the file
+        
+        Returns:
+            Dict with 'id', 'url', 'name' of uploaded file
+        """
+        url = f"{self.base_url}/files"
+        
+        try:
+            filename = name or os.path.basename(file_path)
+            
+            with open(file_path, 'rb') as f:
+                files = {'file': (filename, f)}
+                data = {'name': filename}
+                
+                resp = requests.post(
+                    url,
+                    headers={"Authorization": f"Bearer {self.api_key}"},
+                    files=files,
+                    data=data,
+                    timeout=60
+                )
+                resp.raise_for_status()
+                result = resp.json()
+                
+                return {
+                    'success': True,
+                    'id': result.get('data', {}).get('id'),
+                    'url': result.get('data', {}).get('url'),
+                    'name': result.get('data', {}).get('name', filename)
+                }
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+    
+    def upload_bytes(self, content: bytes, name: str) -> Dict:
+        """Upload file content directly from bytes."""
+        url = f"{self.base_url}/files"
+        
+        try:
+            files = {'file': (name, content)}
+            data = {'name': name}
+            
+            resp = requests.post(
+                url,
+                headers={"Authorization": f"Bearer {self.api_key}"},
+                files=files,
+                data=data,
+                timeout=60
+            )
+            resp.raise_for_status()
+            result = resp.json()
+            
+            return {
+                'success': True,
+                'id': result.get('data', {}).get('id'),
+                'url': result.get('data', {}).get('url'),
+                'name': result.get('data', {}).get('name', name)
+            }
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+    
+    def list_files(self) -> List[Dict]:
+        """List all uploaded files in MailerLite."""
+        url = f"{self.base_url}/files"
+        try:
+            resp = requests.get(
+                url,
+                headers={"Authorization": f"Bearer {self.api_key}", "Accept": "application/json"},
+                timeout=30
+            )
+            resp.raise_for_status()
+            result = resp.json()
+            return result.get('data', [])
+        except Exception as e:
+            return []
+
+
 class MailerLiteCampaignGenerator:
     """Handles MailerLite API interactions for campaign creation."""
 
@@ -277,6 +370,127 @@ class MailerLiteCampaignGenerator:
             'ovd': takenrooster_entry.get('ovd', '') if takenrooster_entry else ''
         }
 
+    def get_templates(self) -> List[Dict]:
+        """Fetch available templates from MailerLite."""
+        result = self._make_request("GET", "/templates")
+        return result.get('data', [])
+    
+    def get_template(self, template_id: str) -> Dict:
+        """Fetch a specific template by ID."""
+        return self._make_request("GET", f"/templates/{template_id}")
+    
+    def create_campaign_from_template(self,
+                                     name: str,
+                                     subject: str,
+                                     template_id: str,
+                                     template_variables: Dict[str, str],
+                                     attachment_urls: Optional[List[str]] = None,
+                                     group_ids: Optional[List[str]] = None,
+                                     send_time: Optional[str] = None) -> Dict:
+        """
+        Create campaign using a MailerLite template with variable substitution.
+        
+        Args:
+            name: Campaign name
+            subject: Email subject
+            template_id: MailerLite template ID
+            template_variables: Dict of {{placeholder}} -> value replacements
+            attachment_urls: List of uploaded file URLs to include as links
+            group_ids: Subscriber groups
+            send_time: Schedule time
+        
+        Returns:
+            API response with campaign details
+        """
+        # Get template content
+        template = self.get_template(template_id)
+        if 'error' in template:
+            return template
+        
+        # Extract template HTML
+        html_content = template.get('data', {}).get('html', '')
+        
+        # Replace template variables
+        for key, value in template_variables.items():
+            placeholder = f"{{{{{key}}}}}"
+            html_content = html_content.replace(placeholder, str(value))
+        
+        # Add attachment links if provided
+        if attachment_urls:
+            attachment_section = '<div style="margin-top: 30px; padding: 15px; background: #f5f5f5; border-radius: 8px;"><h3>Bijlagen</h3><ul>'
+            for url in attachment_urls:
+                filename = url.split('/')[-1]
+                attachment_section += f'<li><a href="{url}" target="_blank" style="color: #3A7C22;">{filename}</a></li>'
+            attachment_section += '</ul></div>'
+            
+            # Insert before closing </body> tag or at end
+            if '</body>' in html_content:
+                html_content = html_content.replace('</body>', f'{attachment_section}</body>')
+            else:
+                html_content += attachment_section
+        
+        # Create campaign with template HTML
+        return self.create_campaign(
+            name=name,
+            subject=subject,
+            html_content=html_content,
+            group_ids=group_ids,
+            send_time=send_time
+        )
+    
+    def create_campaign_with_attachments(self,
+                                        name: str,
+                                        subject: str,
+                                        html_content: str,
+                                        attachments: List[Dict],
+                                        group_ids: Optional[List[str]] = None,
+                                        send_time: Optional[str] = None) -> Dict:
+        """
+        Create campaign with file attachments uploaded to MailerLite.
+        
+        Args:
+            attachments: List of dicts with 'path' (local file) or 'content' (bytes) + 'name'
+        """
+        from mailerlite_campaign import MailerLiteFileManager
+        
+        file_manager = MailerLiteFileManager(self.api_key)
+        attachment_urls = []
+        
+        # Upload all attachments
+        for att in attachments:
+            if 'path' in att:
+                result = file_manager.upload_file(att['path'], att.get('name'))
+            elif 'content' in att:
+                result = file_manager.upload_bytes(att['content'], att.get('name', 'attachment'))
+            else:
+                continue
+            
+            if result.get('success'):
+                attachment_urls.append(result['url'])
+        
+        # Add attachment links to HTML
+        if attachment_urls:
+            attachment_html = '<div style="margin: 30px 0; padding: 20px; background: #f8f8f8; border-left: 4px solid #3A7C22;">'
+            attachment_html += '<h3 style="margin-top: 0; color: #3A7C22;">📎 Bijlagen</h3><ul style="margin: 10px 0;">'
+            for url in attachment_urls:
+                filename = url.split('/')[-1]
+                attachment_html += f'<li style="margin: 5px 0;"><a href="{url}" style="color: #3A7C22; text-decoration: none;">{filename}</a></li>'
+            attachment_html += '</ul></div>'
+            
+            # Insert before closing body tag
+            if '</body>' in html_content:
+                html_content = html_content.replace('</body>', f'{attachment_html}</body>')
+            else:
+                html_content += attachment_html
+        
+        return self.create_campaign(
+            name=name,
+            subject=subject,
+            html_content=html_content,
+            group_ids=group_ids,
+            send_time=send_time
+        )
+    
     def test_connection(self) -> Dict:
         """Test API connection and return status."""
         result = self._make_request("GET", "/groups")
