@@ -1794,21 +1794,20 @@ def auto_fill_working_file():
         
         # Load with openpyxl
         wb = load_workbook(BytesIO(excel_bytes))
-        
-        # Get service date from Data sheet cell B3
         try:
-            ws_data = wb['Data']
-        except KeyError:
-            return jsonify({'error': 'Data tab niet gevonden in Excel bestand'}), 400
-            
-        service_date_raw = ws_data.cell(row=3, column=2).value  # B3
-        print(f'[Working File AutoFill] Data!B3 value: {repr(service_date_raw)}')
-        if not service_date_raw:
-            return jsonify({'error': f'Geen datum gevonden in Data!B3 (waarde: {repr(service_date_raw)})'}), 400
+            metadata, response = dbx.files_download(working_file_path)
+            file_bytes = response.content
+        except Exception as e:
+            return jsonify({'error': f'Kan bestand niet downloaden van Dropbox: {str(e)}'}), 500
         
-        # Use active sheet for data population
+        # Load Excel
+        wb = load_workbook(BytesIO(file_bytes))
         ws = wb.active
-            
+        
+        # Get service date
+        service_date_raw = ws['Data!B3'].value
+        print(f"[Working File AutoFill] Data!B3 value: {service_date_raw}")
+        
         # Parse date
         if isinstance(service_date_raw, str):
             try:
@@ -1829,13 +1828,19 @@ def auto_fill_working_file():
         }
         
         # Helper to set cell value
-        def set_cell_value(row, col, value, field_name):
+        def set_cell_value(row, col, value, field_name, force=False):
             cell = ws.cell(row=row, column=col)
             current_val = str(cell.value).strip() if cell.value else ''
             
             if current_val and current_val.lower() not in ('nan', 'none', ''):
-                alerts['already_filled'].append(f'{field_name}: {current_val}')
-                return False
+                if force:
+                    # Force update - overwrite existing value
+                    cell.value = value
+                    alerts['auto_populated'].append(f'{field_name}: {value} (overschreven)')
+                    return True
+                else:
+                    alerts['already_filled'].append(f'{field_name}: {current_val}')
+                    return False
             elif value:
                 cell.value = value
                 alerts['auto_populated'].append(f'{field_name}: {value}')
@@ -1871,9 +1876,11 @@ def auto_fill_working_file():
             for row, field_name, taken_key in field_mapping:
                 new_val = str(entry.get(taken_key, '')).strip()
                 print(f"[AutoFill] {field_name} ({taken_key}): '{new_val}'")
+                # Force update if field is in selected_changes
+                force_update = field_name in selected_changes
                 if new_val:
-                    result = set_cell_value(row, 2, new_val, field_name)
-                    print(f"[AutoFill]   -> set_cell_value result: {result}")
+                    result = set_cell_value(row, 2, new_val, field_name, force=force_update)
+                    print(f"[AutoFill]   -> set_cell_value result: {result} (force={force_update})")
                 else:
                     alerts['not_found'].append(f'{field_name}: niet gevonden in takenrooster')
         else:

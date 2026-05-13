@@ -721,8 +721,20 @@
                     document.getElementById('previewModal').classList.add('hidden');
                     setWorkingFolderLoading(true);
 
+                    // Collect selected changes
+                    const selectedChanges = [];
+                    const checkboxes = document.querySelectorAll('.change-checkbox:checked');
+                    checkboxes.forEach(cb => {
+                        selectedChanges.push(cb.dataset.field);
+                    });
+                    console.log('[Apply] Selected changes:', selectedChanges);
+
                     try {
-                        const resp = await fetch('/liturgie/auto-fill-working-file', { method: 'POST' });
+                        const resp = await fetch('/liturgie/auto-fill-working-file', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ selected_changes: selectedChanges })
+                        });
                         const data = await resp.json();
 
                         if (resp.ok && data.success) {
