@@ -167,6 +167,9 @@ class MailerLiteCampaignGenerator:
         """
         groups = group_ids or ([self.group_id] if self.group_id else [])
         
+        # Note: Free MailerLite plans don't support content submission via API
+        # This will fail with "Content submission is only available on advanced plan"
+        
         data = {
             "name": name,
             "subject": subject,
@@ -174,10 +177,8 @@ class MailerLiteCampaignGenerator:
             "emails": [{
                 "subject": subject,
                 "content": html_content,
-                "from": {
-                    "email": "kerkenraad@gkin.nl",
-                    "name": "GKIN Amstelveen"
-                }
+                "from_name": "GKIN Amstelveen",
+                "from": "kerkenraad@gkin.nl"
             }],
             "groups": groups
         }
@@ -185,7 +186,13 @@ class MailerLiteCampaignGenerator:
         if send_time:
             data['send_time'] = send_time
             
-        return self._make_request("POST", "/campaigns", data)
+        result = self._make_request("POST", "/campaigns", data)
+        
+        # Add helpful message for free plan users
+        if result.get('error') and 'advanced plan' in str(result.get('details', '')):
+            result['free_plan_note'] = "Your MailerLite free plan doesn't allow API content submission. Workaround: (1) Create campaign manually in MailerLite, or (2) Upgrade to paid plan, or (3) Copy the HTML from preview and paste into MailerLite campaign."
+        
+        return result
 
     def generate_html_from_mededelingen(self,
                                         service_date: datetime,

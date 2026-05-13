@@ -2544,6 +2544,9 @@ def campaign_create():
                 error_msg += f" - Details: {json.dumps(result['details'])}"
             if result.get('response_text'):
                 error_msg += f" - Response: {result['response_text'][:200]}"
+            # Add free plan note if applicable
+            if result.get('free_plan_note'):
+                error_msg = result['free_plan_note']
             return jsonify({'success': False, 'error': error_msg}), 500
         
         campaign_id = result.get('data', {}).get('id', 'unknown')
