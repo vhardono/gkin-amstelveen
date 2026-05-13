@@ -1788,12 +1788,20 @@ def auto_fill_working_file():
         
         # Load with openpyxl
         wb = load_workbook(BytesIO(excel_bytes))
-        ws = wb.active
         
-        # Get service date from D4
-        service_date_raw = ws.cell(row=4, column=4).value
+        # Get service date from Data sheet cell B3
+        try:
+            ws_data = wb['Data']
+        except KeyError:
+            return jsonify({'error': 'Data tab niet gevonden in Excel bestand'}), 400
+            
+        service_date_raw = ws_data.cell(row=3, column=2).value  # B3
+        print(f'[Working File AutoFill] Data!B3 value: {repr(service_date_raw)}')
         if not service_date_raw:
-            return jsonify({'error': 'Geen datum gevonden in cel D4'}), 400
+            return jsonify({'error': f'Geen datum gevonden in Data!B3 (waarde: {repr(service_date_raw)})'}), 400
+        
+        # Use active sheet for data population
+        ws = wb.active
             
         # Parse date
         if isinstance(service_date_raw, str):
@@ -1985,12 +1993,20 @@ def preview_working_file():
             return jsonify({'error': f'Kon bestand niet laden: {str(e)}'}), 500
         
         wb = load_workbook(BytesIO(excel_bytes))
-        ws = wb.active
         
-        # Get date
-        service_date_raw = ws.cell(row=4, column=4).value
+        # Get service date from Data sheet cell B3
+        try:
+            ws_data = wb['Data']
+        except KeyError:
+            return jsonify({'error': 'Data tab niet gevonden in Excel bestand'}), 400
+            
+        service_date_raw = ws_data.cell(row=3, column=2).value  # B3
+        print(f'[Working File Preview] Data!B3 value: {repr(service_date_raw)}')
         if not service_date_raw:
-            return jsonify({'error': 'Geen datum in D4'}), 400
+            return jsonify({'error': f'Geen datum gevonden in Data!B3 (waarde: {repr(service_date_raw)})'}), 400
+        
+        # Use active sheet for reading current values
+        ws = wb.active
             
         if isinstance(service_date_raw, str):
             try:
