@@ -89,6 +89,25 @@
                     <button type="button" id="excelClear" class="ml-auto text-gray-400 hover:text-red-500">✕</button>
                 </div>
 
+                <!-- Working Folder Direct Access Section -->
+                <div class="mt-6 pt-4 border-t border-gray-200">
+                    <h3 class="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                        <svg class="w-4 h-4 shrink-0 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                        </svg>
+                        Direct vanuit Dropbox werkomap
+                    </h3>
+                    <button type="button" id="workingFolderPreviewBtn"
+                            class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg transition flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                        </svg>
+                        <span>Wijzigingen bekijken (werkmap)</span>
+                    </button>
+                    <p class="text-xs text-gray-400 mt-1 text-center">Leest direct van /working folder/file mingguan/Main Liturgy file.xlsx</p>
+                </div>
+
                 <!-- Alert display section -->
                 <div id="autoFillAlerts" class="hidden mt-4">
                     <!-- Download filled file button -->
@@ -454,6 +473,133 @@
             a.remove();
             URL.revokeObjectURL(url);
         });
+
+        // Working Folder Direct Access button handler
+        document.getElementById('workingFolderPreviewBtn').addEventListener('click', async () => {
+            setWorkingFolderLoading(true);
+            hideAutoFillAlerts();
+
+            try {
+                // Load preview from Dropbox working folder
+                const previewResp = await fetch('/liturgie/preview-working-file');
+                const previewData = await previewResp.json();
+
+                if (!previewResp.ok) {
+                    showStatus('Fout bij laden preview: ' + (previewData.error || 'Onbekende fout'), 'error');
+                    return;
+                }
+
+                // Store for later apply
+                _previewData = previewData;
+
+                // Populate preview modal (same as before)
+                document.getElementById('previewDate').textContent = previewData.service_date;
+                
+                const notFoundList = document.getElementById('previewNotFoundList');
+                const notFoundSection = document.getElementById('previewNotFound');
+                notFoundList.innerHTML = '';
+                if (previewData.alerts.not_found && previewData.alerts.not_found.length > 0) {
+                    previewData.alerts.not_found.forEach(item => {
+                        const li = document.createElement('li');
+                        li.textContent = '⚠️ ' + item;
+                        notFoundList.appendChild(li);
+                    });
+                    notFoundSection.classList.remove('hidden');
+                } else {
+                    notFoundSection.classList.add('hidden');
+                }
+
+                const changesDiv = document.getElementById('previewChanges');
+                changesDiv.innerHTML = '';
+                for (const [field, currentVal] of Object.entries(previewData.current_values)) {
+                    const newVal = previewData.proposed_changes[field];
+                    const row = document.createElement('div');
+                    row.className = 'flex justify-between py-1 border-b border-gray-100 last:border-0';
+                    
+                    if (newVal && newVal !== currentVal) {
+                        row.innerHTML = `
+                            <span class="text-gray-600">${field}:</span>
+                            <div class="text-right">
+                                <span class="text-gray-400 line-through">${currentVal || '(leeg)'}</span>
+                                <span class="text-green-600 font-medium ml-2">→ ${newVal}</span>
+                            </div>
+                        `;
+                    } else {
+                        row.innerHTML = `
+                            <span class="text-gray-600">${field}:</span>
+                            <span class="${currentVal ? 'text-gray-600' : 'text-gray-400 italic'}">${currentVal || '(leeg - geen wijziging)'}</span>
+                        `;
+                    }
+                    changesDiv.appendChild(row);
+                }
+
+                const warningsList = document.getElementById('previewWarningsList');
+                const warningsSection = document.getElementById('previewWarnings');
+                warningsList.innerHTML = '';
+                if (previewData.alerts.warnings && previewData.alerts.warnings.length > 0) {
+                    previewData.alerts.warnings.forEach(item => {
+                        const li = document.createElement('li');
+                        li.textContent = '⚠️ ' + item;
+                        warningsList.appendChild(li);
+                    });
+                    warningsSection.classList.remove('hidden');
+                } else {
+                    warningsSection.classList.add('hidden');
+                }
+
+                // Change apply button to use working folder endpoint
+                const applyBtn = document.getElementById('applyChangesBtn');
+                applyBtn.onclick = async () => {
+                    document.getElementById('previewModal').classList.add('hidden');
+                    setWorkingFolderLoading(true);
+
+                    try {
+                        const resp = await fetch('/liturgie/auto-fill-working-file', { method: 'POST' });
+                        const data = await resp.json();
+
+                        if (resp.ok && data.success) {
+                            showAutoFillAlerts(data.alerts, data.dankoffer_info, false);
+                            showStatus(`✓ Bestand bijgewerkt op Dropbox voor ${data.service_date}`, 'success');
+                        } else {
+                            showStatus('Fout bij bijwerken: ' + (data.error || 'Onbekende fout'), 'error');
+                        }
+                    } catch (err) {
+                        showStatus('Netwerkfout: ' + err.message, 'error');
+                    } finally {
+                        setWorkingFolderLoading(false);
+                    }
+                };
+
+                // Show modal
+                document.getElementById('previewModal').classList.remove('hidden');
+
+            } catch (err) {
+                showStatus('Netwerkfout bij laden preview: ' + err.message, 'error');
+            } finally {
+                setWorkingFolderLoading(false);
+            }
+        });
+
+        function setWorkingFolderLoading(on) {
+            const btn = document.getElementById('workingFolderPreviewBtn');
+            btn.disabled = on;
+            if (on) {
+                btn.innerHTML = `
+                    <svg class="w-4 h-4 spinner shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10" stroke-width="3" stroke-dasharray="60" stroke-dashoffset="15"/>
+                    </svg>
+                    <span>Laden...</span>
+                `;
+            } else {
+                btn.innerHTML = `
+                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                    </svg>
+                    <span>Wijzigingen bekijken (werkmap)</span>
+                `;
+            }
+        }
 
         function setAutoFillLoading(on) {
             document.getElementById('autoFillBtn').disabled = on;
