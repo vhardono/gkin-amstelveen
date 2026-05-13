@@ -1979,6 +1979,8 @@ def preview_working_file():
     """
     from openpyxl import load_workbook
     from io import BytesIO
+    from data_sources.takenrooster import TakenroosterReader
+    from data_sources.email_reader import OutlookCollecteReader
     
     try:
         dbx = _get_dbx_liturgie()

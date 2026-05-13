@@ -153,11 +153,22 @@
                                 <ul id="previewNotFoundList" class="text-xs text-red-700 space-y-0.5"></ul>
                             </div>
                             
-                            <div class="mb-4">
-                                <h4 class="text-sm font-semibold text-gray-700 mb-2">Huidige waarden → Nieuwe waarden:</h4>
-                                <div id="previewChanges" class="space-y-2 text-sm">
-                                    <!-- Changes will be populated here -->
-                                </div>
+                            <div class="mb-4 max-h-64 overflow-y-auto">
+                                <table class="w-full text-sm border-collapse">
+                                    <thead class="sticky top-0 bg-white">
+                                        <tr class="border-b border-gray-300">
+                                            <th class="text-left py-2 px-2 font-semibold text-gray-700 w-8">
+                                                <input type="checkbox" id="selectAllChanges" checked class="rounded border-gray-300">
+                                            </th>
+                                            <th class="text-left py-2 px-2 font-semibold text-gray-700">Veld</th>
+                                            <th class="text-left py-2 px-2 font-semibold text-gray-700">Huidig</th>
+                                            <th class="text-left py-2 px-2 font-semibold text-gray-700">Nieuw</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="previewChangesTable">
+                                        <!-- Changes will be populated here -->
+                                    </tbody>
+                                </table>
                             </div>
                             
                             <div id="previewWarnings" class="hidden mb-4 bg-amber-50 border border-amber-200 rounded-lg p-3">
@@ -361,29 +372,30 @@
                 }
 
                 // Show proposed changes
-                const changesDiv = document.getElementById('previewChanges');
-                changesDiv.innerHTML = '';
+                const changesTable = document.getElementById('previewChangesTable');
+                changesTable.innerHTML = '';
                 for (const [field, currentVal] of Object.entries(previewData.current_values)) {
                     const newVal = previewData.proposed_changes[field];
-                    const row = document.createElement('div');
-                    row.className = 'flex justify-between py-1 border-b border-gray-100 last:border-0';
+                    const row = document.createElement('tr');
+                    row.className = 'border-b border-gray-100 last:border-0';
                     
-                    if (newVal && newVal !== currentVal) {
-                        row.innerHTML = `
-                            <span class="text-gray-600">${field}:</span>
-                            <div class="text-right">
-                                <span class="text-gray-400 line-through">${currentVal || '(leeg)'}</span>
-                                <span class="text-green-600 font-medium ml-2">→ ${newVal}</span>
-                            </div>
-                        `;
-                    } else {
-                        row.innerHTML = `
-                            <span class="text-gray-600">${field}:</span>
-                            <span class="${currentVal ? 'text-gray-600' : 'text-gray-400 italic'}">${currentVal || '(leeg - geen wijziging)'}</span>
-                        `;
-                    }
-                    changesDiv.appendChild(row);
+                    const hasChange = newVal && newVal !== currentVal;
+                    row.innerHTML = `
+                        <td class="py-2 px-2">
+                            <input type="checkbox" class="change-checkbox rounded border-gray-300" data-field="${field}" ${hasChange ? 'checked' : ''}>
+                        </td>
+                        <td class="py-2 px-2 text-gray-600">${field}</td>
+                        <td class="py-2 px-2 ${currentVal ? 'text-gray-600' : 'text-gray-400 italic'}">${currentVal || '(leeg)'}</td>
+                        <td class="py-2 px-2 ${hasChange ? 'text-green-600 font-medium' : 'text-gray-400'}">${hasChange ? newVal : '-'}</td>
+                    `;
+                    changesTable.appendChild(row);
                 }
+
+                // Handle Select All checkbox
+                document.getElementById('selectAllChanges').addEventListener('change', function() {
+                    const checkboxes = document.querySelectorAll('.change-checkbox');
+                    checkboxes.forEach(cb => cb.checked = this.checked);
+                });
 
                 // Show warnings
                 const warningsList = document.getElementById('previewWarningsList');
@@ -664,29 +676,30 @@
                     notFoundSection.classList.add('hidden');
                 }
 
-                const changesDiv = document.getElementById('previewChanges');
-                changesDiv.innerHTML = '';
+                const changesTable = document.getElementById('previewChangesTable');
+                changesTable.innerHTML = '';
                 for (const [field, currentVal] of Object.entries(previewData.current_values)) {
                     const newVal = previewData.proposed_changes[field];
-                    const row = document.createElement('div');
-                    row.className = 'flex justify-between py-1 border-b border-gray-100 last:border-0';
+                    const row = document.createElement('tr');
+                    row.className = 'border-b border-gray-100 last:border-0';
                     
-                    if (newVal && newVal !== currentVal) {
-                        row.innerHTML = `
-                            <span class="text-gray-600">${field}:</span>
-                            <div class="text-right">
-                                <span class="text-gray-400 line-through">${currentVal || '(leeg)'}</span>
-                                <span class="text-green-600 font-medium ml-2">→ ${newVal}</span>
-                            </div>
-                        `;
-                    } else {
-                        row.innerHTML = `
-                            <span class="text-gray-600">${field}:</span>
-                            <span class="${currentVal ? 'text-gray-600' : 'text-gray-400 italic'}">${currentVal || '(leeg - geen wijziging)'}</span>
-                        `;
-                    }
-                    changesDiv.appendChild(row);
+                    const hasChange = newVal && newVal !== currentVal;
+                    row.innerHTML = `
+                        <td class="py-2 px-2">
+                            <input type="checkbox" class="change-checkbox rounded border-gray-300" data-field="${field}" ${hasChange ? 'checked' : ''}>
+                        </td>
+                        <td class="py-2 px-2 text-gray-600">${field}</td>
+                        <td class="py-2 px-2 ${currentVal ? 'text-gray-600' : 'text-gray-400 italic'}">${currentVal || '(leeg)'}</td>
+                        <td class="py-2 px-2 ${hasChange ? 'text-green-600 font-medium' : 'text-gray-400'}">${hasChange ? newVal : '-'}</td>
+                    `;
+                    changesTable.appendChild(row);
                 }
+
+                // Handle Select All checkbox
+                document.getElementById('selectAllChanges').addEventListener('change', function() {
+                    const checkboxes = document.querySelectorAll('.change-checkbox');
+                    checkboxes.forEach(cb => cb.checked = this.checked);
+                });
 
                 const warningsList = document.getElementById('previewWarningsList');
                 const warningsSection = document.getElementById('previewWarnings');
