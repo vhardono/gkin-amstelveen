@@ -1055,7 +1055,7 @@ def _get_dankoffer_verse(dbx, service_date: datetime, mark_as_used: bool = True)
             selected = existing_assignment
             reset_needed = False
             already_assigned = True
-            print(f'[Dankoffer] Reusing existing verse: {selected["full_text"]}')
+            print(f'[Dankoffer] Reusing existing verse: {selected["verse"]}')
         else:
             # STEP 2: Find the first unused verse (blank date)
             already_assigned = False
