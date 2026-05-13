@@ -742,8 +742,9 @@
                 document.getElementById('previewModal').classList.remove('hidden');
 
             } catch (err) {
-                console.error('[Working Folder] Error:', err);
-                showStatus('Netwerkfout bij laden preview: ' + err.message, 'error');
+                console.error('[Working Folder] Full error:', err);
+                console.error('[Working Folder] Error stack:', err.stack);
+                showStatus('Netwerkfout bij laden preview: ' + err.message + ' (check console)', 'error');
             } finally {
                 setWorkingFolderLoading(false);
             }

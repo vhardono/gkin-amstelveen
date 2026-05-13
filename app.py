@@ -1979,8 +1979,6 @@ def preview_working_file():
     """
     from openpyxl import load_workbook
     from io import BytesIO
-    from data_sources.takenrooster import TakenroosterReader
-    from data_sources.email_reader import OutlookCollecteReader
     
     try:
         dbx = _get_dbx_liturgie()
@@ -2053,10 +2051,9 @@ def preview_working_file():
         else:
             preview['current_values']['Dankoffer vers'] = ''
         
-        # Proposed values (same logic as auto-fill)
+        # Get proposed values from sources
         try:
-            takenrooster = TakenroosterReader('/dbx/takenrooster/Takenrooster 2025-2026 GKIN.xlsx')
-            entry = takenrooster.get_entry(service_date)
+            entry = _get_takenrooster(service_date)
             if entry:
                 for field, key in [('Voorganger', 'predikant'), ('OvD', 'ovd'), ('1e Ontvangst', '1eo'),
                                    ('2e Ontvangst', '2eo'), ('Voorzangers', 'voorzangers'), 
