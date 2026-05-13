@@ -1,5 +1,6 @@
 """
 GKIN Amstelveen Mededelingen Generator – Web App
+Redeploy trigger
 """
 
 import base64
