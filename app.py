@@ -2187,6 +2187,50 @@ def campaign_api_status():
     return jsonify(generator.test_connection())
 
 
+@app.route('/upload-to-mailerlite', methods=['POST'])
+@_password_required
+def upload_to_mailerlite():
+    """Upload a local file to MailerLite and return the URL."""
+    data = request.get_json() or {}
+    local_path = data.get('local_path', '')
+    
+    if not local_path:
+        return jsonify({'success': False, 'error': 'No path provided'}), 400
+    
+    # Resolve the full path
+    if local_path.startswith('/uploads/'):
+        filename = local_path.replace('/uploads/', '')
+        full_path = os.path.join(UPLOAD_DIR, filename)
+    elif os.path.exists(local_path):
+        full_path = local_path
+    else:
+        full_path = os.path.join(UPLOAD_DIR, local_path)
+    
+    if not os.path.exists(full_path):
+        return jsonify({'success': False, 'error': f'File not found: {full_path}'}), 404
+    
+    try:
+        from mailerlite_campaign import MailerLiteFileManager
+        file_manager = MailerLiteFileManager()
+        
+        result = file_manager.upload_file(full_path)
+        
+        if result.get('success'):
+            return jsonify({
+                'success': True,
+                'url': result['url'],
+                'id': result['id'],
+                'name': result['name']
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': result.get('error', 'Upload failed')
+            }), 500
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @app.route('/campaign/qr-code/<date>', methods=['GET'])
 @_password_required
 def campaign_qr_code(date):

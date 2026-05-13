@@ -243,8 +243,8 @@
                 return;
             }
             
-            // Auto-fetch QR code for this date
-            await fetchQRCode(selectedDate);
+            // Auto-fetch OLE data from email (includes QR and Tikkie URL)
+            await fetchOLEData(selectedDate);
             
             await loadPreview(selectedDate);
             campaignOptions.classList.remove('hidden');
@@ -253,26 +253,56 @@
             actionButtons.classList.remove('hidden');
         });
         
-        // --- Fetch QR Code ---
-        async function fetchQRCode(date) {
+        // --- Fetch OLE Data from Email (QR + Tikkie URL) ---
+        async function fetchOLEData(date) {
             try {
-                const resp = await fetch(`/campaign/qr-code/${date}`);
+                const resp = await fetch('/fetch-email-collecte', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ date })
+                });
                 const data = await resp.json();
                 
+                const collecteField = document.getElementById('collecteUrlInput');
                 const qrField = document.getElementById('qrUrlInput');
                 const qrStatus = document.getElementById('qrStatus') || createQRStatusElement();
                 
-                if (data.success) {
-                    qrField.value = data.url;
-                    qrStatus.innerHTML = `<span class="text-green-600">✓ QR code auto-geupload: ${data.filename}</span>`;
-                    qrStatus.className = 'text-sm mt-1';
-                } else {
-                    qrStatus.innerHTML = `<span class="text-amber-600">⚠ ${data.error} - Upload handmatig of gebruik URL hierboven</span>`;
-                    qrStatus.className = 'text-sm mt-1';
-                    qrField.placeholder = 'Plak hier de QR code URL of upload handmatig';
+                if (resp.status === 401 || data.error === 'login_required') {
+                    qrStatus.innerHTML = `<span class="text-amber-600">⚠ Niet ingelogd bij Outlook - log in bij Mededelingen om auto-fetch te gebruiken</span>`;
+                    return;
                 }
+                
+                // Fill Tikkie URL
+                if (data.ole_url) {
+                    collecteField.value = data.ole_url;
+                }
+                
+                // Handle QR code
+                if (data.ole_qr) {
+                    // Upload to MailerLite and get URL
+                    const uploadResp = await fetch('/upload-to-mailerlite', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ local_path: data.ole_qr })
+                    });
+                    const uploadData = await uploadResp.json();
+                    
+                    if (uploadData.success) {
+                        qrField.value = uploadData.url;
+                        qrStatus.innerHTML = `<span class="text-green-600">✓ QR code auto-geupload uit e-mail</span>`;
+                    } else {
+                        // Fallback: use local path for preview, user can manually upload
+                        qrField.value = data.ole_qr.startsWith('http') ? data.ole_qr : `/uploads/${data.ole_qr}`;
+                        qrStatus.innerHTML = `<span class="text-amber-600">⚠ QR gevonden maar upload mislukt - controleer handmatig</span>`;
+                    }
+                } else {
+                    qrStatus.innerHTML = `<span class="text-amber-600">⚠ Geen OLE QR code gevonden in e-mail</span>`;
+                }
+                
             } catch (err) {
-                console.error('QR fetch error:', err);
+                console.error('OLE fetch error:', err);
+                const qrStatus = document.getElementById('qrStatus') || createQRStatusElement();
+                qrStatus.innerHTML = `<span class="text-gray-500">ℹ Auto-fetch niet beschikbaar - vul handmatig in</span>`;
             }
         }
         
