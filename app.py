@@ -1003,6 +1003,8 @@ def _get_dankoffer_verse(dbx, service_date: datetime, mark_as_used: bool = True)
 
     Returns dict with: book, chapter, verse_start, verse_end, full_text, row_index, total_count
     """
+    from io import BytesIO
+
     try:
         _, resp = dbx.files_download(DANKOFFER_DROPBOX_PATH)
         df = pd.read_excel(BytesIO(resp.content), header=None)
@@ -1336,8 +1338,21 @@ def liturgie_fill_data():
             if dankoffer['verse_end']:
                 result_e21 = set_cell_value(dankoffer_row, 5, dankoffer['verse_end'], 'Dankoffer eind vers (E21)')
                 print(f'[Liturgie Fill] E21 set result: {result_e21}, value: {dankoffer["verse_end"]}')
+
+            # Store results for response
+            dankoffer_cells = {
+                'B21_filled': result_b21,
+                'C21_filled': result_c21,
+                'D21_filled': result_d21,
+                'E21_filled': result_e21 if dankoffer['verse_end'] else False,
+                'B21_value': dankoffer['book'],
+                'C21_value': dankoffer['chapter'],
+                'D21_value': dankoffer['verse_start'],
+                'E21_value': dankoffer['verse_end'] if dankoffer['verse_end'] else None
+            }
         else:
             print(f'[Liturgie Fill] No dankoffer data returned!')
+            dankoffer_cells = None
 
         # Try to get Tikkie link from email if available
         try:
@@ -1379,7 +1394,8 @@ def liturgie_fill_data():
                 'reset_needed': dankoffer.get('reset_needed', False),
                 'marked_as_used': dankoffer.get('marked_as_used', False),
                 'already_assigned': dankoffer.get('already_assigned', False),
-                'date_assigned': dankoffer.get('date_assigned')
+                'date_assigned': dankoffer.get('date_assigned'),
+                'cells': dankoffer_cells  # Include which cells were filled
             }
 
         return jsonify({
