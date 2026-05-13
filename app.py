@@ -1024,17 +1024,35 @@ def _get_dankoffer_verse(dbx, service_date: datetime, mark_as_used: bool = True)
         if not verses_data:
             return None
 
-        # Find the first unused verse
+        # Find the first unused verse (blank date)
         unused_verses = [v for v in verses_data if not v['date_used']]
 
-        # If all verses are used, reset and use the first one
-        if not unused_verses:
-            # All verses used - reset and start over
-            selected = verses_data[0]
-            reset_needed = True
-        else:
+        if unused_verses:
+            # Use the first unused verse
             selected = unused_verses[0]
             reset_needed = False
+        else:
+            # All verses are used - find the one with the OLDEST date
+            # Parse dates and find the minimum (oldest)
+            dated_verses = []
+            for v in verses_data:
+                try:
+                    if v['date_used']:
+                        parsed_date = datetime.strptime(v['date_used'], '%Y-%m-%d')
+                        dated_verses.append({**v, 'parsed_date': parsed_date})
+                except ValueError:
+                    # If date format is invalid, treat as very old
+                    dated_verses.append({**v, 'parsed_date': datetime(1900, 1, 1)})
+
+            if dated_verses:
+                # Sort by date and pick the oldest
+                dated_verses.sort(key=lambda x: x['parsed_date'])
+                selected = dated_verses[0]
+                reset_needed = True  # Indicates we're reusing an old verse
+            else:
+                # Fallback - should not happen
+                selected = verses_data[0]
+                reset_needed = True
 
         verse_text = selected['verse']
 
@@ -1080,7 +1098,8 @@ def _get_dankoffer_verse(dbx, service_date: datetime, mark_as_used: bool = True)
 def _mark_dankoffer_verse_as_used(dbx, row_idx: int, service_date: datetime, reset_all: bool = False):
     """
     Update Dankoffer.xlsx in Dropbox to mark a verse as used (Column C).
-    If reset_all=True, clear all dates in Column C first.
+    Updates just the selected row with the new date.
+    If reset_all=True, it means we're reusing an old verse (just updating its date).
     """
     try:
         from io import BytesIO
@@ -1090,11 +1109,6 @@ def _mark_dankoffer_verse_as_used(dbx, row_idx: int, service_date: datetime, res
         _, resp = dbx.files_download(DANKOFFER_DROPBOX_PATH)
         wb = openpyxl.load_workbook(BytesIO(resp.content))
         ws = wb.active
-
-        # If reset needed, clear all dates in column C (column 3)
-        if reset_all:
-            for row in range(2, ws.max_row + 1):  # Start from row 2 (assuming row 1 is header)
-                ws.cell(row=row, column=3).value = None
 
         # Mark the selected verse as used (Column C = column 3)
         # row_idx is 0-indexed, Excel rows are 1-indexed
