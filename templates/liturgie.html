@@ -476,16 +476,22 @@
 
         // Working Folder Direct Access button handler
         document.getElementById('workingFolderPreviewBtn').addEventListener('click', async () => {
+            console.log('[Working Folder] Button clicked');
             setWorkingFolderLoading(true);
             hideAutoFillAlerts();
 
             try {
                 // Load preview from Dropbox working folder
+                console.log('[Working Folder] Fetching preview...');
                 const previewResp = await fetch('/liturgie/preview-working-file');
+                console.log('[Working Folder] Response status:', previewResp.status);
+                
                 const previewData = await previewResp.json();
+                console.log('[Working Folder] Preview data:', previewData);
 
                 if (!previewResp.ok) {
                     showStatus('Fout bij laden preview: ' + (previewData.error || 'Onbekende fout'), 'error');
+                    console.error('[Working Folder] Error:', previewData.error);
                     return;
                 }
 
@@ -571,9 +577,11 @@
                 };
 
                 // Show modal
+                console.log('[Working Folder] Showing modal');
                 document.getElementById('previewModal').classList.remove('hidden');
 
             } catch (err) {
+                console.error('[Working Folder] Error:', err);
                 showStatus('Netwerkfout bij laden preview: ' + err.message, 'error');
             } finally {
                 setWorkingFolderLoading(false);
