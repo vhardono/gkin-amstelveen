@@ -19,6 +19,7 @@ import re
 import requests as _requests
 from bs4 import BeautifulSoup as _BS
 import pandas as pd
+import dropbox
 
 from data_sources.dropbox_reader import DropboxExcelReader
 from data_sources.scipio_scraper import ScipioScraper
@@ -985,51 +986,59 @@ def liturgie_generate():
 
 DANKOFFER_DROPBOX_PATH = '/working folder/Dankoffer.xlsx'
 
-# Track last used dankoffer row per year for rotation
-_dankoffer_rotation_cache: Dict[str, int] = {}
-
-
-def _get_dankoffer_verse(dbx, service_date: datetime) -> Optional[Dict]:
+def _get_dankoffer_verse(dbx, service_date: datetime, mark_as_used: bool = True) -> Optional[Dict]:
     """
-    Read Dankoffer.xlsx from Dropbox and return the verse for the given date.
-    Uses rotational logic: cycles through rows, 1st row for 1st week, etc.
-    Returns dict with: book, chapter, verse_start, verse_end
-    """
-    global _dankoffer_rotation_cache
+    Read Dankoffer.xlsx from Dropbox and return the next available verse.
 
+    Expected Dankoffer.xlsx format:
+    - Column A: Bible verse reference (e.g., "Psalmen 50:14-15")
+    - Column B: Bible text (the actual verse content)
+    - Column C: Date Used (blank = not used yet, or shows date when used)
+
+    Logic:
+    1. Find the first row where Column C (Date Used) is blank/empty
+    2. Return that verse
+    3. If mark_as_used=True, update Column C with the service date
+    4. If all verses are used, reset all dates and use the first verse
+
+    Returns dict with: book, chapter, verse_start, verse_end, full_text, row_index, total_count
+    """
     try:
         _, resp = dbx.files_download(DANKOFFER_DROPBOX_PATH)
         df = pd.read_excel(BytesIO(resp.content), header=None)
 
-        # Column A contains verses like "Psalmen 50:14-15" or "Psalmen 50:14"
-        verses = []
+        # Read verses and their used dates from Column C (index 2)
+        verses_data = []
         for idx, row in df.iterrows():
-            val = str(row.iloc[0]).strip() if pd.notna(row.iloc[0]) else ''
-            if val and val.lower() not in ('nan', 'none', ''):
-                verses.append(val)
+            verse = str(row.iloc[0]).strip() if pd.notna(row.iloc[0]) else ''
+            # Column C (index 2) contains Date Used
+            date_used = str(row.iloc[2]).strip() if len(row) > 2 and pd.notna(row.iloc[2]) else ''
 
-        if not verses:
+            if verse and verse.lower() not in ('nan', 'none', ''):
+                verses_data.append({
+                    'verse': verse,
+                    'date_used': date_used if date_used.lower() not in ('nan', 'none', '') else '',
+                    'row_idx': idx
+                })
+
+        if not verses_data:
             return None
 
-        # Calculate which verse to use based on week number (rotational)
-        year_week = f"{service_date.year}-{service_date.isocalendar()[1]}"
+        # Find the first unused verse
+        unused_verses = [v for v in verses_data if not v['date_used']]
 
-        # Check if we have a cached position for this year
-        cache_key = str(service_date.year)
-        last_idx = _dankoffer_rotation_cache.get(cache_key, -1)
+        # If all verses are used, reset and use the first one
+        if not unused_verses:
+            # All verses used - reset and start over
+            selected = verses_data[0]
+            reset_needed = True
+        else:
+            selected = unused_verses[0]
+            reset_needed = False
 
-        # Calculate expected index based on week number
-        week_num = service_date.isocalendar()[1]
-        expected_idx = (week_num - 1) % len(verses)
-
-        # Use the calculated rotational index
-        verse_idx = expected_idx
-        _dankoffer_rotation_cache[cache_key] = verse_idx
-
-        verse_text = verses[verse_idx]
+        verse_text = selected['verse']
 
         # Parse verse text like "Psalmen 50:14-15" or "Psalmen 50:14"
-        # Pattern: Book Chapter:Start[-End]
         import re
         match = re.match(r'^(.+?)\s+(\d+):(\d+)(?:-(\d+))?$', verse_text.strip())
         if not match:
@@ -1040,18 +1049,76 @@ def _get_dankoffer_verse(dbx, service_date: datetime) -> Optional[Dict]:
         verse_start = match.group(3)
         verse_end = match.group(4)  # None if single verse
 
-        return {
+        result = {
             'book': book,
             'chapter': chapter,
             'verse_start': verse_start,
             'verse_end': verse_end,
             'full_text': verse_text,
-            'row_index': verse_idx + 1  # 1-indexed for user display
+            'row_index': selected['row_idx'] + 1,  # 1-indexed for user display
+            'total_count': len(verses_data),
+            'unused_count': len(unused_verses),
+            'reset_needed': reset_needed
         }
+
+        # Update the Dankoffer.xlsx to mark this verse as used
+        if mark_as_used:
+            try:
+                _mark_dankoffer_verse_as_used(dbx, selected['row_idx'], service_date, reset_needed)
+                result['marked_as_used'] = True
+            except Exception as e:
+                print(f'[Dankoffer] Warning: Could not mark verse as used: {e}')
+                result['marked_as_used'] = False
+
+        return result
 
     except Exception as e:
         print(f'[Dankoffer] Error reading dankoffer file: {e}')
         return None
+
+
+def _mark_dankoffer_verse_as_used(dbx, row_idx: int, service_date: datetime, reset_all: bool = False):
+    """
+    Update Dankoffer.xlsx in Dropbox to mark a verse as used (Column C).
+    If reset_all=True, clear all dates in Column C first.
+    """
+    try:
+        from io import BytesIO
+        import openpyxl
+
+        # Download current file
+        _, resp = dbx.files_download(DANKOFFER_DROPBOX_PATH)
+        wb = openpyxl.load_workbook(BytesIO(resp.content))
+        ws = wb.active
+
+        # If reset needed, clear all dates in column C (column 3)
+        if reset_all:
+            for row in range(2, ws.max_row + 1):  # Start from row 2 (assuming row 1 is header)
+                ws.cell(row=row, column=3).value = None
+
+        # Mark the selected verse as used (Column C = column 3)
+        # row_idx is 0-indexed, Excel rows are 1-indexed
+        excel_row = row_idx + 1  # Adjust if your file has a header row
+        date_str = service_date.strftime('%Y-%m-%d')
+        ws.cell(row=excel_row, column=3).value = date_str
+
+        # Save to BytesIO
+        output = BytesIO()
+        wb.save(output)
+        output.seek(0)
+
+        # Upload back to Dropbox
+        dbx.files_upload(output.read(), DANKOFFER_DROPBOX_PATH, mode=dropbox.files.WriteMode('overwrite'))
+        print(f'[Dankoffer] Marked verse at row {excel_row}, column C as used on {date_str}')
+
+    except Exception as e:
+        print(f'[Dankoffer] Error updating dankoffer file: {e}')
+        raise
+
+
+def _preview_dankoffer_verse(dbx, service_date: datetime) -> Optional[Dict]:
+    """Preview which verse will be used without marking it as used."""
+    return _get_dankoffer_verse(dbx, service_date, mark_as_used=False)
 
 
 def _parse_verse_reference(verse_text: str) -> Optional[Dict]:
@@ -1228,12 +1295,74 @@ def liturgie_fill_data():
         # Encode for response
         excel_b64 = base64.b64encode(output.read()).decode('ascii')
 
+        # Prepare dankoffer info for response
+        dankoffer_info = None
+        if dankoffer:
+            dankoffer_info = {
+                'verse': dankoffer['full_text'],
+                'row_index': dankoffer['row_index'],
+                'total_count': dankoffer['total_count'],
+                'unused_count': dankoffer['unused_count'],
+                'reset_needed': dankoffer.get('reset_needed', False),
+                'marked_as_used': dankoffer.get('marked_as_used', False)
+            }
+
         return jsonify({
             'excel_data': excel_b64,
             'filename': f'Main_Liturgy_file_{service_date.strftime("%Y%m%d")}_filled.xlsx',
             'alerts': alerts,
             'service_date': service_date.strftime('%d-%m-%Y'),
-            'dankoffer_verse': dankoffer['full_text'] if dankoffer else None
+            'dankoffer_verse': dankoffer['full_text'] if dankoffer else None,
+            'dankoffer_info': dankoffer_info
+        })
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
+# ---------------------------------------------------------------------------
+# Dankoffer Preview Endpoint
+# ---------------------------------------------------------------------------
+
+@app.route('/liturgie/preview-dankoffer', methods=['POST'])
+def preview_dankoffer():
+    """
+    Preview which dankoffer verse will be used for a given date.
+    Does NOT mark the verse as used - just shows what would be selected.
+
+    Request body: { "date": "2026-05-11" } (ISO format)
+    """
+    data = request.get_json(force=True)
+    date_str = data.get('date', '')
+
+    if not date_str:
+        return jsonify({'error': 'Geen datum opgegeven.'}), 400
+
+    try:
+        service_date = datetime.strptime(date_str, '%Y-%m-%d')
+    except ValueError:
+        return jsonify({'error': 'Ongeldige datum formaat. Gebruik YYYY-MM-DD.'}), 400
+
+    try:
+        dbx = _get_dbx_liturgie()
+        dankoffer = _preview_dankoffer_verse(dbx, service_date)
+
+        if not dankoffer:
+            return jsonify({
+                'error': 'Geen dankoffer verzen gevonden in Dankoffer.xlsx.'
+            }), 404
+
+        return jsonify({
+            'verse': dankoffer['full_text'],
+            'row_index': dankoffer['row_index'],
+            'total_count': dankoffer['total_count'],
+            'unused_count': dankoffer['unused_count'],
+            'reset_needed': dankoffer.get('reset_needed', False),
+            'service_date': service_date.strftime('%d-%m-%Y'),
+            'message': f'Vers {dankoffer["row_index"]} van {dankoffer["total_count"]} zal gebruikt worden.' +
+                       (' (ALLE verzen zijn al gebruikt - cyclus wordt gereset!)' if dankoffer.get('reset_needed') else '')
         })
 
     except Exception as e:
