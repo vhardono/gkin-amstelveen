@@ -1823,7 +1823,7 @@ def auto_fill_working_file():
         }
         
         # Helper to set cell value
-        def set_cell_value(row, col, value, field_name, force=False):
+        def set_cell_value(ws, row, col, value, field_name, force=False):
             cell = ws.cell(row=row, column=col)
             current_val = str(cell.value).strip() if cell.value else ''
             
@@ -1874,7 +1874,7 @@ def auto_fill_working_file():
                 # Force update if field is in selected_changes
                 force_update = field_name in selected_changes
                 if new_val:
-                    result = set_cell_value(row, 2, new_val, field_name, force=force_update)
+                    result = set_cell_value(ws_active, row, 2, new_val, field_name, force=force_update)
                     print(f"[AutoFill]   -> set_cell_value result: {result} (force={force_update})")
                 else:
                     alerts['not_found'].append(f'{field_name}: niet gevonden in takenrooster')
