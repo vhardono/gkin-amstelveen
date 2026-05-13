@@ -97,33 +97,26 @@
 
                 <!-- Auto-update Section -->
                 <div class="mt-4 pt-4 border-t border-gray-200">
-                    <div class="flex items-center gap-2 mb-3">
+                    <div class="flex items-center gap-2">
                         <input type="checkbox" id="autoUpdateValues" class="rounded border-gray-300">
-                        <label for="autoUpdateValues" class="text-sm text-gray-700">Automatisch bijwerken met laatste gegevens:</label>
-                    </div>
-                    <div class="ml-6 text-xs text-gray-500 space-y-1">
-                        <div>• Takenrooster (Voorganger, OvD, etc.)</div>
-                        <div>• Tikkie QR link</div>
-                        <div>• Dankoffer vers</div>
+                        <label for="autoUpdateValues" class="text-sm text-gray-700">Automatisch bijwerken met laatste gegevens</label>
                     </div>
 
-                    <!-- Action Buttons -->
-                    <div class="mt-4 flex gap-2">
+                    <!-- Expanded detail: only visible when checkbox is checked -->
+                    <div id="autoUpdateDetail" class="hidden mt-3">
+                        <div class="ml-6 text-xs text-gray-500 space-y-1 mb-4">
+                            <div>• Takenrooster (Voorganger, OvD, etc.)</div>
+                            <div>• Tikkie QR link</div>
+                            <div>• Dankoffer vers</div>
+                        </div>
                         <button type="button" id="previewChangesBtn"
-                                class="flex-1 bg-white border border-gkin-green text-gkin-green hover:bg-green-50 font-medium py-2 px-3 rounded-lg text-sm transition">
-                            Wijzigingen bekijken
-                        </button>
-                        <button type="button" id="updateFileBtn"
-                                class="flex-1 bg-gkin-green hover:bg-green-700 text-white font-medium py-2 px-3 rounded-lg text-sm transition flex items-center justify-center gap-2">
+                                class="w-full bg-gkin-green hover:bg-green-700 text-white font-medium py-2 px-3 rounded-lg text-sm transition flex items-center justify-center gap-2">
                             <svg id="updateSpinner" class="w-4 h-4 spinner hidden shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <circle cx="12" cy="12" r="10" stroke-width="3" stroke-dasharray="60" stroke-dashoffset="15"/>
                             </svg>
-                            <span id="updateBtnText">Bestand bijwerken</span>
+                            <span id="updateBtnText">Wijzigingen bekijken &amp; bijwerken</span>
                         </button>
                     </div>
-                    <p id="updateHint" class="text-xs text-gray-400 mt-2 text-center">
-                        Dropbox bestand wordt direct bijgewerkt / Upload bestand wordt gedownload
-                    </p>
                 </div>
             </div>
 
@@ -382,6 +375,11 @@
             }
         }
 
+        // --- Checkbox: auto-update toggle ---
+        document.getElementById('autoUpdateValues').addEventListener('change', function() {
+            document.getElementById('autoUpdateDetail').classList.toggle('hidden', !this.checked);
+        });
+
         // --- Radio button: Excel source ---
         document.querySelectorAll('input[name="excelSource"]').forEach(radio => {
             radio.addEventListener('change', () => {
@@ -513,56 +511,6 @@
             }
         });
 
-        // --- Bestand bijwerken button (direct update without preview) ---
-        document.getElementById('updateFileBtn').addEventListener('click', async () => {
-            const source = getExcelSource();
-            setUpdateLoading(true);
-            hideAutoFillAlerts();
-
-            try {
-                if (source === 'dropbox') {
-                    const resp = await fetch('/liturgie/auto-fill-working-file', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ selected_changes: [] })
-                    });
-                    const data = await resp.json();
-                    if (resp.ok && data.success) {
-                        showAutoFillAlerts(data.alerts, data.dankoffer_info, false);
-                        showStatus(`✓ Bestand bijgewerkt op Dropbox voor ${data.service_date}`, 'success');
-                    } else {
-                        showStatus('Fout bij bijwerken: ' + (data.error || 'Onbekende fout'), 'error');
-                    }
-                } else {
-                    const excelFile = document.getElementById('excelFile').files[0];
-                    if (!excelFile) {
-                        showStatus('Upload eerst het Excel bestand.', 'error');
-                        return;
-                    }
-                    _currentExcelFile = excelFile;
-                    const fd = new FormData();
-                    fd.append('excel_file', excelFile);
-                    const resp = await fetch('/liturgie/fill-data', { method: 'POST', body: fd });
-                    const data = await resp.json();
-                    if (resp.ok && data.excel_data) {
-                        _filledExcelData = data.excel_data;
-                        _filledFilename = data.filename;
-                        document.getElementById('excelFile').value = '';
-                        document.getElementById('excelName').classList.add('hidden');
-                        document.getElementById('excelDrop').classList.remove('hidden');
-                        showAutoFillAlerts(data.alerts, data.dankoffer_info, true);
-                        showStatus(`✓ Gegevens ingevuld voor ${data.service_date}. Download het bestand en upload het opnieuw.`, 'success');
-                    } else {
-                        showStatus('Fout bij auto-vullen: ' + (data.error || 'Onbekende fout'), 'error');
-                    }
-                }
-            } catch (err) {
-                showStatus('Netwerkfout: ' + err.message, 'error');
-            } finally {
-                setUpdateLoading(false);
-            }
-        });
-
         // Preview modal handlers
         document.getElementById('cancelPreviewBtn').addEventListener('click', () => {
             document.getElementById('previewModal').classList.add('hidden');
@@ -641,13 +589,11 @@
 
         function setUpdateLoading(on) {
             const previewBtn = document.getElementById('previewChangesBtn');
-            const updateBtn = document.getElementById('updateFileBtn');
             const spinner = document.getElementById('updateSpinner');
             const btnText = document.getElementById('updateBtnText');
-            previewBtn.disabled = on;
-            updateBtn.disabled = on;
+            if (previewBtn) previewBtn.disabled = on;
             if (spinner) spinner.classList.toggle('hidden', !on);
-            if (btnText) btnText.textContent = on ? 'Bezig...' : 'Bestand bijwerken';
+            if (btnText) btnText.textContent = on ? 'Bezig...' : 'Wijzigingen bekijken & bijwerken';
         }
 
         function hideAutoFillAlerts() {
