@@ -1183,6 +1183,9 @@ def liturgie_fill_data():
     - Dankoffer verse from Dankoffer.xlsx (B21-E21)
     - Tikkie link from email (if available)
 
+    Uses openpyxl to preserve formatting, images, and other content.
+    Only modifies specific cells without changing the rest of the file.
+
     Returns a new Excel file with populated data and alert info.
     """
     excel_file = request.files.get('excel_file')
@@ -1192,13 +1195,18 @@ def liturgie_fill_data():
     excel_bytes = excel_file.read()
 
     try:
-        # Read the Excel file to get current values
+        # Use openpyxl to preserve formatting and images
         from io import BytesIO
-        df = pd.read_excel(BytesIO(excel_bytes), sheet_name='Data', header=None)
+        import openpyxl
 
-        # Get date from B3 (row index 2, column index 1 - 0-indexed)
-        date_val = df.iloc[2, 1] if df.shape[0] > 2 and df.shape[1] > 1 else None
-        if pd.isna(date_val):
+        wb = openpyxl.load_workbook(BytesIO(excel_bytes))
+        ws = wb['Data'] if 'Data' in wb.sheetnames else wb.active
+
+        # Get date from B3 (row 3, column 2 in openpyxl 1-indexed)
+        date_cell = ws.cell(row=3, column=2)
+        date_val = date_cell.value
+
+        if not date_val:
             return jsonify({'error': 'Geen datum gevonden in cel B3.'}), 400
 
         # Parse the date
@@ -1206,9 +1214,12 @@ def liturgie_fill_data():
             service_date = date_val
         else:
             try:
-                service_date = pd.to_datetime(str(date_val), dayfirst=True).to_pydatetime()
-            except Exception:
-                return jsonify({'error': f'Ongeldige datum in cel B3: {date_val}'}), 400
+                service_date = datetime.strptime(str(date_val), '%d-%m-%Y') if '-' in str(date_val) else datetime.strptime(str(date_val), '%Y-%m-%d')
+            except ValueError:
+                try:
+                    service_date = pd.to_datetime(str(date_val), dayfirst=True).to_pydatetime()
+                except Exception:
+                    return jsonify({'error': f'Ongeldige datum in cel B3: {date_val}'}), 400
 
         # Get takenrooster entry for this date
         taken = _get_takenrooster()
@@ -1234,69 +1245,64 @@ def liturgie_fill_data():
             'auto_populated': []
         }
 
-        # Define the fields to populate (row index, field name, takenrooster key)
-        field_mapping = [
-            (3, 'Voorganger', 'predikant'),      # B4
-            (4, 'OvD', 'ovd'),                   # B5
-            (5, '1e Ontvangst', '1eo'),          # B6
-            (6, 'Muzikanten', 'muziek'),         # B7
-            (7, 'Voorzangers', 'voorzangers'),   # B8
-            (8, 'Beamer', 'beamer'),             # B9
-            (9, 'Geluid', 'multimedia'),         # B10
-            (10, 'KND', 'knd'),                  # B11
-            (11, 'Tieners', 'tieners'),          # B12
-        ]
+        # Helper function to get cell value as string
+        def get_cell_value(row, col):
+            val = ws.cell(row=row, column=col).value
+            return str(val).strip() if val else ''
 
-        # Check and populate B4-B12
-        for row_idx, field_name, taken_key in field_mapping:
-            current_val = str(df.iloc[row_idx, 1]).strip() if df.shape[0] > row_idx and df.shape[1] > 1 else ''
-            new_val = str(entry.get(taken_key, '')).strip()
+        # Helper function to set cell value while preserving formatting
+        def set_cell_value(row, col, value, field_name):
+            cell = ws.cell(row=row, column=col)
+            current_val = str(cell.value).strip() if cell.value else ''
 
             if current_val and current_val.lower() not in ('nan', 'none', ''):
                 alerts['already_filled'].append(f'{field_name}: {current_val}')
-            elif new_val:
-                df.iloc[row_idx, 1] = new_val
-                alerts['auto_populated'].append(f'{field_name}: {new_val}')
+                return False
+            elif value:
+                cell.value = value
+                alerts['auto_populated'].append(f'{field_name}: {value}')
+                return True
+            return False
+
+        # Define the fields to populate (excel row, field name, takenrooster key, excel column)
+        # B4-B12 correspond to rows 4-12, column 2
+        field_mapping = [
+            (4, 'Voorganger', 'predikant', 2),      # B4
+            (5, 'OvD', 'ovd', 2),                   # B5
+            (6, '1e Ontvangst', '1eo', 2),          # B6
+            (7, 'Muzikanten', 'muziek', 2),         # B7
+            (8, 'Voorzangers', 'voorzangers', 2),   # B8
+            (9, 'Beamer', 'beamer', 2),             # B9
+            (10, 'Geluid', 'multimedia', 2),        # B10
+            (11, 'KND', 'knd', 2),                  # B11
+            (12, 'Tieners', 'tieners', 2),          # B12
+        ]
+
+        # Populate B4-B12
+        for row, field_name, taken_key, col in field_mapping:
+            new_val = str(entry.get(taken_key, '')).strip()
+            if new_val:
+                set_cell_value(row, col, new_val, field_name)
 
         # Get dankoffer verse from Dropbox
         dbx = _get_dbx_liturgie()
         dankoffer = _get_dankoffer_verse(dbx, service_date)
 
-        # Row 21 is index 20 (0-indexed)
-        dankoffer_row = 20
+        # Row 21 (dankoffer) - B21-E21
+        dankoffer_row = 21
         if dankoffer:
             # B21: Book name
-            current_book = str(df.iloc[dankoffer_row, 1]).strip() if df.shape[0] > dankoffer_row and df.shape[1] > 1 else ''
-            if current_book and current_book.lower() not in ('nan', 'none', ''):
-                alerts['already_filled'].append(f'Dankoffer boek (B21): {current_book}')
-            else:
-                df.iloc[dankoffer_row, 1] = dankoffer['book']
-                alerts['auto_populated'].append(f'Dankoffer boek (B21): {dankoffer["book"]} (rij {dankoffer["row_index"]} uit Dankoffer.xlsx)')
+            set_cell_value(dankoffer_row, 2, dankoffer['book'], f'Dankoffer boek (B21) (rij {dankoffer["row_index"]} uit Dankoffer.xlsx)')
 
             # C21: Chapter (H.S. / pasal)
-            current_chapter = str(df.iloc[dankoffer_row, 2]).strip() if df.shape[0] > dankoffer_row and df.shape[1] > 2 else ''
-            if current_chapter and current_chapter.lower() not in ('nan', 'none', ''):
-                alerts['already_filled'].append(f'Dankoffer hoofdstuk (C21): {current_chapter}')
-            else:
-                df.iloc[dankoffer_row, 2] = dankoffer['chapter']
-                alerts['auto_populated'].append(f'Dankoffer hoofdstuk (C21): {dankoffer["chapter"]}')
+            set_cell_value(dankoffer_row, 3, dankoffer['chapter'], 'Dankoffer hoofdstuk (C21)')
 
             # D21: Start verse (ayat)
-            current_start = str(df.iloc[dankoffer_row, 3]).strip() if df.shape[0] > dankoffer_row and df.shape[1] > 3 else ''
-            if current_start and current_start.lower() not in ('nan', 'none', ''):
-                alerts['already_filled'].append(f'Dankoffer begin vers (D21): {current_start}')
-            else:
-                df.iloc[dankoffer_row, 3] = dankoffer['verse_start']
-                alerts['auto_populated'].append(f'Dankoffer begin vers (D21): {dankoffer["verse_start"]}')
+            set_cell_value(dankoffer_row, 4, dankoffer['verse_start'], 'Dankoffer begin vers (D21)')
 
             # E21: End verse (ayat) - only if there's an end verse
             if dankoffer['verse_end']:
-                current_end = str(df.iloc[dankoffer_row, 4]).strip() if df.shape[0] > dankoffer_row and df.shape[1] > 4 else ''
-                if current_end and current_end.lower() not in ('nan', 'none', ''):
-                    alerts['already_filled'].append(f'Dankoffer eind vers (E21): {current_end}')
-                else:
-                    df.iloc[dankoffer_row, 4] = dankoffer['verse_end']
-                    alerts['auto_populated'].append(f'Dankoffer eind vers (E21): {dankoffer["verse_end"]}')
+                set_cell_value(dankoffer_row, 5, dankoffer['verse_end'], 'Dankoffer eind vers (E21)')
 
         # Try to get Tikkie link from email if available
         try:
@@ -1305,30 +1311,23 @@ def liturgie_fill_data():
                 email_data = reader.fetch_collecte_data(target_date=service_date, since_days=60)
                 tikkie_url = email_data.get('tikkie_url', '')
                 if tikkie_url:
-                    # Find Tikkie link row - typically around row 12-14 based on FIELD_MAP
-                    # We'll look for "Tikkie link" label in column A
+                    # Find Tikkie link row by looking for "Tikkie link" label in column A
                     tikkie_row = None
-                    for idx, row in df.iterrows():
-                        label = str(row.iloc[0]).strip().lower() if pd.notna(row.iloc[0]) else ''
+                    for row in range(1, ws.max_row + 1):
+                        label = str(ws.cell(row=row, column=1).value).strip().lower() if ws.cell(row=row, column=1).value else ''
                         if 'tikkie' in label or 'qr_link' in label:
-                            tikkie_row = idx
+                            tikkie_row = row
                             break
 
                     if tikkie_row is not None:
-                        current_tikkie = str(df.iloc[tikkie_row, 1]).strip() if df.shape[1] > 1 else ''
-                        if current_tikkie and current_tikkie.lower() not in ('nan', 'none', ''):
-                            alerts['already_filled'].append(f'Tikkie link: {current_tikkie}')
-                        else:
-                            df.iloc[tikkie_row, 1] = tikkie_url
-                            alerts['auto_populated'].append(f'Tikkie link: {tikkie_url}')
+                        set_cell_value(tikkie_row, 2, tikkie_url, 'Tikkie link')
         except Exception as e:
             print(f'[Liturgie Fill] Could not fetch Tikkie link: {e}')
             pass  # Non-critical, continue without Tikkie
 
-        # Save the modified Excel to a new file
+        # Save the modified Excel preserving all formatting
         output = BytesIO()
-        with pd.ExcelWriter(output, engine='openpyxl') as writer:
-            df.to_excel(writer, sheet_name='Data', index=False, header=False)
+        wb.save(output)
         output.seek(0)
 
         # Encode for response
