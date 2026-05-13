@@ -2053,7 +2053,8 @@ def preview_working_file():
         
         # Get proposed values from sources
         try:
-            takenrooster = _get_takenrooster()
+            takenrooster_data = _get_takenrooster()
+            takenrooster = takenrooster_data.get('entries', [])
             entry = None
             for tr_entry in takenrooster:
                 entry_date = tr_entry.get('date')
