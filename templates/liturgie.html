@@ -121,6 +121,42 @@
                         </p>
                     </div>
                 </div>
+
+                <!-- Preview Modal -->
+                <div id="previewModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+                    <div class="bg-white rounded-xl shadow-lg max-w-lg w-full mx-4 max-h-[80vh] overflow-y-auto">
+                        <div class="p-6">
+                            <h3 class="text-lg font-semibold text-gray-800 mb-4">Wijzigingen bekijken</h3>
+                            <p class="text-sm text-gray-600 mb-4">Datum: <span id="previewDate" class="font-medium"></span></p>
+                            
+                            <div id="previewNotFound" class="hidden mb-4 bg-red-50 border border-red-200 rounded-lg p-3">
+                                <h4 class="text-sm font-semibold text-red-800 mb-1">Niet gevonden:</h4>
+                                <ul id="previewNotFoundList" class="text-xs text-red-700 space-y-0.5"></ul>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <h4 class="text-sm font-semibold text-gray-700 mb-2">Huidige waarden → Nieuwe waarden:</h4>
+                                <div id="previewChanges" class="space-y-2 text-sm">
+                                    <!-- Changes will be populated here -->
+                                </div>
+                            </div>
+                            
+                            <div id="previewWarnings" class="hidden mb-4 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                                <h4 class="text-sm font-semibold text-amber-800 mb-1">Waarschuwingen:</h4>
+                                <ul id="previewWarningsList" class="text-xs text-amber-700 space-y-0.5"></ul>
+                            </div>
+                            
+                            <div class="flex gap-3 mt-6">
+                                <button type="button" id="cancelPreviewBtn" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-lg transition">
+                                    Annuleren
+                                </button>
+                                <button type="button" id="applyChangesBtn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition flex items-center justify-center gap-2">
+                                    <span>Toepassen</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Preek.docx upload (optional) -->
@@ -257,6 +293,10 @@
         let _filledExcelData = null;  // Store for download
         let _filledFilename = null;
 
+        // Store current file for later use
+        let _currentExcelFile = null;
+        let _previewData = null;
+
         document.getElementById('autoFillBtn').addEventListener('click', async () => {
             const excelInput = document.getElementById('excelFile');
             const excelFile = excelInput.files[0];
@@ -266,10 +306,109 @@
             }
 
             setAutoFillLoading(true);
+            _currentExcelFile = excelFile;
+
+            const fd = new FormData();
+            fd.append('excel_data', excelFile);
+
+            try {
+                // First call preview endpoint
+                const previewResp = await fetch('/liturgie/preview-fill-data', { method: 'POST', body: fd });
+                const previewData = await previewResp.json();
+
+                if (!previewResp.ok) {
+                    showStatus('Fout bij laden preview: ' + (previewData.error || 'Onbekende fout'), 'error');
+                    return;
+                }
+
+                _previewData = previewData;
+
+                // Populate preview modal
+                document.getElementById('previewDate').textContent = previewData.service_date;
+                
+                // Show not found items
+                const notFoundList = document.getElementById('previewNotFoundList');
+                const notFoundSection = document.getElementById('previewNotFound');
+                notFoundList.innerHTML = '';
+                if (previewData.alerts.not_found && previewData.alerts.not_found.length > 0) {
+                    previewData.alerts.not_found.forEach(item => {
+                        const li = document.createElement('li');
+                        li.textContent = '⚠️ ' + item;
+                        notFoundList.appendChild(li);
+                    });
+                    notFoundSection.classList.remove('hidden');
+                } else {
+                    notFoundSection.classList.add('hidden');
+                }
+
+                // Show proposed changes
+                const changesDiv = document.getElementById('previewChanges');
+                changesDiv.innerHTML = '';
+                for (const [field, currentVal] of Object.entries(previewData.current_values)) {
+                    const newVal = previewData.proposed_changes[field];
+                    const row = document.createElement('div');
+                    row.className = 'flex justify-between py-1 border-b border-gray-100 last:border-0';
+                    
+                    if (newVal && newVal !== currentVal) {
+                        row.innerHTML = `
+                            <span class="text-gray-600">${field}:</span>
+                            <div class="text-right">
+                                <span class="text-gray-400 line-through">${currentVal || '(leeg)'}</span>
+                                <span class="text-green-600 font-medium ml-2">→ ${newVal}</span>
+                            </div>
+                        `;
+                    } else {
+                        row.innerHTML = `
+                            <span class="text-gray-600">${field}:</span>
+                            <span class="${currentVal ? 'text-gray-600' : 'text-gray-400 italic'}">${currentVal || '(leeg - geen wijziging)'}</span>
+                        `;
+                    }
+                    changesDiv.appendChild(row);
+                }
+
+                // Show warnings
+                const warningsList = document.getElementById('previewWarningsList');
+                const warningsSection = document.getElementById('previewWarnings');
+                warningsList.innerHTML = '';
+                if (previewData.alerts.warnings && previewData.alerts.warnings.length > 0) {
+                    previewData.alerts.warnings.forEach(item => {
+                        const li = document.createElement('li');
+                        li.textContent = '⚠️ ' + item;
+                        warningsList.appendChild(li);
+                    });
+                    warningsSection.classList.remove('hidden');
+                } else {
+                    warningsSection.classList.add('hidden');
+                }
+
+                // Show modal
+                document.getElementById('previewModal').classList.remove('hidden');
+
+            } catch (err) {
+                showStatus('Netwerkfout bij laden preview: ' + err.message, 'error');
+            } finally {
+                setAutoFillLoading(false);
+            }
+        });
+
+        // Preview modal handlers
+        document.getElementById('cancelPreviewBtn').addEventListener('click', () => {
+            document.getElementById('previewModal').classList.add('hidden');
+        });
+
+        document.getElementById('applyChangesBtn').addEventListener('click', async () => {
+            document.getElementById('previewModal').classList.add('hidden');
+            
+            if (!_currentExcelFile) {
+                showStatus('Geen Excel bestand geselecteerd.', 'error');
+                return;
+            }
+
+            setAutoFillLoading(true);
             hideAutoFillAlerts();
 
             const fd = new FormData();
-            fd.append('excel_file', excelFile);
+            fd.append('excel_file', _currentExcelFile);
 
             try {
                 const resp = await fetch('/liturgie/fill-data', { method: 'POST', body: fd });
@@ -280,7 +419,8 @@
                     _filledExcelData = data.excel_data;
                     _filledFilename = data.filename;
 
-                    // Clear the current upload (user must re-upload the filled file)
+                    // Clear the current upload
+                    const excelInput = document.getElementById('excelFile');
                     excelInput.value = '';
                     document.getElementById('excelName').classList.add('hidden');
                     document.getElementById('excelDrop').classList.remove('hidden');
