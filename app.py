@@ -1843,8 +1843,10 @@ def auto_fill_working_file():
             return False
         
         # 1. Populate B4-B12 from Takenrooster
+        print(f"[AutoFill] Getting takenrooster for date: {service_date}")
         takenrooster_data = _get_takenrooster()
         takenrooster = takenrooster_data.get('entries', [])
+        print(f"[AutoFill] Found {len(takenrooster)} takenrooster entries")
         entry = None
         for tr_entry in takenrooster:
             entry_date = tr_entry.get('date')
@@ -1853,6 +1855,7 @@ def auto_fill_working_file():
                 break
         
         if entry:
+            print(f"[AutoFill] Found entry: {entry}")
             field_mapping = [
                 (4, 'Voorganger', 'predikant'),
                 (5, 'OvD', 'ovd'),
@@ -1867,11 +1870,14 @@ def auto_fill_working_file():
             
             for row, field_name, taken_key in field_mapping:
                 new_val = str(entry.get(taken_key, '')).strip()
+                print(f"[AutoFill] {field_name} ({taken_key}): '{new_val}'")
                 if new_val:
-                    set_cell_value(row, 2, new_val, field_name)
+                    result = set_cell_value(row, 2, new_val, field_name)
+                    print(f"[AutoFill]   -> set_cell_value result: {result}")
                 else:
                     alerts['not_found'].append(f'{field_name}: niet gevonden in takenrooster')
         else:
+            print(f"[AutoFill] No entry found for date {service_date}")
             alerts['not_found'].append(f'Geen dienst gevonden in takenrooster voor {service_date.strftime("%d-%m-%Y")}')
         
         # 2. Populate Tikkie link
