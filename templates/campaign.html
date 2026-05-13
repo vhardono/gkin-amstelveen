@@ -243,12 +243,47 @@
                 return;
             }
             
+            // Auto-fetch QR code for this date
+            await fetchQRCode(selectedDate);
+            
             await loadPreview(selectedDate);
             campaignOptions.classList.remove('hidden');
             oleTemplateFields.classList.remove('hidden');
             previewSection.classList.remove('hidden');
             actionButtons.classList.remove('hidden');
         });
+        
+        // --- Fetch QR Code ---
+        async function fetchQRCode(date) {
+            try {
+                const resp = await fetch(`/campaign/qr-code/${date}`);
+                const data = await resp.json();
+                
+                const qrField = document.getElementById('qrUrlInput');
+                const qrStatus = document.getElementById('qrStatus') || createQRStatusElement();
+                
+                if (data.success) {
+                    qrField.value = data.url;
+                    qrStatus.innerHTML = `<span class="text-green-600">✓ QR code auto-geupload: ${data.filename}</span>`;
+                    qrStatus.className = 'text-sm mt-1';
+                } else {
+                    qrStatus.innerHTML = `<span class="text-amber-600">⚠ ${data.error} - Upload handmatig of gebruik URL hierboven</span>`;
+                    qrStatus.className = 'text-sm mt-1';
+                    qrField.placeholder = 'Plak hier de QR code URL of upload handmatig';
+                }
+            } catch (err) {
+                console.error('QR fetch error:', err);
+            }
+        }
+        
+        function createQRStatusElement() {
+            const qrField = document.getElementById('qrUrlInput');
+            const statusDiv = document.createElement('div');
+            statusDiv.id = 'qrStatus';
+            statusDiv.className = 'text-sm mt-1';
+            qrField.parentNode.appendChild(statusDiv);
+            return statusDiv;
+        }
 
         // --- Load Preview ---
         async function loadPreview(date) {

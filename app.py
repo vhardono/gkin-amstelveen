@@ -2187,6 +2187,64 @@ def campaign_api_status():
     return jsonify(generator.test_connection())
 
 
+@app.route('/campaign/qr-code/<date>', methods=['GET'])
+@_password_required
+def campaign_qr_code(date):
+    """Fetch QR code image for a given date."""
+    try:
+        selected_date = datetime.strptime(date, '%Y-%m-%d')
+    except ValueError:
+        return jsonify({'error': 'invalid date format'}), 400
+    
+    # Look for QR code files in uploads directory
+    # Pattern: {uuid}.png or {uuid}.jpg that might be a QR code
+    qr_patterns = [
+        f"*{date}*qr*",
+        f"*{date}*QR*", 
+        f"*qr*{date}*",
+        f"*QR*{date}*",
+        f"*dankoffer*",
+        f"*ole*",
+        f"*collecte*"
+    ]
+    
+    import glob
+    found_files = []
+    for pattern in qr_patterns:
+        found_files.extend(glob.glob(os.path.join(UPLOAD_DIR, pattern + ".png")))
+        found_files.extend(glob.glob(os.path.join(UPLOAD_DIR, pattern + ".jpg")))
+        found_files.extend(glob.glob(os.path.join(UPLOAD_DIR, pattern + ".jpeg")))
+    
+    # If found, upload to MailerLite and return URL
+    if found_files:
+        from mailerlite_campaign import MailerLiteFileManager
+        file_manager = MailerLiteFileManager()
+        
+        # Use the most recent file
+        latest_file = max(found_files, key=os.path.getctime)
+        result = file_manager.upload_file(latest_file, f"QR_Code_{date}.png")
+        
+        if result.get('success'):
+            return jsonify({
+                'success': True,
+                'url': result['url'],
+                'filename': os.path.basename(latest_file),
+                'auto_uploaded': True
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': result.get('error', 'Upload failed'),
+                'local_path': latest_file
+            })
+    
+    return jsonify({
+        'success': False,
+        'error': 'Geen QR code gevonden voor deze datum',
+        'manual_upload_required': True
+    })
+
+
 @app.route('/campaign/preview', methods=['POST'])
 @_password_required
 def campaign_preview():
