@@ -1325,24 +1325,35 @@ def liturgie_fill_data():
                     if book_name:
                         valid_books.append(str(book_name).strip())
                 print(f'[Liturgie Fill] Found {len(valid_books)} valid books in Boeken sheet')
+                print(f'[Liturgie Fill] First 10 books: {valid_books[:10]}')
 
             # Validate dankoffer book name against Boeken list
             dankoffer_book = dankoffer['book']
             book_valid = False
             if valid_books:
                 # Check exact match or partial match (case-insensitive)
-                dankoffer_book_lower = dankoffer_book.lower()
+                dankoffer_book_normalized = dankoffer_book.lower().replace(' ', '').replace('.', '').replace('ii', '2')
+                print(f'[Liturgie Fill] Looking for book: "{dankoffer_book}" (normalized: "{dankoffer_book_normalized}")')
+
                 for valid_book in valid_books:
-                    if dankoffer_book_lower == valid_book.lower() or dankoffer_book_lower in valid_book.lower() or valid_book.lower() in dankoffer_book_lower:
+                    valid_book_normalized = valid_book.lower().replace(' ', '').replace('.', '').replace('ii', '2')
+
+                    # Check various match types
+                    exact_match = dankoffer_book.lower() == valid_book.lower()
+                    contains_match = dankoffer_book.lower() in valid_book.lower() or valid_book.lower() in dankoffer_book.lower()
+                    normalized_match = dankoffer_book_normalized == valid_book_normalized
+
+                    if exact_match or contains_match or normalized_match:
                         book_valid = True
                         # Use the exact name from Boeken list for consistency
                         dankoffer_book = valid_book
-                        print(f'[Liturgie Fill] Validated book name: "{dankoffer_book}" matches "{valid_book}"')
+                        print(f'[Liturgie Fill] ✓ Validated book name: "{dankoffer_book}" (match type: exact={exact_match}, contains={contains_match}, normalized={normalized_match})')
                         break
 
                 if not book_valid:
                     alerts['already_filled'].append(f'⚠️ Dankoffer boek "{dankoffer["book"]}" NIET gevonden in Boeken lijst! Controleer spelling.')
-                    print(f'[Liturgie Fill] WARNING: Book "{dankoffer["book"]}" not found in Boeken list: {valid_books[:5]}...')
+                    print(f'[Liturgie Fill] WARNING: Book "{dankoffer["book"]}" not found in {len(valid_books)} books')
+                    print(f'[Liturgie Fill] Boeken list sample: {valid_books[40:50] if len(valid_books) > 50 else valid_books}')
 
             # Check current values in dankoffer cells
             current_b21 = get_cell_value(dankoffer_row, 2)
