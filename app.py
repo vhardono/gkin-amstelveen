@@ -2582,7 +2582,7 @@ def campaign_create():
                 # Check for specific errors
                 if isinstance(details, dict):
                     if details.get('code') == 'invalid_parameter' and 'sender' in str(details.get('message', '')).lower():
-                        error_msg = "Sender email not verified in Brevo. Please verify kerkenraad@gkin.nl in Brevo Settings > Senders & IP, or use a different verified email address."
+                        error_msg = f"Sender email '{generator.sender_email}' not verified in Brevo. Please verify this email in Brevo Settings > Senders & IP, or set BREVO_SENDER_EMAIL environment variable to a verified email address."
             
             if result.get('response_text'):
                 error_msg += f" - Response: {result['response_text'][:200]}"
