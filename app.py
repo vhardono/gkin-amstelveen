@@ -945,18 +945,42 @@ def liturgie_index():
     return render_template('liturgie.html')
 
 
+PREEK_DROPBOX_PATH = '/working folder/file mingguan/Preek.docx'
+
 @app.route('/liturgie/generate', methods=['POST'])
 def liturgie_generate():
-    excel_file = request.files.get('excel_file')
-    if not excel_file or not excel_file.filename:
-        return jsonify({'error': 'Excel bestand is verplicht.'}), 400
-
-    excel_bytes = excel_file.read()
-    preek_file  = request.files.get('preek_file')
-    preek_bytes = preek_file.read() if preek_file and preek_file.filename else None
+    excel_source = request.form.get('excel_source', 'upload')
+    preek_source = request.form.get('preek_source', 'upload')
     want_a = request.form.get('want_a', '1') == '1'
     want_b = request.form.get('want_b', '1') == '1'
     want_p = request.form.get('want_p', '1') == '1'
+
+    # Get Excel bytes
+    if excel_source == 'dropbox':
+        try:
+            dbx = _get_dbx_liturgie()
+            _, resp = dbx.files_download(WORKING_FILE_PATH)
+            excel_bytes = resp.content
+        except Exception as e:
+            return jsonify({'error': f'Kon Main Liturgy file niet laden van Dropbox: {e}'}), 500
+    else:
+        excel_file = request.files.get('excel_file')
+        if not excel_file or not excel_file.filename:
+            return jsonify({'error': 'Excel bestand is verplicht.'}), 400
+        excel_bytes = excel_file.read()
+
+    # Get Preek bytes
+    if preek_source == 'dropbox':
+        try:
+            dbx = _get_dbx_liturgie()
+            _, resp = dbx.files_download(PREEK_DROPBOX_PATH)
+            preek_bytes = resp.content
+        except Exception as e:
+            preek_bytes = None  # Preek is optional, continue without it
+            print(f'[Generate] Could not load Preek.docx from Dropbox: {e}')
+    else:
+        preek_file = request.files.get('preek_file')
+        preek_bytes = preek_file.read() if preek_file and preek_file.filename else None
 
     work_dir = tempfile.mkdtemp(prefix='liturgi_')
     try:
