@@ -2540,6 +2540,7 @@ def campaign_create():
             error_msg = result['error']
             # Add details if available
             if result.get('details'):
+                import json
                 error_msg += f" - Details: {json.dumps(result['details'])}"
             if result.get('response_text'):
                 error_msg += f" - Response: {result['response_text'][:200]}"
