@@ -1788,16 +1788,17 @@ def auto_fill_working_file():
         # Read Main Liturgy file from Dropbox
         try:
             resp = dbx.files_download(WORKING_FILE_PATH)
-            excel_bytes = resp[1].content
+            file_bytes = resp[1].content
         except Exception as e:
             return jsonify({'error': f'Kon Main Liturgy file niet laden van Dropbox: {str(e)}'}), 500
         
-        # Load with openpyxl
-        wb = load_workbook(BytesIO(excel_bytes))
-        ws = wb.active
+        # Load Excel
+        wb = load_workbook(BytesIO(file_bytes))
+        ws_data = wb['Data']
+        ws_active = wb.active
         
-        # Get service date
-        service_date_raw = ws['Data!B3'].value
+        # Get service date from Data sheet
+        service_date_raw = ws_data['B3'].value
         print(f"[Working File AutoFill] Data!B3 value: {service_date_raw}")
         
         # Parse date
