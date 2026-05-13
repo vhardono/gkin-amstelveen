@@ -58,6 +58,20 @@
                     Main Liturgy file.xlsx <span class="text-red-500 ml-1">*</span>
                 </h2>
 
+                <!-- Auto-fill button -->
+                <button type="button" id="autoFillBtn"
+                        class="mb-4 w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                    <svg id="autoFillIcon" class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                    </svg>
+                    <svg id="autoFillSpinner" class="w-4 h-4 spinner hidden shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10" stroke-width="3" stroke-dasharray="60" stroke-dashoffset="15"/>
+                    </svg>
+                    <span id="autoFillText">Auto-vullen gegevens (Takenrooster, Tikkie, Dankoffer)</span>
+                </button>
+                <p class="text-xs text-gray-400 mb-4 text-center">Vult automatisch dienstgegevens in Main Liturgy file.xlsx in werkmap</p>
+
                 <input type="file" id="excelFile" accept=".xlsx,.xls" class="hidden">
                 <div id="excelDrop" class="drop-zone border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-gkin-green hover:bg-green-50">
                     <svg class="w-10 h-10 mx-auto text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -74,20 +88,6 @@
                     <span id="excelNameText"></span>
                     <button type="button" id="excelClear" class="ml-auto text-gray-400 hover:text-red-500">✕</button>
                 </div>
-
-                <!-- Auto-fill button -->
-                <button type="button" id="autoFillBtn"
-                        class="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-                    <svg id="autoFillIcon" class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                    </svg>
-                    <svg id="autoFillSpinner" class="w-4 h-4 spinner hidden shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <circle cx="12" cy="12" r="10" stroke-width="3" stroke-dasharray="60" stroke-dashoffset="15"/>
-                    </svg>
-                    <span id="autoFillText">Auto-vullen gegevens (Takenrooster + Dankoffer)</span>
-                </button>
-                <p class="text-xs text-gray-400 mt-1 text-center">Vult automatisch Voorganger, OvD, Muzikanten, etc. en het Dankoffer Bijbelvers in</p>
 
                 <!-- Alert display section -->
                 <div id="autoFillAlerts" class="hidden mt-4">

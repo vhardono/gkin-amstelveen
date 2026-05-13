@@ -1585,5 +1585,178 @@ def preview_dankoffer():
         return jsonify({'error': str(e)}), 500
 
 
+# ---------------------------------------------------------------------------
+# Liturgie Auto-Fill Preview Endpoint
+# ---------------------------------------------------------------------------
+
+@app.route('/liturgie/preview-fill-data', methods=['POST'])
+def preview_liturgie_fill_data():
+    """
+    Preview what changes would be made to Main Liturgy file.xlsx
+    Reads from working folder and returns preview without saving.
+    """
+    try:
+        # Read Excel from working folder
+        working_file_path = '/working/folder/file mingguan/Main Liturgy file.xlsx'
+        
+        # For now, since we can't access the working folder directly in this context,
+        # we'll need the user to upload the file first, then we'll cache it
+        # In production, this would read directly from the working folder
+        
+        if 'excel_data' not in request.files:
+            return jsonify({'error': 'Geen Excel bestand geüpload. Upload eerst Main Liturgy file.xlsx'}), 400
+            
+        excel_file = request.files['excel_data']
+        excel_bytes = excel_file.read()
+        
+        # Load with openpyxl to preserve formatting
+        from openpyxl import load_workbook
+        from io import BytesIO
+        
+        wb = load_workbook(BytesIO(excel_bytes))
+        ws = wb.active
+        
+        # Get service date from cell D4
+        service_date_raw = ws.cell(row=4, column=4).value
+        if not service_date_raw:
+            return jsonify({'error': 'Geen datum gevonden in cel D4'}), 400
+            
+        # Parse date
+        if isinstance(service_date_raw, str):
+            try:
+                service_date = datetime.strptime(service_date_raw, '%d-%m-%Y')
+            except ValueError:
+                try:
+                    service_date = datetime.strptime(service_date_raw, '%Y-%m-%d')
+                except ValueError:
+                    return jsonify({'error': f'Ongeldige datum formaat in D4: {service_date_raw}'}), 400
+        else:
+            service_date = service_date_raw
+            
+        # Preview data - get from sources without saving
+        preview = {
+            'service_date': service_date.strftime('%d-%m-%Y'),
+            'current_values': {},
+            'proposed_changes': {},
+            'alerts': {
+                'not_found': [],
+                'warnings': []
+            }
+        }
+        
+        # Get current values from Excel
+        # B4-B12: People on duty
+        field_mapping = [
+            (4, 'Voorganger'),       # B4
+            (5, 'OvD'),              # B5
+            (6, '1e Ontvangst'),     # B6
+            (7, '2e Ontvangst'),     # B7
+            (8, 'Voorzangers'),      # B8
+            (9, 'Beamer'),           # B9
+            (10, 'Geluid'),          # B10
+            (11, 'KND'),             # B11
+            (12, 'Tieners'),         # B12
+        ]
+        
+        for row, field_name in field_mapping:
+            current_val = str(ws.cell(row=row, column=2).value).strip() if ws.cell(row=row, column=2).value else ''
+            preview['current_values'][field_name] = current_val
+            
+        # Current Tikkie link
+        tikkie_row = None
+        for row in range(1, ws.max_row + 1):
+            label = str(ws.cell(row=row, column=1).value).strip().lower() if ws.cell(row=row, column=1).value else ''
+            if 'tikkie' in label or 'qr_link' in label:
+                tikkie_row = row
+                break
+        if tikkie_row:
+            current_tikkie = str(ws.cell(row=tikkie_row, column=2).value).strip() if ws.cell(row=tikkie_row, column=2).value else ''
+            preview['current_values']['Tikkie link'] = current_tikkie
+            
+        # Current Dankoffer verse
+        dankoffer_book = str(ws.cell(row=21, column=2).value).strip() if ws.cell(row=21, column=2).value else ''
+        dankoffer_chapter = str(ws.cell(row=21, column=3).value).strip() if ws.cell(row=21, column=3).value else ''
+        dankoffer_verse = str(ws.cell(row=21, column=4).value).strip() if ws.cell(row=21, column=4).value else ''
+        if dankoffer_book and dankoffer_chapter and dankoffer_verse:
+            preview['current_values']['Dankoffer vers'] = f'{dankoffer_book} {dankoffer_chapter}:{dankoffer_verse}'
+        else:
+            preview['current_values']['Dankoffer vers'] = ''
+        
+        # Get proposed values from sources
+        try:
+            takenrooster = TakenroosterReader('/dbx/takenrooster/Takenrooster 2025-2026 GKIN.xlsx')
+            entry = takenrooster.get_entry(service_date)
+            
+            if entry:
+                taken_mapping = {
+                    'Voorganger': 'predikant',
+                    'OvD': 'ovd',
+                    '1e Ontvangst': '1eo',
+                    '2e Ontvangst': '2eo',
+                    'Voorzangers': 'voorzangers',
+                    'Beamer': 'beamer',
+                    'Geluid': 'multimedia',
+                    'KND': 'knd',
+                    'Tieners': 'tieners',
+                }
+                
+                for field_name, key in taken_mapping.items():
+                    new_val = str(entry.get(key, '')).strip()
+                    if new_val:
+                        preview['proposed_changes'][field_name] = new_val
+            else:
+                preview['alerts']['not_found'].append(f'Geen dienst gevonden in takenrooster voor {service_date.strftime("%d-%m-%Y")}')
+        except Exception as e:
+            preview['alerts']['warnings'].append(f'Fout bij ophalen takenrooster: {str(e)}')
+        
+        # Get Tikkie link
+        try:
+            reader = OutlookCollecteReader()
+            if reader.is_authenticated():
+                email_data = reader.fetch_collecte_data(target_date=service_date, since_days=60)
+                tikkie_url = email_data.get('dankoffer_url', '')
+                if tikkie_url:
+                    preview['proposed_changes']['Tikkie link'] = tikkie_url
+                else:
+                    preview['alerts']['not_found'].append('Tikkie link niet gevonden in e-mail')
+            else:
+                preview['alerts']['warnings'].append('Outlook niet geauthenticeerd - Tikkie link niet opgehaald')
+        except Exception as e:
+            preview['alerts']['warnings'].append(f'Fout bij ophalen Tikkie: {str(e)}')
+        
+        # Get Dankoffer verse
+        try:
+            dbx = _get_dbx_liturgie()
+            dankoffer = _get_dankoffer_verse(dbx, service_date, mark_as_used=False)  # Preview only, don't mark
+            
+            if dankoffer:
+                verse_text = f"{dankoffer['book']} {dankoffer['chapter']}:{dankoffer['verse_start']}"
+                if dankoffer['verse_end']:
+                    verse_text += f"-{dankoffer['verse_end']}"
+                preview['proposed_changes']['Dankoffer vers'] = verse_text
+                preview['dankoffer_info'] = {
+                    'verse': verse_text,
+                    'row_index': dankoffer['row_index'],
+                    'total_count': dankoffer['total_count'],
+                    'already_assigned': dankoffer.get('already_assigned', False)
+                }
+            else:
+                preview['alerts']['not_found'].append('Geen Dankoffer verzen gevonden')
+        except Exception as e:
+            preview['alerts']['warnings'].append(f'Fout bij ophalen Dankoffer: {str(e)}')
+        
+        return jsonify(preview)
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
