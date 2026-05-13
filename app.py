@@ -1770,6 +1770,9 @@ def auto_fill_working_file():
     Auto-fill Main Liturgy file.xlsx directly from Dropbox working folder.
     Reads from /working folder/file mingguan/, applies changes, saves back.
     """
+    from openpyxl import load_workbook
+    from io import BytesIO
+    
     try:
         # Get Dropbox client
         dbx = _get_dbx_liturgie()
@@ -1966,6 +1969,9 @@ def preview_working_file():
     """
     Preview what changes would be made to Main Liturgy file.xlsx in Dropbox working folder.
     """
+    from openpyxl import load_workbook
+    from io import BytesIO
+    
     try:
         dbx = _get_dbx_liturgie()
         if not dbx:
