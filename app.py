@@ -2208,12 +2208,11 @@ def campaign_index():
         d_date = d.date() if hasattr(d, 'date') else d
         if d_date < today:
             continue
-        label = (f"{dutch_days[d.weekday()].capitalize()} {d.day} {dutch_months[d.month - 1]} {d.year}"
-                 f"  —  {entry['predikant']}")
+        label = (f"{dutch_days[d.weekday()].capitalize()} {d.day} {dutch_months[d.month - 1]} {d.year}")
         dates.append({
             'value': d.strftime('%Y-%m-%d'),
             'label': label,
-            'predikant': entry['predikant'],
+            'predikant': '',  # Don't pass predikant from takenrooster for OLE
             'ovd': entry.get('ovd', ''),
             'beamer': entry.get('beamer', ''),
             'voorzangers': entry.get('voorzangers', ''),

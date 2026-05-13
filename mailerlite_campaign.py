@@ -223,8 +223,19 @@ class MailerLiteCampaignGenerator:
         
         # Determine service type with location
         service_type = "OLE" if is_ole else "GKIN Amstelveen"
+        
+        # Map location codes to full names
+        LOCATION_MAP = {
+            'AM': 'in Amstelveen',
+            'DH': 'vanuit de Marcuskerk in Den Haag',
+            'TB': 'vanuit de Pauluskerk te Tilburg'
+        }
         location_display = f" ({ole_location})" if ole_location else ""
-        time_display = ole_time if ole_time else "10:00"
+        location_body = LOCATION_MAP.get(ole_location, ole_location) if ole_location else ""
+        
+        # Fix time format - remove 'u' suffix if present, then add ' uur'
+        time_clean = ole_time.replace('u', '').replace('U', '') if ole_time else "10:00"
+        time_display = time_clean
         
         html = f"""<!doctype html>
 <html lang="nl" dir="ltr">
@@ -312,7 +323,7 @@ class MailerLiteCampaignGenerator:
                                             <table align="center" width="100%" border="0" cellspacing="0" cellpadding="0">
                                                 <tr><td>
                                                     <p style="font-family: 'Inter', sans-serif; color: #515856; font-size: 16px; line-height: 137%; margin-top: 0; margin-bottom: 10px;">Beste broeders en zusters,<br></p>
-                                                    <p style="font-family: 'Inter', sans-serif; color: #515856; font-size: 16px; line-height: 137%; margin-top: 0; margin-bottom: 10px;">Op {date_str} zal {predikant} voorgaan in de Online Landelijke Eredienst (OLE) van GKIN{location_display}, aanvang {time_display} uur.</p>
+                                                    <p style="font-family: 'Inter', sans-serif; color: #515856; font-size: 16px; line-height: 137%; margin-top: 0; margin-bottom: 10px;">Op {date_str} zal {predikant} voorgaan in de Online Landelijke Eredienst (OLE) van GKIN {location_body}, aanvang {time_display} uur.</p>
 """
         
         if theme:
