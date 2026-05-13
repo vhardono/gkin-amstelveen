@@ -1009,6 +1009,16 @@ def _get_dankoffer_verse(dbx, service_date: datetime, mark_as_used: bool = True)
         _, resp = dbx.files_download(DANKOFFER_DROPBOX_PATH)
         df = pd.read_excel(BytesIO(resp.content), header=None)
 
+        # Check if first row is a header
+        first_cell = str(df.iloc[0, 0]).strip().lower() if pd.notna(df.iloc[0, 0]) else ''
+        header_keywords = ['verse', 'bible', 'text', 'reference', 'ref', 'book', 'chapter', 'date', 'gebruikt']
+        has_header = any(keyword in first_cell for keyword in header_keywords)
+
+        if has_header:
+            # Skip header row
+            df = df.iloc[1:].reset_index(drop=True)
+            print(f'[Dankoffer] Header detected. Data starts at row 1 (skipping header)')
+
         # Read verses and their used dates from Column C (index 2)
         verses_data = []
         for idx, row in df.iterrows():
