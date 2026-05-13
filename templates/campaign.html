@@ -317,8 +317,10 @@
                 subjectLine.value = data.subject;
                 campaignName.value = data.name;
                 
-                // Show preview
-                previewContainer.innerHTML = `<iframe srcdoc="${escapeHtml(data.html_content)}" class="w-full" style="min-height: 600px; border: none;"></iframe>`;
+                // Show preview using blob URL (handles large HTML better than srcdoc)
+                const blob = new Blob([data.html_content], { type: 'text/html' });
+                const url = URL.createObjectURL(blob);
+                previewContainer.innerHTML = `<iframe src="${url}" class="w-full" style="min-height: 700px; border: 1px solid #e5e7eb; border-radius: 8px;"></iframe>`;
                 
             } catch (err) {
                 showResult('Netwerkfout: ' + err.message, 'error');
@@ -397,7 +399,10 @@
                 
                 if (resp.ok && data.success) {
                     const dashboardUrl = `https://dashboard.mailerlite.com/campaigns/${data.campaign_id}`;
-                    showResult(`✓ Campagne aangemaakt!<br><br>ID: ${data.campaign_id}<br><a href="${dashboardUrl}" target="_blank" class="text-gkin-green underline">Open in MailerLite Dashboard →</a>`, 'success');
+                    const statusText = data.scheduled ? 
+                        '<strong>Status:</strong> Gepland (scheduled)' : 
+                        '<strong>Status:</strong> Concept (draft) - je moet nog verzenden in MailerLite';
+                    showResult(`✓ Campagne aangemaakt!<br><br>ID: ${data.campaign_id}<br>${statusText}<br><a href="${dashboardUrl}" target="_blank" class="text-gkin-green underline">Open in MailerLite Dashboard →</a>`, 'success');
                 } else {
                     showResult('Fout bij aanmaken: ' + (data.error || 'Onbekende fout'), 'error');
                 }
