@@ -280,7 +280,8 @@ class OutlookCollecteReader:
             return ''
 
         # --- Fetch Tikkie collecte email ---
-        tikkie_msgs = _search_messages('Tikkie Collecte', 'fokkedj@gmail.com')
+        # Search for any subject containing "Tikkie" to accommodate variations like "Tikkie Hemelvaart Collecte"
+        tikkie_msgs = _search_messages('Tikkie', 'fokkedj@gmail.com')
         tikkie_match = next((m for m in tikkie_msgs if _date_in_subject(m.get('subject',''))), None)
         if tikkie_match:
             result['emails_found'] += 1
