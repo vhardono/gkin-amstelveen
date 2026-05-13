@@ -1758,5 +1758,327 @@ def preview_liturgie_fill_data():
         return jsonify({'error': str(e)}), 500
 
 
+# ---------------------------------------------------------------------------
+# Liturgie Auto-Fill Working File Endpoint (Dropbox Direct)
+# ---------------------------------------------------------------------------
+
+WORKING_FILE_PATH = '/working folder/file mingguan/Main Liturgy file.xlsx'
+
+@app.route('/liturgie/auto-fill-working-file', methods=['POST'])
+def auto_fill_working_file():
+    """
+    Auto-fill Main Liturgy file.xlsx directly from Dropbox working folder.
+    Reads from /working folder/file mingguan/, applies changes, saves back.
+    """
+    try:
+        # Get Dropbox client
+        dbx = _get_dbx_liturgie()
+        if not dbx:
+            return jsonify({'error': 'Dropbox niet geconfigureerd'}), 500
+        
+        # Read Main Liturgy file from Dropbox
+        try:
+            resp = dbx.files_download(WORKING_FILE_PATH)
+            excel_bytes = resp[1].content
+        except Exception as e:
+            return jsonify({'error': f'Kon Main Liturgy file niet laden van Dropbox: {str(e)}'}), 500
+        
+        # Load with openpyxl
+        wb = load_workbook(BytesIO(excel_bytes))
+        ws = wb.active
+        
+        # Get service date from D4
+        service_date_raw = ws.cell(row=4, column=4).value
+        if not service_date_raw:
+            return jsonify({'error': 'Geen datum gevonden in cel D4'}), 400
+            
+        # Parse date
+        if isinstance(service_date_raw, str):
+            try:
+                service_date = datetime.strptime(service_date_raw, '%d-%m-%Y')
+            except ValueError:
+                try:
+                    service_date = datetime.strptime(service_date_raw, '%Y-%m-%d')
+                except ValueError:
+                    return jsonify({'error': f'Ongeldige datum formaat in D4: {service_date_raw}'}), 400
+        else:
+            service_date = service_date_raw
+        
+        # Track what was filled
+        alerts = {
+            'already_filled': [],
+            'auto_populated': [],
+            'not_found': []
+        }
+        
+        # Helper to set cell value
+        def set_cell_value(row, col, value, field_name):
+            cell = ws.cell(row=row, column=col)
+            current_val = str(cell.value).strip() if cell.value else ''
+            
+            if current_val and current_val.lower() not in ('nan', 'none', ''):
+                alerts['already_filled'].append(f'{field_name}: {current_val}')
+                return False
+            elif value:
+                cell.value = value
+                alerts['auto_populated'].append(f'{field_name}: {value}')
+                return True
+            return False
+        
+        # 1. Populate B4-B12 from Takenrooster
+        takenrooster = TakenroosterReader('/dbx/takenrooster/Takenrooster 2025-2026 GKIN.xlsx')
+        entry = takenrooster.get_entry(service_date)
+        
+        if entry:
+            field_mapping = [
+                (4, 'Voorganger', 'predikant'),
+                (5, 'OvD', 'ovd'),
+                (6, '1e Ontvangst', '1eo'),
+                (7, '2e Ontvangst', '2eo'),
+                (8, 'Voorzangers', 'voorzangers'),
+                (9, 'Beamer', 'beamer'),
+                (10, 'Geluid', 'multimedia'),
+                (11, 'KND', 'knd'),
+                (12, 'Tieners', 'tieners'),
+            ]
+            
+            for row, field_name, taken_key in field_mapping:
+                new_val = str(entry.get(taken_key, '')).strip()
+                if new_val:
+                    set_cell_value(row, 2, new_val, field_name)
+                else:
+                    alerts['not_found'].append(f'{field_name}: niet gevonden in takenrooster')
+        else:
+            alerts['not_found'].append(f'Geen dienst gevonden in takenrooster voor {service_date.strftime("%d-%m-%Y")}')
+        
+        # 2. Populate Tikkie link
+        try:
+            reader = OutlookCollecteReader()
+            if reader.is_authenticated():
+                email_data = reader.fetch_collecte_data(target_date=service_date, since_days=60)
+                tikkie_url = email_data.get('dankoffer_url', '')
+                if tikkie_url:
+                    tikkie_row = None
+                    for row in range(1, ws.max_row + 1):
+                        label = str(ws.cell(row=row, column=1).value).strip().lower() if ws.cell(row=row, column=1).value else ''
+                        if 'tikkie' in label or 'qr_link' in label:
+                            tikkie_row = row
+                            break
+                    if tikkie_row:
+                        set_cell_value(tikkie_row, 2, tikkie_url, 'Tikkie link')
+                else:
+                    alerts['not_found'].append('Tikkie link niet gevonden in e-mail')
+            else:
+                alerts['not_found'].append('Outlook niet geauthenticeerd - Tikkie link niet opgehaald')
+        except Exception as e:
+            alerts['not_found'].append(f'Tikkie link ophalen mislukt: {str(e)}')
+        
+        # 3. Populate Dankoffer verse
+        dankoffer = _get_dankoffer_verse(dbx, service_date, mark_as_used=True)
+        dankoffer_info = None
+        
+        if dankoffer:
+            dankoffer_row = 21
+            dankoffer_book = dankoffer['book']
+            
+            # Validate book name against Boeken sheet
+            book_valid = False
+            valid_books = _get_valid_book_names(wb)
+            if valid_books:
+                norm_book = normalize_text(dankoffer_book)
+                book_valid = any(
+                    norm_book == normalize_text(valid) or norm_book in normalize_text(valid)
+                    for valid in valid_books
+                )
+            
+            if book_valid or not valid_books:
+                def set_dankoffer_cell(row, col, value):
+                    cell = ws.cell(row=row, column=col)
+                    current_val = str(cell.value).strip() if cell.value else ''
+                    if current_val and current_val.lower() not in ('nan', 'none', ''):
+                        return False
+                    elif value:
+                        cell.value = value
+                        return True
+                    return False
+                
+                set_dankoffer_cell(dankoffer_row, 2, dankoffer_book)
+                set_dankoffer_cell(dankoffer_row, 3, dankoffer['chapter'])
+                verse_text = dankoffer['verse_start']
+                if dankoffer['verse_end']:
+                    verse_text += f'-{dankoffer["verse_end"]}'
+                set_dankoffer_cell(dankoffer_row, 4, verse_text)
+                
+                alerts['auto_populated'].append(f'Dankoffer vers: {dankoffer["full_text"]}')
+            
+            # Build status detail
+            status_detail = f'Rij {dankoffer["row_index"]} van {dankoffer["total_count"]} ({dankoffer["unused_count"]} resterend)'
+            if dankoffer.get('already_assigned'):
+                status_detail = f'Dit vers was al toegewezen aan deze datum • {status_detail}'
+            elif dankoffer.get('reset_needed'):
+                status_detail = f'Alle verzen waren gebruikt → oudste verzen worden hergebruikt • {status_detail}'
+            else:
+                status_detail = f'Nieuwe toewijzing toegevoegd aan Dankoffer.xlsx • {status_detail}'
+            
+            dankoffer_info = {
+                'verse': dankoffer['full_text'],
+                'row_index': dankoffer['row_index'],
+                'total_count': dankoffer['total_count'],
+                'unused_count': dankoffer['unused_count'],
+                'already_assigned': dankoffer.get('already_assigned', False),
+                'reset_needed': dankoffer.get('reset_needed', False),
+                'marked_as_used': dankoffer.get('marked_as_used', True),
+                'status_detail': status_detail
+            }
+        else:
+            alerts['not_found'].append('Geen Dankoffer verzen gevonden')
+        
+        # Save back to Dropbox
+        output = BytesIO()
+        wb.save(output)
+        output.seek(0)
+        
+        try:
+            dbx.files_upload(
+                output.getvalue(),
+                WORKING_FILE_PATH,
+                mode=dropbox.files.WriteMode.overwrite
+            )
+        except Exception as e:
+            return jsonify({'error': f'Kon bestand niet opslaan naar Dropbox: {str(e)}'}), 500
+        
+        return jsonify({
+            'success': True,
+            'service_date': service_date.strftime('%d-%m-%Y'),
+            'alerts': alerts,
+            'dankoffer_info': dankoffer_info,
+            'message': f'Bestand bijgewerkt op Dropbox: {WORKING_FILE_PATH}'
+        })
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/liturgie/preview-working-file', methods=['GET'])
+def preview_working_file():
+    """
+    Preview what changes would be made to Main Liturgy file.xlsx in Dropbox working folder.
+    """
+    try:
+        dbx = _get_dbx_liturgie()
+        if not dbx:
+            return jsonify({'error': 'Dropbox niet geconfigureerd'}), 500
+        
+        # Read file
+        try:
+            resp = dbx.files_download(WORKING_FILE_PATH)
+            excel_bytes = resp[1].content
+        except Exception as e:
+            return jsonify({'error': f'Kon bestand niet laden: {str(e)}'}), 500
+        
+        wb = load_workbook(BytesIO(excel_bytes))
+        ws = wb.active
+        
+        # Get date
+        service_date_raw = ws.cell(row=4, column=4).value
+        if not service_date_raw:
+            return jsonify({'error': 'Geen datum in D4'}), 400
+            
+        if isinstance(service_date_raw, str):
+            try:
+                service_date = datetime.strptime(service_date_raw, '%d-%m-%Y')
+            except ValueError:
+                service_date = datetime.strptime(service_date_raw, '%Y-%m-%d')
+        else:
+            service_date = service_date_raw
+        
+        # Build preview
+        preview = {
+            'service_date': service_date.strftime('%d-%m-%Y'),
+            'current_values': {},
+            'proposed_changes': {},
+            'alerts': {'not_found': [], 'warnings': []}
+        }
+        
+        # Current values
+        field_rows = {
+            'Voorganger': 4, 'OvD': 5, '1e Ontvangst': 6, '2e Ontvangst': 7,
+            'Voorzangers': 8, 'Beamer': 9, 'Geluid': 10, 'KND': 11, 'Tieners': 12
+        }
+        
+        for field, row in field_rows.items():
+            val = str(ws.cell(row=row, column=2).value).strip() if ws.cell(row=row, column=2).value else ''
+            preview['current_values'][field] = val
+        
+        # Tikkie current
+        for row in range(1, ws.max_row + 1):
+            label = str(ws.cell(row=row, column=1).value).strip().lower() if ws.cell(row=row, column=1).value else ''
+            if 'tikkie' in label or 'qr_link' in label:
+                val = str(ws.cell(row=row, column=2).value).strip() if ws.cell(row=row, column=2).value else ''
+                preview['current_values']['Tikkie link'] = val
+                break
+        
+        # Dankoffer current
+        b21 = str(ws.cell(row=21, column=2).value).strip() if ws.cell(row=21, column=2).value else ''
+        c21 = str(ws.cell(row=21, column=3).value).strip() if ws.cell(row=21, column=3).value else ''
+        d21 = str(ws.cell(row=21, column=4).value).strip() if ws.cell(row=21, column=4).value else ''
+        if b21 and c21 and d21:
+            preview['current_values']['Dankoffer vers'] = f'{b21} {c21}:{d21}'
+        else:
+            preview['current_values']['Dankoffer vers'] = ''
+        
+        # Proposed values (same logic as auto-fill)
+        try:
+            takenrooster = TakenroosterReader('/dbx/takenrooster/Takenrooster 2025-2026 GKIN.xlsx')
+            entry = takenrooster.get_entry(service_date)
+            if entry:
+                for field, key in [('Voorganger', 'predikant'), ('OvD', 'ovd'), ('1e Ontvangst', '1eo'),
+                                   ('2e Ontvangst', '2eo'), ('Voorzangers', 'voorzangers'), 
+                                   ('Beamer', 'beamer'), ('Geluid', 'multimedia'),
+                                   ('KND', 'knd'), ('Tieners', 'tieners')]:
+                    val = str(entry.get(key, '')).strip()
+                    if val:
+                        preview['proposed_changes'][field] = val
+            else:
+                preview['alerts']['not_found'].append('Geen dienst in takenrooster')
+        except Exception as e:
+            preview['alerts']['warnings'].append(f'Takenrooster fout: {str(e)}')
+        
+        try:
+            reader = OutlookCollecteReader()
+            if reader.is_authenticated():
+                email_data = reader.fetch_collecte_data(target_date=service_date, since_days=60)
+                url = email_data.get('dankoffer_url', '')
+                if url:
+                    preview['proposed_changes']['Tikkie link'] = url
+                else:
+                    preview['alerts']['not_found'].append('Tikkie niet gevonden')
+            else:
+                preview['alerts']['warnings'].append('Outlook niet geauthenticeerd')
+        except Exception as e:
+            preview['alerts']['warnings'].append(f'Tikkie fout: {str(e)}')
+        
+        try:
+            dankoffer = _get_dankoffer_verse(dbx, service_date, mark_as_used=False)
+            if dankoffer:
+                verse = f"{dankoffer['book']} {dankoffer['chapter']}:{dankoffer['verse_start']}"
+                if dankoffer['verse_end']:
+                    verse += f"-{dankoffer['verse_end']}"
+                preview['proposed_changes']['Dankoffer vers'] = verse
+            else:
+                preview['alerts']['not_found'].append('Dankoffer niet gevonden')
+        except Exception as e:
+            preview['alerts']['warnings'].append(f'Dankoffer fout: {str(e)}')
+        
+        return jsonify(preview)
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
