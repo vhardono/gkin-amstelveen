@@ -1282,7 +1282,8 @@ def liturgie_fill_data():
         # Track what was already filled vs what we populated
         alerts = {
             'already_filled': [],
-            'auto_populated': []
+            'auto_populated': [],
+            'not_found': []
         }
 
         # Helper function to get cell value as string
@@ -1321,7 +1322,9 @@ def liturgie_fill_data():
         # Populate B4-B12
         for row, field_name, taken_key, col in field_mapping:
             new_val = str(entry.get(taken_key, '')).strip()
-            if new_val:
+            if not new_val:
+                alerts['not_found'].append(f'{field_name}: niet gevonden in takenrooster')
+            elif new_val:
                 set_cell_value(row, col, new_val, field_name)
 
         # Get dankoffer verse from Dropbox
@@ -1456,15 +1459,14 @@ def liturgie_fill_data():
             dankoffer_cells = None
 
         # Try to get Tikkie link from email if available
+        tikkie_found = False
         try:
             reader = OutlookCollecteReader()
-            print(f'[Liturgie Fill] Tikkie: Outlook reader created, authenticated={reader.is_authenticated()}')
             if reader.is_authenticated():
                 email_data = reader.fetch_collecte_data(target_date=service_date, since_days=60)
-                print(f'[Liturgie Fill] Tikkie: email_data returned: {email_data}')
                 tikkie_url = email_data.get('dankoffer_url', '')
-                print(f'[Liturgie Fill] Tikkie: URL found: {tikkie_url[:50] if tikkie_url else "NONE"}')
                 if tikkie_url:
+                    tikkie_found = True
                     # Find Tikkie link row by looking for "Tikkie link" label in column A
                     tikkie_row = None
                     for row in range(1, ws.max_row + 1):
@@ -1475,9 +1477,13 @@ def liturgie_fill_data():
 
                     if tikkie_row is not None:
                         set_cell_value(tikkie_row, 2, tikkie_url, 'Tikkie link')
+                else:
+                    alerts['not_found'].append('Tikkie link niet gevonden in e-mail')
+            else:
+                alerts['not_found'].append('Outlook niet geauthenticeerd - Tikkie link niet opgehaald')
         except Exception as e:
             print(f'[Liturgie Fill] Could not fetch Tikkie link: {e}')
-            pass  # Non-critical, continue without Tikkie
+            alerts['not_found'].append(f'Tikkie link ophalen mislukt: {str(e)}')
 
         # Save the modified Excel preserving all formatting
         output = BytesIO()
