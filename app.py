@@ -2537,7 +2537,13 @@ def campaign_create():
         )
         
         if 'error' in result:
-            return jsonify({'success': False, 'error': result['error']}), 500
+            error_msg = result['error']
+            # Add details if available
+            if result.get('details'):
+                error_msg += f" - Details: {json.dumps(result['details'])}"
+            if result.get('response_text'):
+                error_msg += f" - Response: {result['response_text'][:200]}"
+            return jsonify({'success': False, 'error': error_msg}), 500
         
         campaign_id = result.get('data', {}).get('id', 'unknown')
         

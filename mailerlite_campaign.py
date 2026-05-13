@@ -131,7 +131,15 @@ class MailerLiteCampaignGenerator:
             resp.raise_for_status()
             return resp.json() if resp.text else {}
         except requests.exceptions.RequestException as e:
-            return {'error': str(e), 'status': getattr(e.response, 'status_code', None)}
+            error_response = {'error': str(e), 'status': getattr(e.response, 'status_code', None)}
+            # Try to get detailed validation errors from response
+            if e.response is not None:
+                try:
+                    error_data = e.response.json()
+                    error_response['details'] = error_data
+                except:
+                    error_response['response_text'] = e.response.text[:500]
+            return error_response
 
     def get_groups(self) -> List[Dict]:
         """Fetch available subscriber groups."""
