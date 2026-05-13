@@ -2062,11 +2062,13 @@ def preview_working_file():
                     entry = tr_entry
                     break
             if entry:
+                print(f"[DEBUG] Takenrooster entry keys: {list(entry.keys())}")
                 for field, key in [('Voorganger', 'predikant'), ('OvD', 'ovd'), ('1e Ontvangst', '1eo'),
                                    ('2e Ontvangst', '2eo'), ('Voorzangers', 'voorzangers'), 
                                    ('Beamer', 'beamer'), ('Geluid', 'multimedia'),
                                    ('KND', 'knd'), ('Tieners', 'tieners')]:
                     val = str(entry.get(key, '')).strip()
+                    print(f"[DEBUG] {field} ({key}): '{val}'")
                     if val:
                         preview['proposed_changes'][field] = val
             else:
