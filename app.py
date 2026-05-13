@@ -1316,6 +1316,34 @@ def liturgie_fill_data():
         print(f'[Liturgie Fill] Dankoffer data: {dankoffer}')
 
         if dankoffer:
+            # Read Boeken sheet for validation
+            valid_books = []
+            if 'Boeken' in wb.sheetnames:
+                boeken_ws = wb['Boeken']
+                for row in range(1, boeken_ws.max_row + 1):
+                    book_name = boeken_ws.cell(row=row, column=1).value
+                    if book_name:
+                        valid_books.append(str(book_name).strip())
+                print(f'[Liturgie Fill] Found {len(valid_books)} valid books in Boeken sheet')
+
+            # Validate dankoffer book name against Boeken list
+            dankoffer_book = dankoffer['book']
+            book_valid = False
+            if valid_books:
+                # Check exact match or partial match (case-insensitive)
+                dankoffer_book_lower = dankoffer_book.lower()
+                for valid_book in valid_books:
+                    if dankoffer_book_lower == valid_book.lower() or dankoffer_book_lower in valid_book.lower() or valid_book.lower() in dankoffer_book_lower:
+                        book_valid = True
+                        # Use the exact name from Boeken list for consistency
+                        dankoffer_book = valid_book
+                        print(f'[Liturgie Fill] Validated book name: "{dankoffer_book}" matches "{valid_book}"')
+                        break
+
+                if not book_valid:
+                    alerts['already_filled'].append(f'⚠️ Dankoffer boek "{dankoffer["book"]}" NIET gevonden in Boeken lijst! Controleer spelling.')
+                    print(f'[Liturgie Fill] WARNING: Book "{dankoffer["book"]}" not found in Boeken list: {valid_books[:5]}...')
+
             # Check current values in dankoffer cells
             current_b21 = get_cell_value(dankoffer_row, 2)
             current_c21 = get_cell_value(dankoffer_row, 3)
@@ -1323,9 +1351,13 @@ def liturgie_fill_data():
             current_e21 = get_cell_value(dankoffer_row, 5)
             print(f'[Liturgie Fill] Current dankoffer values - B21: "{current_b21}", C21: "{current_c21}", D21: "{current_d21}", E21: "{current_e21}"')
 
-            # B21: Book name
-            result_b21 = set_cell_value(dankoffer_row, 2, dankoffer['book'], f'Dankoffer boek (B21) (rij {dankoffer["row_index"]} uit Dankoffer.xlsx)')
-            print(f'[Liturgie Fill] B21 set result: {result_b21}, value: {dankoffer["book"]}')
+            # B21: Book name (only if validation passed or no Boeken sheet)
+            if book_valid or not valid_books:
+                result_b21 = set_cell_value(dankoffer_row, 2, dankoffer_book, f'Dankoffer boek (B21) (rij {dankoffer["row_index"]} uit Dankoffer.xlsx)')
+                print(f'[Liturgie Fill] B21 set result: {result_b21}, value: {dankoffer_book}')
+            else:
+                result_b21 = False
+                print(f'[Liturgie Fill] B21 NOT set - book validation failed')
 
             # C21: Chapter (H.S. / pasal)
             result_c21 = set_cell_value(dankoffer_row, 3, dankoffer['chapter'], 'Dankoffer hoofdstuk (C21)')
