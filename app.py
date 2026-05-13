@@ -1890,13 +1890,13 @@ def auto_fill_working_file():
                 tikkie_url = email_data.get('dankoffer_url', '')
                 if tikkie_url:
                     tikkie_row = None
-                    for row in range(1, ws.max_row + 1):
-                        label = str(ws.cell(row=row, column=1).value).strip().lower() if ws.cell(row=row, column=1).value else ''
+                    for row in range(1, ws_active.max_row + 1):
+                        label = str(ws_active.cell(row=row, column=1).value).strip().lower() if ws_active.cell(row=row, column=1).value else ''
                         if 'tikkie' in label or 'qr_link' in label:
                             tikkie_row = row
                             break
                     if tikkie_row:
-                        set_cell_value(tikkie_row, 2, tikkie_url, 'Tikkie link')
+                        set_cell_value(ws_active, tikkie_row, 2, tikkie_url, 'Tikkie link')
                 else:
                     alerts['not_found'].append('Tikkie link niet gevonden in e-mail')
             else:
@@ -1912,7 +1912,7 @@ def auto_fill_working_file():
             dankoffer_row = 21
             dankoffer_book = dankoffer['book']
             
-            def set_dankoffer_cell(row, col, value):
+            def set_dankoffer_cell(ws, row, col, value):
                 cell = ws.cell(row=row, column=col)
                 current_val = str(cell.value).strip() if cell.value else ''
                 if current_val and current_val.lower() not in ('nan', 'none', ''):
@@ -1922,12 +1922,12 @@ def auto_fill_working_file():
                     return True
                 return False
             
-            set_dankoffer_cell(dankoffer_row, 2, dankoffer_book)
-            set_dankoffer_cell(dankoffer_row, 3, dankoffer['chapter'])
+            set_dankoffer_cell(ws_active, dankoffer_row, 2, dankoffer_book)
+            set_dankoffer_cell(ws_active, dankoffer_row, 3, dankoffer['chapter'])
             verse_text = dankoffer['verse_start']
             if dankoffer['verse_end']:
                 verse_text += f'-{dankoffer["verse_end"]}'
-            set_dankoffer_cell(dankoffer_row, 4, verse_text)
+            set_dankoffer_cell(ws_active, dankoffer_row, 4, verse_text)
             
             alerts['auto_populated'].append(f'Dankoffer vers: {dankoffer["full_text"]}')
             
