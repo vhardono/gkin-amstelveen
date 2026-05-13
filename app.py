@@ -2143,5 +2143,192 @@ def preview_working_file():
         return jsonify({'error': str(e)}), 500
 
 
+# =============================================================================
+# MailerLite Campaign Routes (4th Section)
+# =============================================================================
+
+@app.route('/campaign')
+@_password_required
+def campaign_index():
+    """Render the MailerLite campaign generator page with upcoming dates."""
+    taken = _get_takenrooster()
+    dutch_months = [
+        'januari', 'februari', 'maart', 'april', 'mei', 'juni',
+        'juli', 'augustus', 'september', 'oktober', 'november', 'december'
+    ]
+    dutch_days = ['maandag', 'dinsdag', 'woensdag', 'donderdag',
+                  'vrijdag', 'zaterdag', 'zondag']
+    today = datetime.now().date()
+    dates = []
+    for entry in taken['entries']:
+        d = entry['date']
+        d_date = d.date() if hasattr(d, 'date') else d
+        if d_date < today:
+            continue
+        label = (f"{dutch_days[d.weekday()].capitalize()} {d.day} {dutch_months[d.month - 1]} {d.year}"
+                 f"  —  {entry['predikant']}")
+        dates.append({
+            'value': d.strftime('%Y-%m-%d'),
+            'label': label,
+            'predikant': entry['predikant'],
+            'ovd': entry.get('ovd', ''),
+            'beamer': entry.get('beamer', ''),
+            'voorzangers': entry.get('voorzangers', ''),
+        })
+    return render_template('campaign.html', dates=dates)
+
+
+@app.route('/campaign/api-status', methods=['GET'])
+@_password_required
+def campaign_api_status():
+    """Check MailerLite API connection status."""
+    from mailerlite_campaign import MailerLiteCampaignGenerator
+    generator = MailerLiteCampaignGenerator()
+    return jsonify(generator.test_connection())
+
+
+@app.route('/campaign/preview', methods=['POST'])
+@_password_required
+def campaign_preview():
+    """Generate campaign preview based on selected date."""
+    from mailerlite_campaign import MailerLiteCampaignGenerator
+    
+    data = request.get_json() or {}
+    iso_date = data.get('date', '')
+    if not iso_date:
+        return jsonify({'error': 'no date'}), 400
+    
+    try:
+        selected_date = datetime.strptime(iso_date, '%Y-%m-%d')
+    except ValueError:
+        return jsonify({'error': 'invalid date format'}), 400
+    
+    try:
+        # Get takenrooster entry
+        taken = _get_takenrooster()
+        entry = None
+        for e in taken['entries']:
+            e_date = e['date'].date() if hasattr(e['date'], 'date') else e['date']
+            if e_date == selected_date.date():
+                entry = e
+                break
+        
+        if not entry:
+            return jsonify({'error': f'No rooster entry for {iso_date}'}), 404
+        
+        # Get mededelingen from Dropbox
+        reader = DropboxExcelReader()
+        meded = reader.get_mededelingen(mededelingen_date=selected_date)
+        
+        # Generate preview
+        generator = MailerLiteCampaignGenerator()
+        preview = generator.generate_campaign_preview(
+            service_date=selected_date,
+            predikant=entry.get('predikant', ''),
+            mededelingen_data=meded,
+            takenrooster_entry=entry
+        )
+        
+        return jsonify(preview)
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/campaign/create', methods=['POST'])
+@_password_required
+def campaign_create():
+    """Create the actual MailerLite campaign."""
+    from mailerlite_campaign import MailerLiteCampaignGenerator
+    
+    data = request.get_json() or {}
+    iso_date = data.get('date', '')
+    subject = data.get('subject', '')
+    name = data.get('name', '')
+    schedule = data.get('schedule', False)
+    
+    if not iso_date:
+        return jsonify({'error': 'no date'}), 400
+    
+    try:
+        selected_date = datetime.strptime(iso_date, '%Y-%m-%d')
+    except ValueError:
+        return jsonify({'error': 'invalid date format'}), 400
+    
+    try:
+        # Get takenrooster entry
+        taken = _get_takenrooster()
+        entry = None
+        for e in taken['entries']:
+            e_date = e['date'].date() if hasattr(e['date'], 'date') else e['date']
+            if e_date == selected_date.date():
+                entry = e
+                break
+        
+        if not entry:
+            return jsonify({'error': f'No rooster entry for {iso_date}'}), 404
+        
+        # Get mededelingen from Dropbox
+        reader = DropboxExcelReader()
+        meded = reader.get_mededelingen(mededelingen_date=selected_date)
+        
+        # Generate HTML content
+        generator = MailerLiteCampaignGenerator()
+        html_content = generator.generate_html_from_mededelingen(
+            service_date=selected_date,
+            predikant=entry.get('predikant', ''),
+            mededelingen_data=meded,
+            takenrooster_entry=entry
+        )
+        
+        # Calculate send time if scheduled (Saturday 09:00 before the service)
+        send_time = None
+        if schedule:
+            # Get Saturday before service
+            service_weekday = selected_date.weekday()  # 6 = Sunday
+            if service_weekday == 6:  # Sunday
+                saturday = selected_date - timedelta(days=1)
+            else:
+                # Find previous Saturday
+                days_back = (service_weekday + 1) % 7
+                saturday = selected_date - timedelta(days=days_back)
+            
+            send_datetime = saturday.replace(hour=9, minute=0, second=0)
+            send_time = send_datetime.strftime('%Y-%m-%dT%H:%M:%S.000Z')
+        
+        # Create campaign
+        result = generator.create_campaign(
+            name=name or f"GKIN Mededelingen {selected_date.strftime('%y%m%d')}",
+            subject=subject or f"Mededelingen GKIN Amstelveen – {selected_date.strftime('%d %B %Y')}",
+            html_content=html_content,
+            send_time=send_time
+        )
+        
+        if 'error' in result:
+            return jsonify({'success': False, 'error': result['error']}), 500
+        
+        campaign_id = result.get('data', {}).get('id', 'unknown')
+        
+        return jsonify({
+            'success': True,
+            'campaign_id': campaign_id,
+            'name': name,
+            'subject': subject,
+            'scheduled': bool(schedule),
+            'send_time': send_time
+        })
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
+# =============================================================================
+# Main Entry Point
+# =============================================================================
+
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
