@@ -480,7 +480,13 @@
                 } else {
                     const excelFile = document.getElementById('excelFile').files[0];
                     if (!excelFile) {
-                        showStatus('Upload eerst het Excel bestand.', 'error');
+                        // Make sure upload section is visible and scroll to it
+                        const uploadSection = document.getElementById('uploadSection');
+                        uploadSection.classList.remove('hidden');
+                        uploadSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        uploadSection.querySelector('.drop-zone').classList.add('ring-2', 'ring-red-400');
+                        setTimeout(() => uploadSection.querySelector('.drop-zone').classList.remove('ring-2', 'ring-red-400'), 2000);
+                        showStatus('Selecteer eerst een Excel bestand via het upload-vak hierboven.', 'error');
                         return;
                     }
                     _currentExcelFile = excelFile;
@@ -746,6 +752,7 @@
             }
             box.textContent = msg;
             box.classList.remove('hidden');
+            box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
 
         function hideStatus() {

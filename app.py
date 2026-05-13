@@ -1638,12 +1638,12 @@ def preview_liturgie_fill_data():
         from io import BytesIO
         
         wb = load_workbook(BytesIO(excel_bytes))
-        ws = wb.active
+        ws = wb['Data'] if 'Data' in wb.sheetnames else wb.active
         
-        # Get service date from cell D4
-        service_date_raw = ws.cell(row=4, column=4).value
+        # Get service date from Data sheet B3
+        service_date_raw = ws.cell(row=3, column=2).value
         if not service_date_raw:
-            return jsonify({'error': 'Geen datum gevonden in cel D4'}), 400
+            return jsonify({'error': 'Geen datum gevonden in cel B3 (Data tab)'}), 400
             
         # Parse date
         if isinstance(service_date_raw, str):
@@ -1653,7 +1653,7 @@ def preview_liturgie_fill_data():
                 try:
                     service_date = datetime.strptime(service_date_raw, '%Y-%m-%d')
                 except ValueError:
-                    return jsonify({'error': f'Ongeldige datum formaat in D4: {service_date_raw}'}), 400
+                    return jsonify({'error': f'Ongeldige datum formaat in B3: {service_date_raw}'}), 400
         else:
             service_date = service_date_raw
             
