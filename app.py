@@ -2576,12 +2576,17 @@ def campaign_create():
             # Add details if available
             if result.get('details'):
                 import json
-                error_msg += f" - Details: {json.dumps(result['details'])}"
+                details = result['details']
+                error_msg += f" - Details: {json.dumps(details)}"
+                
+                # Check for specific errors
+                if isinstance(details, dict):
+                    if details.get('code') == 'invalid_parameter' and 'sender' in str(details.get('message', '')).lower():
+                        error_msg = "Sender email not verified in Brevo. Please verify kerkenraad@gkin.nl in Brevo Settings > Senders & IP, or use a different verified email address."
+            
             if result.get('response_text'):
                 error_msg += f" - Response: {result['response_text'][:200]}"
-            # Add free plan note if applicable
-            if result.get('free_plan_note'):
-                error_msg = result['free_plan_note']
+            
             return jsonify({'success': False, 'error': error_msg}), 500
         
         campaign_id = result.get('data', {}).get('id', 'unknown')
