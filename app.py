@@ -1221,7 +1221,8 @@ def liturgie_fill_data():
         from io import BytesIO
         import openpyxl
 
-        wb = openpyxl.load_workbook(BytesIO(excel_bytes))
+        # Load workbook preserving all features including data validation
+        wb = openpyxl.load_workbook(BytesIO(excel_bytes), data_only=False, keep_links=True)
         ws = wb['Data'] if 'Data' in wb.sheetnames else wb.active
 
         # Get date from B3 (row 3, column 2 in openpyxl 1-indexed)
