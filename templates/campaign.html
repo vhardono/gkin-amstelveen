@@ -324,7 +324,15 @@
                     } else {
                         // Fallback: use local path for preview, user can manually upload
                         qrField.value = data.ole_qr.startsWith('http') ? data.ole_qr : `/uploads/${data.ole_qr}`;
-                        qrStatus.innerHTML = `<span class="text-amber-600">⚠ QR gevonden maar upload mislukt - controleer handmatig</span>`;
+                        // Show detailed error
+                        let errorDetail = uploadData.error || 'Onbekende fout';
+                        if (uploadData.mailerlite_error) {
+                            errorDetail += ` (API: ${uploadData.mailerlite_error})`;
+                        }
+                        if (uploadData.files_in_dir) {
+                            errorDetail += `<br><small>Beschikbare bestanden: ${uploadData.files_in_dir.slice(0, 5).join(', ')}</small>`;
+                        }
+                        qrStatus.innerHTML = `<span class="text-amber-600">⚠ Upload mislukt: ${errorDetail}<br>Controleer handmatig of upload via MailerLite direct</span>`;
                     }
                 } else {
                     qrStatus.innerHTML = `<span class="text-amber-600">⚠ Geen OLE QR code gevonden in e-mail</span>`;
