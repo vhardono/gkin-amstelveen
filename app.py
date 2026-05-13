@@ -1773,6 +1773,9 @@ WORKING_FILE_PATH = '/working folder/file mingguan/Main Liturgy file.xlsx'
 @app.route('/liturgie/auto-fill-working-file', methods=['POST'])
 def auto_fill_working_file():
     """Auto-fill the Main Liturgy file from Dropbox working folder"""
+    from io import BytesIO
+    from openpyxl import load_workbook
+    
     try:
         # Get selected changes from request
         data = request.get_json() or {}
