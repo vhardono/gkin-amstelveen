@@ -285,15 +285,21 @@ class OutlookCollecteReader:
         # --- Fetch Tikkie collecte email ---
         # Search for any subject containing "Tikkie" to accommodate variations like "Tikkie Hemelvaart Collecte"
         tikkie_msgs = _search_messages('Tikkie', 'fokkedj@gmail.com')
+        print(f'[email_reader] Found {len(tikkie_msgs)} Tikkie messages')
+        for i, msg in enumerate(tikkie_msgs[:3]):
+            print(f'[email_reader] Tikkie msg {i}: {msg.get("subject", "no subject")}')
         tikkie_match = next((m for m in tikkie_msgs if _date_in_subject(m.get('subject',''))), None)
         if tikkie_match:
+            print(f'[email_reader] Matched Tikkie: {tikkie_match.get("subject", "no subject")}')
             result['emails_found'] += 1
             result['source_subjects'].append(tikkie_match.get('subject',''))
             body = re.sub(r'<[^>]+>', ' ', tikkie_match.get('body', {}).get('content', ''))
             result['dankoffer_url'] = _extract_url(body)
+            print(f'[email_reader] Extracted URL: {result["dankoffer_url"][:50] if result["dankoffer_url"] else "NONE"}')
             # Always try attachments — hasAttachments may miss inline images
             result['dankoffer_qr'] = _save_first_image(tikkie_match['id'], 'dankoffer')
         else:
+            print(f'[email_reader] No Tikkie match for date {target_date}')
             result['not_found'].append('Tikkie Collecte e-mail niet gevonden voor deze datum')
 
         # --- Fetch OLE QR email ---
