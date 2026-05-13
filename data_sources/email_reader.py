@@ -297,7 +297,12 @@ class OutlookCollecteReader:
             print(f'[email_reader] Matched Tikkie: {tikkie_match.get("subject", "no subject")}')
             result['emails_found'] += 1
             result['source_subjects'].append(tikkie_match.get('subject',''))
-            body = re.sub(r'<[^>]+>', ' ', tikkie_match.get('body', {}).get('content', ''))
+            raw_body = tikkie_match.get('body', {})
+            print(f'[email_reader] Body contentType: {raw_body.get("contentType", "unknown")}')
+            body_content = raw_body.get('content', '')
+            print(f'[email_reader] Raw body length: {len(body_content)}')
+            body = re.sub(r'<[^>]+>', ' ', body_content)
+            print(f'[email_reader] Body after HTML strip (first 300 chars): {body[:300]}')
             result['dankoffer_url'] = _extract_url(body)
             print(f'[email_reader] Extracted URL: {result["dankoffer_url"][:50] if result["dankoffer_url"] else "NONE"}')
             # Always try attachments — hasAttachments may miss inline images
