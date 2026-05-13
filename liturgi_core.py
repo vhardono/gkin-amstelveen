@@ -1218,7 +1218,8 @@ if vfrom and str(vfrom).strip():
 else:
     elem13_text = f"En we gedenken daarbij de woorden uit {boek}."
 
-add_verses_to_doc(doc, boek, hs, vfrom, vto)
+if hs and str(hs).strip() and vfrom and str(vfrom).strip():
+    add_verses_to_doc(doc, boek, hs, vfrom, vto)
 
 r = p.add_run(f"\t\t{elem13_text}")
 r.font.name = "Calibri"; r.font.size = Pt(10)
