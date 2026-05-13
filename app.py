@@ -1392,12 +1392,23 @@ def liturgie_fill_data():
             current_e21 = get_cell_value(dankoffer_row, 5)
             print(f'[Liturgie Fill] Current dankoffer values - B21: "{current_b21}", C21: "{current_c21}", D21: "{current_d21}", E21: "{current_e21}"')
 
-            # Set all dankoffer cells but only show one consolidated line in alerts
+            # Set all dankoffer cells (directly, without individual alerts)
             dankoffer_filled_parts = []
+            
+            # Helper to set cell without adding to alerts
+            def set_dankoffer_cell(row, col, value):
+                cell = ws.cell(row=row, column=col)
+                current_val = str(cell.value).strip() if cell.value else ''
+                if current_val and current_val.lower() not in ('nan', 'none', ''):
+                    return False  # Already has content
+                elif value:
+                    cell.value = value
+                    return True
+                return False
             
             # B21: Book name (only if validation passed or no Boeken sheet)
             if book_valid or not valid_books:
-                result_b21 = set_cell_value(dankoffer_row, 2, dankoffer_book, f'Dankoffer boek (B21) (rij {dankoffer["row_index"]} uit Dankoffer.xlsx)')
+                result_b21 = set_dankoffer_cell(dankoffer_row, 2, dankoffer_book)
                 print(f'[Liturgie Fill] B21 set result: {result_b21}, value: {dankoffer_book}')
                 if result_b21:
                     dankoffer_filled_parts.append(dankoffer_book)
@@ -1406,13 +1417,13 @@ def liturgie_fill_data():
                 print(f'[Liturgie Fill] B21 NOT set - book validation failed')
 
             # C21: Chapter (H.S. / pasal)
-            result_c21 = set_cell_value(dankoffer_row, 3, dankoffer['chapter'], 'Dankoffer hoofdstuk (C21)')
+            result_c21 = set_dankoffer_cell(dankoffer_row, 3, dankoffer['chapter'])
             print(f'[Liturgie Fill] C21 set result: {result_c21}, value: {dankoffer["chapter"]}')
             if result_c21:
                 dankoffer_filled_parts.append(dankoffer['chapter'])
 
             # D21: Start verse (ayat)
-            result_d21 = set_cell_value(dankoffer_row, 4, dankoffer['verse_start'], 'Dankoffer begin vers (D21)')
+            result_d21 = set_dankoffer_cell(dankoffer_row, 4, dankoffer['verse_start'])
             print(f'[Liturgie Fill] D21 set result: {result_d21}, value: {dankoffer["verse_start"]}')
             if result_d21:
                 verse_text = dankoffer['verse_start']
@@ -1422,7 +1433,7 @@ def liturgie_fill_data():
 
             # E21: End verse (ayat) - only if there's an end verse
             if dankoffer['verse_end']:
-                result_e21 = set_cell_value(dankoffer_row, 5, dankoffer['verse_end'], 'Dankoffer eind vers (E21)')
+                result_e21 = set_dankoffer_cell(dankoffer_row, 5, dankoffer['verse_end'])
                 print(f'[Liturgie Fill] E21 set result: {result_e21}, value: {dankoffer["verse_end"]}')
 
             # Add simplified one-line dankoffer alert
