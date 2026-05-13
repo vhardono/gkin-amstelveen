@@ -98,6 +98,53 @@
             </div>
         </div>
 
+        <!-- OLE Template Fields -->
+        <div id="oleTemplateFields" class="hidden bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-5">
+            <h2 class="text-base font-semibold text-gkin-green mb-4 flex items-center gap-2">
+                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0119 9.414V19a2 2 0 01-2 2z"/>
+                </svg>
+                OLE Dienst Inhoud
+            </h2>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Thema</label>
+                    <input type="text" id="themeInput" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gkin-green" placeholder="Bijv: Ga en verkondigt het Evangelie">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Bijbeltekst</label>
+                    <input type="text" id="bibleVerseInput" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gkin-green" placeholder="Bijv: Marcus 16:9-20">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">YouTube Livestream Link</label>
+                    <input type="url" id="youtubeInput" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gkin-green" placeholder="https://youtube.com/live/...">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Liturgie Document URL</label>
+                    <input type="url" id="liturgieUrlInput" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gkin-green" placeholder="https://... (upload naar MailerLite bestanden)">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Collecte/Tikkie URL</label>
+                    <input type="url" id="collecteUrlInput" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gkin-green" placeholder="https://www.ing.nl/payreq/...">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">QR Code Afbeelding URL</label>
+                    <input type="url" id="qrUrlInput" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gkin-green" placeholder="https://... (upload naar MailerLite bestanden)">
+                </div>
+            </div>
+            
+            <div class="mt-4 bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
+                <strong>Tip:</strong> Upload de liturgie PDF en QR code eerst naar MailerLite Bestanden, en plak hier de URL.
+            </div>
+        </div>
+
         <!-- Preview Section -->
         <div id="previewSection" class="hidden mb-5">
             <div class="flex items-center justify-between mb-3">
@@ -145,10 +192,17 @@
         // --- Elements ---
         const dateSelect = document.getElementById('dateSelect');
         const campaignOptions = document.getElementById('campaignOptions');
+        const oleTemplateFields = document.getElementById('oleTemplateFields');
         const previewSection = document.getElementById('previewSection');
         const actionButtons = document.getElementById('actionButtons');
         const subjectLine = document.getElementById('subjectLine');
         const campaignName = document.getElementById('campaignName');
+        const themeInput = document.getElementById('themeInput');
+        const bibleVerseInput = document.getElementById('bibleVerseInput');
+        const youtubeInput = document.getElementById('youtubeInput');
+        const liturgieUrlInput = document.getElementById('liturgieUrlInput');
+        const collecteUrlInput = document.getElementById('collecteUrlInput');
+        const qrUrlInput = document.getElementById('qrUrlInput');
         const previewContainer = document.getElementById('previewContainer');
         const resultBox = document.getElementById('resultBox');
         const apiStatusBox = document.getElementById('apiStatusBox');
@@ -183,6 +237,7 @@
             const selectedDate = dateSelect.value;
             if (!selectedDate) {
                 campaignOptions.classList.add('hidden');
+                oleTemplateFields.classList.add('hidden');
                 previewSection.classList.add('hidden');
                 actionButtons.classList.add('hidden');
                 return;
@@ -190,6 +245,7 @@
             
             await loadPreview(selectedDate);
             campaignOptions.classList.remove('hidden');
+            oleTemplateFields.classList.remove('hidden');
             previewSection.classList.remove('hidden');
             actionButtons.classList.remove('hidden');
         });
@@ -202,7 +258,15 @@
                 const resp = await fetch('/campaign/preview', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ date })
+                    body: JSON.stringify({ 
+                        date,
+                        theme: themeInput.value,
+                        bible_verse: bibleVerseInput.value,
+                        youtube_link: youtubeInput.value,
+                        liturgie_url: liturgieUrlInput.value,
+                        collecte_url: collecteUrlInput.value,
+                        qr_image_url: qrUrlInput.value
+                    })
                 });
                 
                 const data = await resp.json();
@@ -227,6 +291,16 @@
                 setLoading(false);
             }
         }
+        
+        // Update preview when OLE fields change
+        [themeInput, bibleVerseInput, youtubeInput, liturgieUrlInput, collecteUrlInput, qrUrlInput].forEach(input => {
+            input.addEventListener('blur', () => {
+                const selectedDate = dateSelect.value;
+                if (selectedDate) {
+                    loadPreview(selectedDate);
+                }
+            });
+        });
 
         // --- Refresh Preview ---
         document.getElementById('refreshPreviewBtn').addEventListener('click', () => {
@@ -273,7 +347,14 @@
                         date: dateSelect.value,
                         subject: subjectLine.value,
                         name: campaignName.value,
-                        schedule: schedule
+                        schedule: schedule,
+                        theme: themeInput.value,
+                        bible_verse: bibleVerseInput.value,
+                        youtube_link: youtubeInput.value,
+                        liturgie_url: liturgieUrlInput.value,
+                        collecte_url: collecteUrlInput.value,
+                        qr_image_url: qrUrlInput.value,
+                        is_ole: true
                     })
                 });
                 

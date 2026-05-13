@@ -2220,14 +2220,45 @@ def campaign_preview():
         reader = DropboxExcelReader()
         meded = reader.get_mededelingen(mededelingen_date=selected_date)
         
-        # Generate preview
+        # Get OLE template fields from request
+        theme = data.get('theme', '')
+        bible_verse = data.get('bible_verse', '')
+        youtube_link = data.get('youtube_link', '')
+        liturgie_url = data.get('liturgie_url', '')
+        collecte_url = data.get('collecte_url', '')
+        qr_image_url = data.get('qr_image_url', '')
+        is_ole = data.get('is_ole', True)
+        
+        # Generate HTML with template
         generator = MailerLiteCampaignGenerator()
-        preview = generator.generate_campaign_preview(
+        html_content = generator.generate_html_from_mededelingen(
             service_date=selected_date,
             predikant=entry.get('predikant', ''),
             mededelingen_data=meded,
-            takenrooster_entry=entry
+            takenrooster_entry=entry,
+            is_ole=is_ole,
+            theme=theme,
+            bible_verse=bible_verse,
+            youtube_link=youtube_link,
+            liturgie_url=liturgie_url,
+            collecte_url=collecte_url,
+            qr_image_url=qr_image_url
         )
+        
+        # Generate preview metadata
+        months = ['januari', 'februari', 'maart', 'april', 'mei', 'juni',
+                  'juli', 'augustus', 'september', 'oktober', 'november', 'december']
+        date_str = f"{selected_date.day} {months[selected_date.month - 1]} {selected_date.year}"
+        short_date = selected_date.strftime('%y%m%d')
+        
+        preview = {
+            'name': data.get('name') or f"GKIN OLE {short_date}",
+            'subject': data.get('subject') or f"GKIN (OLE): Online Landelijke Eredienst Zondag {date_str}, 10:00u",
+            'html_content': html_content,
+            'service_date': date_str,
+            'predikant': entry.get('predikant', ''),
+            'ovd': entry.get('ovd', '')
+        }
         
         return jsonify(preview)
         
@@ -2248,6 +2279,15 @@ def campaign_create():
     subject = data.get('subject', '')
     name = data.get('name', '')
     schedule = data.get('schedule', False)
+    
+    # OLE template fields
+    theme = data.get('theme', '')
+    bible_verse = data.get('bible_verse', '')
+    youtube_link = data.get('youtube_link', '')
+    liturgie_url = data.get('liturgie_url', '')
+    collecte_url = data.get('collecte_url', '')
+    qr_image_url = data.get('qr_image_url', '')
+    is_ole = data.get('is_ole', True)
     
     if not iso_date:
         return jsonify({'error': 'no date'}), 400
@@ -2274,13 +2314,20 @@ def campaign_create():
         reader = DropboxExcelReader()
         meded = reader.get_mededelingen(mededelingen_date=selected_date)
         
-        # Generate HTML content
+        # Generate HTML content with OLE template
         generator = MailerLiteCampaignGenerator()
         html_content = generator.generate_html_from_mededelingen(
             service_date=selected_date,
             predikant=entry.get('predikant', ''),
             mededelingen_data=meded,
-            takenrooster_entry=entry
+            takenrooster_entry=entry,
+            is_ole=is_ole,
+            theme=theme,
+            bible_verse=bible_verse,
+            youtube_link=youtube_link,
+            liturgie_url=liturgie_url,
+            collecte_url=collecte_url,
+            qr_image_url=qr_image_url
         )
         
         # Calculate send time if scheduled (Saturday 09:00 before the service)
@@ -2299,9 +2346,13 @@ def campaign_create():
             send_time = send_datetime.strftime('%Y-%m-%dT%H:%M:%S.000Z')
         
         # Create campaign
+        months = ['januari', 'februari', 'maart', 'april', 'mei', 'juni',
+                  'juli', 'augustus', 'september', 'oktober', 'november', 'december']
+        date_str = f"{selected_date.day} {months[selected_date.month - 1]} {selected_date.year}"
+        
         result = generator.create_campaign(
-            name=name or f"GKIN Mededelingen {selected_date.strftime('%y%m%d')}",
-            subject=subject or f"Mededelingen GKIN Amstelveen – {selected_date.strftime('%d %B %Y')}",
+            name=name or f"GKIN OLE {selected_date.strftime('%y%m%d')}",
+            subject=subject or f"GKIN (OLE): Online Landelijke Eredienst Zondag {date_str}, 10:00u",
             html_content=html_content,
             send_time=send_time
         )
