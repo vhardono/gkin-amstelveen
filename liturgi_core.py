@@ -424,6 +424,9 @@ def add_verses_to_doc(doc, dutch_book_name, chapter_number, verse_from, verse_to
       * If verse_to is None/""/0 -> uses single verse (verse_to = verse_from)
     - Appends ONE paragraph to 'doc' with superscript verse numbers and normal text (Calibri 10)
     """
+    # Skip if essential fields are missing
+    if not chapter_number or not str(chapter_number).strip() or not verse_from or not str(verse_from).strip():
+        return
     # Normalize inputs (accept strings like "1" or "")
     chapter_number = _to_int_or_raise(chapter_number, "hoofdstuk")
     verse_from = _to_int_or_raise(verse_from, "vers_van")
@@ -2012,6 +2015,9 @@ def add_verses_to_ppt(prs: Presentation, dutch_book_name: str, chapter_number, v
       * Each verse begins with its number as superscript, size 32, bold, color (255,173,3).
       * ▶ NEW: Adds a top-right label "<Book> <Chapter> (NBV)" in yellow on every slide.
     """
+    # Skip if essential fields are missing
+    if not chapter_number or not str(chapter_number).strip() or not verse_from or not str(verse_from).strip():
+        return
     # Normalize inputs
     chapter_number = _to_int_or_raise(chapter_number, "hoofdstuk")
     verse_from = _to_int_or_raise(verse_from, "vers_van")
@@ -2277,6 +2283,9 @@ def add_verses_to_ppt_indo(
     - Top-right yellow header: "<Book> <Chapter:From–To> (TB|TB2)" on every slide.
     Returns number of slides added.
     """
+    # Skip if essential fields are missing
+    if not chapter_number or not str(chapter_number).strip() or not verse_from or not str(verse_from).strip():
+        return
     # normalize range
     chapter_number = int(chapter_number)
     verse_from = int(verse_from)
