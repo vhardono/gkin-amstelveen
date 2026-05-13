@@ -426,14 +426,16 @@
 
             const changesTable = document.getElementById('previewChangesTable');
             changesTable.innerHTML = '';
+            let totalChanges = 0;
             for (const [field, currentVal] of Object.entries(previewData.current_values)) {
                 const newVal = previewData.proposed_changes[field];
                 const row = document.createElement('tr');
                 row.className = 'border-b border-gray-100 last:border-0';
                 const hasChange = newVal && newVal !== currentVal;
+                if (hasChange) totalChanges++;
                 row.innerHTML = `
                     <td class="py-1 px-1" style="text-align:center">
-                        <input type="checkbox" class="change-checkbox rounded border-gray-300" data-field="${field}" ${hasChange ? 'checked' : ''}>
+                        <input type="checkbox" class="change-checkbox rounded border-gray-300" data-field="${field}" ${hasChange ? 'checked' : ''} ${hasChange ? '' : 'disabled'}>
                     </td>
                     <td class="py-1 px-1 text-gray-600" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${field}</td>
                     <td class="py-1 px-1 ${currentVal ? 'text-gray-600' : 'text-gray-400 italic'}" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${currentVal || ''}">${currentVal || '(leeg)'}</td>
@@ -441,6 +443,12 @@
                 `;
                 changesTable.appendChild(row);
             }
+
+            // Grey out apply button if no changes
+            const applyBtn = document.getElementById('applyChangesBtn');
+            applyBtn.disabled = totalChanges === 0;
+            applyBtn.classList.toggle('opacity-50', totalChanges === 0);
+            applyBtn.classList.toggle('cursor-not-allowed', totalChanges === 0);
 
             document.getElementById('selectAllChanges').addEventListener('change', function() {
                 document.querySelectorAll('.change-checkbox').forEach(cb => cb.checked = this.checked);
