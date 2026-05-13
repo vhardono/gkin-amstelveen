@@ -1794,14 +1794,6 @@ def auto_fill_working_file():
         
         # Load with openpyxl
         wb = load_workbook(BytesIO(excel_bytes))
-        try:
-            metadata, response = dbx.files_download(working_file_path)
-            file_bytes = response.content
-        except Exception as e:
-            return jsonify({'error': f'Kan bestand niet downloaden van Dropbox: {str(e)}'}), 500
-        
-        # Load Excel
-        wb = load_workbook(BytesIO(file_bytes))
         ws = wb.active
         
         # Get service date
