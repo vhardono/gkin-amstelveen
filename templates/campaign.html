@@ -331,8 +331,8 @@
                 
                 // Handle QR code
                 if (data.ole_qr) {
-                    // Upload to MailerLite and get URL
-                    const uploadResp = await fetch('/upload-to-mailerlite', {
+                    // Upload to Brevo and get file ID
+                    const uploadResp = await fetch('/upload-to-brevo', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ local_path: data.ole_qr })
@@ -340,20 +340,18 @@
                     const uploadData = await uploadResp.json();
                     
                     if (uploadData.success) {
-                        qrField.value = uploadData.url;
-                        qrStatus.innerHTML = `<span class="text-green-600">✓ QR code auto-geupload uit e-mail</span>`;
+                        // Brevo returns file_id - need to manually get URL from Brevo interface
+                        qrField.value = data.ole_qr.startsWith('http') ? data.ole_qr : `/uploads/${data.ole_qr}`;
+                        qrStatus.innerHTML = `<span class="text-green-600">✓ QR code gevonden: ${data.ole_qr}<br><small>Geüpload naar Brevo (ID: ${uploadData.file_id}). Kopieer de URL uit Brevo bestandsbeheer naar het veld hierboven.</small></span>`;
                     } else {
                         // Fallback: use local path for preview, user can manually upload
                         qrField.value = data.ole_qr.startsWith('http') ? data.ole_qr : `/uploads/${data.ole_qr}`;
                         // Show detailed error
                         let errorDetail = uploadData.error || 'Onbekende fout';
-                        if (uploadData.mailerlite_error) {
-                            errorDetail += ` (API: ${uploadData.mailerlite_error})`;
-                        }
                         if (uploadData.files_in_dir) {
                             errorDetail += `<br><small>Beschikbare bestanden: ${uploadData.files_in_dir.slice(0, 5).join(', ')}</small>`;
                         }
-                        qrStatus.innerHTML = `<span class="text-amber-600">⚠ Upload mislukt: ${errorDetail}<br>Controleer handmatig of upload via MailerLite direct</span>`;
+                        qrStatus.innerHTML = `<span class="text-amber-600">⚠ Upload mislukt: ${errorDetail}<br>Upload handmatig via Brevo en plak de URL hierboven</span>`;
                     }
                 } else {
                     qrStatus.innerHTML = `<span class="text-amber-600">⚠ Geen OLE QR code gevonden in e-mail</span>`;

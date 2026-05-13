@@ -2223,16 +2223,39 @@ def campaign_index():
 @app.route('/campaign/api-status', methods=['GET'])
 @_password_required
 def campaign_api_status():
-    """Check MailerLite API connection status."""
-    from mailerlite_campaign import MailerLiteCampaignGenerator
-    generator = MailerLiteCampaignGenerator()
-    return jsonify(generator.test_connection())
+    """Check Brevo API connection status."""
+    from brevo_campaign import BrevoCampaignGenerator
+    generator = BrevoCampaignGenerator()
+    
+    try:
+        # Try to fetch lists to verify API connection
+        lists = generator.get_lists()
+        
+        if 'error' in lists:
+            return jsonify({
+                'status': 'error',
+                'message': f"API connection failed: {lists.get('error', 'Unknown error')}"
+            })
+        
+        list_names = [l.get('name', 'Unknown') for l in lists]
+        
+        return jsonify({
+            'status': 'ok',
+            'message': f"Connected to Brevo API",
+            'lists_count': len(lists),
+            'lists': list_names
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': f"API check failed: {str(e)}"
+        }), 500
 
 
-@app.route('/upload-to-mailerlite', methods=['POST'])
+@app.route('/upload-to-brevo', methods=['POST'])
 @_password_required
-def upload_to_mailerlite():
-    """Upload a local file to MailerLite and return the URL."""
+def upload_to_brevo():
+    """Upload a local file to Brevo and return the file ID."""
     data = request.get_json() or {}
     local_path = data.get('local_path', '')
     
@@ -2262,23 +2285,21 @@ def upload_to_mailerlite():
         }), 404
     
     try:
-        from mailerlite_campaign import MailerLiteFileManager
-        file_manager = MailerLiteFileManager()
+        from brevo_campaign import BrevoCampaignGenerator
+        generator = BrevoCampaignGenerator()
         
-        result = file_manager.upload_file(full_path)
+        result = generator.upload_file(full_path)
         
         if result.get('success'):
             return jsonify({
                 'success': True,
-                'url': result['url'],
-                'id': result['id'],
+                'file_id': result['file_id'],
                 'name': result['name']
             })
         else:
             return jsonify({
                 'success': False,
-                'error': result.get('error', 'Upload failed'),
-                'mailerlite_error': result.get('status')
+                'error': result.get('error', 'Upload failed')
             }), 500
     except Exception as e:
         import traceback
@@ -2289,7 +2310,7 @@ def upload_to_mailerlite():
 @app.route('/campaign/qr-code/<date>', methods=['GET'])
 @_password_required
 def campaign_qr_code(date):
-    """Fetch QR code image for a given date."""
+    """Search for and upload QR code for the given date to Brevo."""
     try:
         selected_date = datetime.strptime(date, '%Y-%m-%d')
     except ValueError:
@@ -2348,7 +2369,7 @@ def campaign_qr_code(date):
 @_password_required
 def campaign_preview():
     """Generate campaign preview based on selected date."""
-    from mailerlite_campaign import MailerLiteCampaignGenerator
+    from brevo_campaign import BrevoCampaignGenerator
     
     data = request.get_json() or {}
     iso_date = data.get('date', '')
@@ -2393,7 +2414,7 @@ def campaign_preview():
         predikant_to_use = ole_predikant if ole_predikant else entry.get('predikant', '')
         
         # Generate HTML with template
-        generator = MailerLiteCampaignGenerator()
+        generator = BrevoCampaignGenerator()
         html_content = generator.generate_html_from_mededelingen(
             service_date=selected_date,
             predikant=predikant_to_use,
@@ -2439,8 +2460,8 @@ def campaign_preview():
 @app.route('/campaign/create', methods=['POST'])
 @_password_required
 def campaign_create():
-    """Create the actual MailerLite campaign."""
-    from mailerlite_campaign import MailerLiteCampaignGenerator
+    """Create the actual Brevo campaign."""
+    from brevo_campaign import BrevoCampaignGenerator
     
     data = request.get_json() or {}
     iso_date = data.get('date', '')
@@ -2489,7 +2510,7 @@ def campaign_create():
         predikant_to_use = ole_predikant if ole_predikant else entry.get('predikant', '')
         
         # Generate HTML content with OLE template
-        generator = MailerLiteCampaignGenerator()
+        generator = BrevoCampaignGenerator()
         html_content = generator.generate_html_from_mededelingen(
             service_date=selected_date,
             predikant=predikant_to_use,
@@ -2529,11 +2550,25 @@ def campaign_create():
         # Use dynamic time in subject (from OLE preekroster) - remove u suffix if present
         time_for_subject = (ole_time if ole_time else '10:00').replace('u', '').replace('U', '')
         
+        # Calculate send time if scheduled (Saturday 09:00 before the service)
+        scheduled_at = None
+        if schedule:
+            # Get Saturday before service
+            service_weekday = selected_date.weekday()  # 6 = Sunday
+            if service_weekday == 6:  # Sunday
+                saturday = selected_date - timedelta(days=1)
+            else:
+                saturday = selected_date - timedelta(days=service_weekday + 2)
+            
+            # Set to Saturday 09:00
+            send_datetime = datetime.combine(saturday, datetime.min.time()) + timedelta(hours=9)
+            scheduled_at = send_datetime.strftime('%Y-%m-%dT%H:%M:%S') + '+02:00'  # CEST timezone
+        
         result = generator.create_campaign(
             name=name or f"GKIN OLE {selected_date.strftime('%y%m%d')}",
             subject=subject or f"GKIN (OLE): Online Landelijke Eredienst Zondag {date_str}, {time_for_subject}u",
             html_content=html_content,
-            send_time=send_time
+            scheduled_at=scheduled_at
         )
         
         if 'error' in result:
