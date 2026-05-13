@@ -191,7 +191,9 @@ class MailerLiteCampaignGenerator:
                                         youtube_link: str = "",
                                         liturgie_url: str = "",
                                         collecte_url: str = "",
-                                        qr_image_url: str = "") -> str:
+                                        qr_image_url: str = "",
+                                        ole_location: str = "",
+                                        ole_time: str = "10:00") -> str:
         """
         Generate HTML email content matching MailerLite OLE template structure.
         
@@ -208,6 +210,8 @@ class MailerLiteCampaignGenerator:
             liturgie_url: Liturgy document URL
             collecte_url: Collection payment URL
             qr_image_url: QR code image URL for collection
+            ole_location: OLE location code (AM, DH, TB, etc.)
+            ole_time: Service time (10:00, 10:30, etc.)
         
         Returns:
             Complete HTML email content matching MailerLite format
@@ -217,8 +221,10 @@ class MailerLiteCampaignGenerator:
         date_str = f"{service_date.day} {months[service_date.month - 1]} {service_date.year}"
         short_date = service_date.strftime('%d-%m-%Y')
         
-        # Determine service type
+        # Determine service type with location
         service_type = "OLE" if is_ole else "GKIN Amstelveen"
+        location_display = f" ({ole_location})" if ole_location else ""
+        time_display = ole_time if ole_time else "10:00"
         
         html = f"""<!doctype html>
 <html lang="nl" dir="ltr">
@@ -228,7 +234,7 @@ class MailerLiteCampaignGenerator:
     <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=yes">
     <meta name="format-detection" content="telephone=no, date=no, address=no, email=no, url=no">
     <meta name="x-apple-disable-message-reformatting">
-    <title>GKIN ({service_type}): Online Landelijke Eredienst Zondag {date_str}, 10:00u</title>
+    <title>GKIN ({service_type}){location_display}: Online Landelijke Eredienst Zondag {date_str}, {time_display}u</title>
     <style type="text/css">
         html, body {{ margin: 0 !important; padding: 0 !important; width: 100% !important; height: 100% !important; }}
         body {{ -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; font-family: 'Inter', sans-serif; background-color: #F4F7FA; }}
@@ -306,7 +312,7 @@ class MailerLiteCampaignGenerator:
                                             <table align="center" width="100%" border="0" cellspacing="0" cellpadding="0">
                                                 <tr><td>
                                                     <p style="font-family: 'Inter', sans-serif; color: #515856; font-size: 16px; line-height: 137%; margin-top: 0; margin-bottom: 10px;">Beste broeders en zusters,<br></p>
-                                                    <p style="font-family: 'Inter', sans-serif; color: #515856; font-size: 16px; line-height: 137%; margin-top: 0; margin-bottom: 10px;">Op {date_str} zal {predikant} voorgaan in de Online Landelijke Eredienst (OLE) van GKIN, aanvang 10:00 uur.</p>
+                                                    <p style="font-family: 'Inter', sans-serif; color: #515856; font-size: 16px; line-height: 137%; margin-top: 0; margin-bottom: 10px;">Op {date_str} zal {predikant} voorgaan in de Online Landelijke Eredienst (OLE) van GKIN{location_display}, aanvang {time_display} uur.</p>
 """
         
         if theme:
@@ -340,7 +346,7 @@ class MailerLiteCampaignGenerator:
                                                                                 <th align="center" valign="middle" style="background-color: #000000; border-radius: 6px; -webkit-font-smoothing: auto; word-break: break-all;">
                                                                                     <a href="{liturgie_url}" target="_blank" style="display: block; padding: 10px 25px; font-family: 'Inter', sans-serif; font-size: 14px; color: #ffffff; letter-spacing: 0.025em; text-decoration: none; border-radius: 6px; line-height: 16px; word-break: break-word; min-width: 70px; font-weight: normal;">
                                                                                         <div>Liturgie</div>
-                                                                                        <div>({service_type})</div>
+                                                                                        <div>({ole_location or 'OLE'})</div>
                                                                                     </a>
                                                                                 </th>
                                                                             </tr>
@@ -361,7 +367,7 @@ class MailerLiteCampaignGenerator:
                                                                                 <th align="center" valign="middle" style="background-color: #000000; border-radius: 6px; -webkit-font-smoothing: auto; word-break: break-all;">
                                                                                     <a href="{youtube_link}" target="_blank" style="display: block; padding: 10px 25px; font-family: 'Inter', sans-serif; font-size: 14px; color: #ffffff; letter-spacing: 0.025em; text-decoration: none; border-radius: 6px; line-height: 16px; word-break: break-word; min-width: 70px; font-weight: normal;">
                                                                                         <div>Webvideo</div>
-                                                                                        <div>({service_type})</div>
+                                                                                        <div>({ole_location or 'OLE'})</div>
                                                                                     </a>
                                                                                 </th>
                                                                             </tr>

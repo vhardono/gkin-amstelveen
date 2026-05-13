@@ -302,6 +302,49 @@ def fetch_language():
     return jsonify({'language': ''})
 
 
+@app.route('/fetch-ole-preekroster', methods=['POST'])
+def fetch_ole_preekroster():
+    """Fetch OLE preekroster data for a given date - includes location, time, predikant."""
+    from data_sources.preekroster_scraper import PreekrosterScraper
+    data = request.get_json(force=True)
+    iso_date = data.get('date', '')
+    if not iso_date:
+        return jsonify({'error': 'no date'}), 400
+    try:
+        d = datetime.strptime(iso_date, '%Y-%m-%d')
+    except ValueError:
+        return jsonify({'error': 'invalid date'}), 400
+
+    dutch_months_short = ['jan','feb','mrt','apr','mei','jun',
+                          'jul','aug','sep','okt','nov','dec']
+    date_key = f"{d.day} {dutch_months_short[d.month - 1]}"  # e.g. "17 mei"
+
+    try:
+        from datetime import timedelta
+        scraper = PreekrosterScraper()
+        roster = scraper.get_preekroster(mededelingen_date=d - timedelta(days=6))
+        
+        # Look for OLE entry matching this date
+        for entry in roster.get('ole_table', []):
+            raw = entry.get('date', '')
+            if raw.startswith(date_key):
+                return jsonify({
+                    'found': True,
+                    'predikant': entry.get('predikant', ''),
+                    'location': entry.get('regio', ''),  # AM, DH, TB, etc.
+                    'time': entry.get('time', '10.00u'),
+                    'language': entry.get('language', ''),
+                    'full_date': entry.get('date', '')
+                })
+        
+        return jsonify({
+            'found': False,
+            'error': 'Geen OLE dienst gevonden voor deze datum in preekroster'
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/fetch-knd-thema', methods=['POST'])
 def fetch_knd_thema():
     data = request.get_json(force=True)
@@ -2329,6 +2372,8 @@ def campaign_preview():
         liturgie_url = data.get('liturgie_url', '')
         collecte_url = data.get('collecte_url', '')
         qr_image_url = data.get('qr_image_url', '')
+        ole_location = data.get('ole_location', '')
+        ole_time = data.get('ole_time', '10:00')
         is_ole = data.get('is_ole', True)
         
         # Generate HTML with template
@@ -2344,7 +2389,9 @@ def campaign_preview():
             youtube_link=youtube_link,
             liturgie_url=liturgie_url,
             collecte_url=collecte_url,
-            qr_image_url=qr_image_url
+            qr_image_url=qr_image_url,
+            ole_location=ole_location,
+            ole_time=ole_time
         )
         
         # Generate preview metadata
@@ -2389,6 +2436,8 @@ def campaign_create():
     liturgie_url = data.get('liturgie_url', '')
     collecte_url = data.get('collecte_url', '')
     qr_image_url = data.get('qr_image_url', '')
+    ole_location = data.get('ole_location', '')
+    ole_time = data.get('ole_time', '10:00')
     is_ole = data.get('is_ole', True)
     
     if not iso_date:
@@ -2429,7 +2478,9 @@ def campaign_create():
             youtube_link=youtube_link,
             liturgie_url=liturgie_url,
             collecte_url=collecte_url,
-            qr_image_url=qr_image_url
+            qr_image_url=qr_image_url,
+            ole_location=ole_location,
+            ole_time=ole_time
         )
         
         # Calculate send time if scheduled (Saturday 09:00 before the service)

@@ -255,6 +255,35 @@
         
         // --- Fetch OLE Data from Email (QR + Tikkie URL) ---
         async function fetchOLEData(date) {
+            // 1. Fetch OLE preekroster data (location, time, predikant)
+            try {
+                const rosterResp = await fetch('/fetch-ole-preekroster', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ date })
+                });
+                const rosterData = await rosterResp.json();
+                
+                const locationField = document.getElementById('locationInput') || document.getElementById('oleLocation');
+                const timeField = document.getElementById('timeInput') || document.getElementById('oleTime');
+                
+                if (rosterData.found) {
+                    // Store location and time for use in email generation
+                    window.oleLocation = rosterData.location;  // AM, DH, TB, etc.
+                    window.oleTime = rosterData.time;  // 10.00u, 10.30u, etc.
+                    
+                    // Show status
+                    const preekStatus = document.getElementById('preekStatus') || createPreekStatusElement();
+                    preekStatus.innerHTML = `<span class="text-green-600">✓ OLE preekroster gevonden: ${rosterData.location} · ${rosterData.time} · ${rosterData.predikant}</span>`;
+                } else {
+                    const preekStatus = document.getElementById('preekStatus') || createPreekStatusElement();
+                    preekStatus.innerHTML = `<span class="text-amber-600">⚠ ${rosterData.error || 'Geen OLE preekroster data'}</span>`;
+                }
+            } catch (err) {
+                console.error('OLE preekroster fetch error:', err);
+            }
+            
+            // 2. Fetch QR and Tikkie URL from email
             try {
                 const resp = await fetch('/fetch-email-collecte', {
                     method: 'POST',
@@ -306,6 +335,15 @@
             }
         }
         
+        function createPreekStatusElement() {
+            const container = document.getElementById('oleTemplateFields');
+            const statusDiv = document.createElement('div');
+            statusDiv.id = 'preekStatus';
+            statusDiv.className = 'text-sm mt-2 mb-2';
+            container.insertBefore(statusDiv, container.firstChild.nextSibling);
+            return statusDiv;
+        }
+        
         function createQRStatusElement() {
             const qrField = document.getElementById('qrUrlInput');
             const statusDiv = document.createElement('div');
@@ -330,7 +368,9 @@
                         youtube_link: youtubeInput.value,
                         liturgie_url: liturgieUrlInput.value,
                         collecte_url: collecteUrlInput.value,
-                        qr_image_url: qrUrlInput.value
+                        qr_image_url: qrUrlInput.value,
+                        ole_location: window.oleLocation || '',
+                        ole_time: window.oleTime || '10:00'
                     })
                 });
                 
