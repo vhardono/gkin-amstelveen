@@ -503,6 +503,9 @@
 
                 // Wire apply button based on source
                 const applyBtn = document.getElementById('applyChangesBtn');
+                applyBtn.querySelector('span').textContent = source === 'dropbox'
+                    ? 'Opslaan naar Dropbox'
+                    : 'Toepassen & downloaden';
                 applyBtn.onclick = source === 'dropbox'
                     ? applyDropboxChanges
                     : applyUploadChanges;
@@ -561,11 +564,15 @@
                 if (resp.ok && data.excel_data) {
                     _filledExcelData = data.excel_data;
                     _filledFilename = data.filename;
-                    document.getElementById('excelFile').value = '';
-                    document.getElementById('excelName').classList.add('hidden');
-                    document.getElementById('excelDrop').classList.remove('hidden');
-                    showAutoFillAlerts(data.alerts, data.dankoffer_info, true);
-                    showStatus(`✓ Gegevens ingevuld voor ${data.service_date}. Download het bestand en upload het opnieuw.`, 'success');
+                    // Auto-download immediately
+                    const bytes = Uint8Array.from(atob(data.excel_data), c => c.charCodeAt(0));
+                    const blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url; a.download = data.filename;
+                    document.body.appendChild(a); a.click(); a.remove();
+                    URL.revokeObjectURL(url);
+                    showStatus(`✓ Bestand ingevuld & gedownload voor ${data.service_date}.`, 'success');
                 } else {
                     showStatus('Fout bij auto-vullen: ' + (data.error || 'Onbekende fout'), 'error');
                 }
