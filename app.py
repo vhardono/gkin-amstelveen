@@ -1028,12 +1028,16 @@ def _get_dankoffer_verse(dbx, service_date: datetime, mark_as_used: bool = True)
 
         # Format the service date for comparison (YYYY-MM-DD)
         service_date_str = service_date.strftime('%Y-%m-%d')
+        print(f'[Dankoffer] Looking for service date: {service_date_str}')
+        print(f'[Dankoffer] Verses data: {len(verses_data)} verses loaded')
 
         # STEP 1: Check if this service date is already assigned to a verse
         existing_assignment = None
         for v in verses_data:
+            print(f'[Dankoffer] Checking verse row {v["row_idx"]}: date_used="{v["date_used"]}" vs service_date="{service_date_str}"')
             if v['date_used'] == service_date_str:
                 existing_assignment = v
+                print(f'[Dankoffer] ✓ Found existing assignment at row {v["row_idx"]}')
                 break
 
         if existing_assignment:
@@ -1041,10 +1045,12 @@ def _get_dankoffer_verse(dbx, service_date: datetime, mark_as_used: bool = True)
             selected = existing_assignment
             reset_needed = False
             already_assigned = True
+            print(f'[Dankoffer] Reusing existing verse: {selected["full_text"]}')
         else:
             # STEP 2: Find the first unused verse (blank date)
             already_assigned = False
             unused_verses = [v for v in verses_data if not v['date_used']]
+            print(f'[Dankoffer] No existing assignment found. {len(unused_verses)} unused verses available')
 
             if unused_verses:
                 # Use the first unused verse
