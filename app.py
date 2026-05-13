@@ -1460,7 +1460,7 @@ def liturgie_fill_data():
             reader = OutlookCollecteReader()
             if reader.is_authenticated():
                 email_data = reader.fetch_collecte_data(target_date=service_date, since_days=60)
-                tikkie_url = email_data.get('tikkie_url', '')
+                tikkie_url = email_data.get('dankoffer_url', '')
                 if tikkie_url:
                     # Find Tikkie link row by looking for "Tikkie link" label in column A
                     tikkie_row = None

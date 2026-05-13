@@ -192,7 +192,7 @@ class OutlookCollecteReader:
         since = (datetime.utcnow() - timedelta(days=since_days)).strftime('%Y-%m-%dT00:00:00Z')
 
         result: Dict[str, Any] = {
-            'tikkie_url': '', 'ole_url': '',
+            'dankoffer_url': '', 'ole_url': '',
             'dankoffer_qr':  '', 'ole_qr':  '',
             'collecte_contant': '', 'collecte_bonnen': '',
             'collecte_bank':    '', 'collecte_tikkie': '',
