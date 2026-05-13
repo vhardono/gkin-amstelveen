@@ -268,14 +268,16 @@
                 const timeField = document.getElementById('timeInput') || document.getElementById('oleTime');
                 
                 if (rosterData.found) {
-                    // Store location and time for use in email generation
+                    // Store location, time, AND predikant for use in email generation
                     window.oleLocation = rosterData.location;  // AM, DH, TB, etc.
                     window.oleTime = rosterData.time;  // 10.00u, 10.30u, etc.
+                    window.olePredikant = rosterData.predikant;  // ds. Name from OLE preekroster
                     
                     // Show status
                     const preekStatus = document.getElementById('preekStatus') || createPreekStatusElement();
                     preekStatus.innerHTML = `<span class="text-green-600">✓ OLE preekroster gevonden: ${rosterData.location} · ${rosterData.time} · ${rosterData.predikant}</span>`;
                 } else {
+                    window.olePredikant = '';  // Clear if not found
                     const preekStatus = document.getElementById('preekStatus') || createPreekStatusElement();
                     preekStatus.innerHTML = `<span class="text-amber-600">⚠ ${rosterData.error || 'Geen OLE preekroster data'}</span>`;
                 }
@@ -370,7 +372,8 @@
                         collecte_url: collecteUrlInput.value,
                         qr_image_url: qrUrlInput.value,
                         ole_location: window.oleLocation || '',
-                        ole_time: window.oleTime || '10:00'
+                        ole_time: window.oleTime || '10:00',
+                        ole_predikant: window.olePredikant || ''  // Use OLE predikant instead of takenrooster
                     })
                 });
                 

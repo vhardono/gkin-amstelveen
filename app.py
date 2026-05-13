@@ -2250,7 +2250,17 @@ def upload_to_mailerlite():
         full_path = os.path.join(UPLOAD_DIR, local_path)
     
     if not os.path.exists(full_path):
-        return jsonify({'success': False, 'error': f'File not found: {full_path}'}), 404
+        # List files in upload dir to help debug
+        try:
+            files_in_dir = os.listdir(UPLOAD_DIR)[:10]  # First 10 files
+        except:
+            files_in_dir = []
+        return jsonify({
+            'success': False, 
+            'error': f'File not found: {full_path}',
+            'upload_dir': UPLOAD_DIR,
+            'files_in_dir': files_in_dir
+        }), 404
     
     try:
         from mailerlite_campaign import MailerLiteFileManager
@@ -2268,9 +2278,12 @@ def upload_to_mailerlite():
         else:
             return jsonify({
                 'success': False,
-                'error': result.get('error', 'Upload failed')
+                'error': result.get('error', 'Upload failed'),
+                'mailerlite_error': result.get('status')
             }), 500
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
@@ -2374,13 +2387,17 @@ def campaign_preview():
         qr_image_url = data.get('qr_image_url', '')
         ole_location = data.get('ole_location', '')
         ole_time = data.get('ole_time', '10:00')
+        ole_predikant = data.get('ole_predikant', '')  # Use OLE predikant from preekroster
         is_ole = data.get('is_ole', True)
+        
+        # Use OLE predikant if available, otherwise fall back to takenrooster
+        predikant_to_use = ole_predikant if ole_predikant else entry.get('predikant', '')
         
         # Generate HTML with template
         generator = MailerLiteCampaignGenerator()
         html_content = generator.generate_html_from_mededelingen(
             service_date=selected_date,
-            predikant=entry.get('predikant', ''),
+            predikant=predikant_to_use,
             mededelingen_data=meded,
             takenrooster_entry=entry,
             is_ole=is_ole,
@@ -2400,12 +2417,15 @@ def campaign_preview():
         date_str = f"{selected_date.day} {months[selected_date.month - 1]} {selected_date.year}"
         short_date = selected_date.strftime('%y%m%d')
         
+        # Use dynamic time in subject (from OLE preekroster)
+        time_for_subject = ole_time if ole_time else '10:00'
+        
         preview = {
             'name': data.get('name') or f"GKIN OLE {short_date}",
-            'subject': data.get('subject') or f"GKIN (OLE): Online Landelijke Eredienst Zondag {date_str}, 10:00u",
+            'subject': data.get('subject') or f"GKIN (OLE): Online Landelijke Eredienst Zondag {date_str}, {time_for_subject}u",
             'html_content': html_content,
             'service_date': date_str,
-            'predikant': entry.get('predikant', ''),
+            'predikant': predikant_to_use,  # Show OLE predikant in preview
             'ovd': entry.get('ovd', '')
         }
         
@@ -2438,6 +2458,7 @@ def campaign_create():
     qr_image_url = data.get('qr_image_url', '')
     ole_location = data.get('ole_location', '')
     ole_time = data.get('ole_time', '10:00')
+    ole_predikant = data.get('ole_predikant', '')
     is_ole = data.get('is_ole', True)
     
     if not iso_date:
@@ -2465,11 +2486,14 @@ def campaign_create():
         reader = DropboxExcelReader()
         meded = reader.get_mededelingen(mededelingen_date=selected_date)
         
+        # Use OLE predikant if available, otherwise fall back to takenrooster
+        predikant_to_use = ole_predikant if ole_predikant else entry.get('predikant', '')
+        
         # Generate HTML content with OLE template
         generator = MailerLiteCampaignGenerator()
         html_content = generator.generate_html_from_mededelingen(
             service_date=selected_date,
-            predikant=entry.get('predikant', ''),
+            predikant=predikant_to_use,
             mededelingen_data=meded,
             takenrooster_entry=entry,
             is_ole=is_ole,
@@ -2503,9 +2527,12 @@ def campaign_create():
                   'juli', 'augustus', 'september', 'oktober', 'november', 'december']
         date_str = f"{selected_date.day} {months[selected_date.month - 1]} {selected_date.year}"
         
+        # Use dynamic time in subject (from OLE preekroster)
+        time_for_subject = ole_time if ole_time else '10:00'
+        
         result = generator.create_campaign(
             name=name or f"GKIN OLE {selected_date.strftime('%y%m%d')}",
-            subject=subject or f"GKIN (OLE): Online Landelijke Eredienst Zondag {date_str}, 10:00u",
+            subject=subject or f"GKIN (OLE): Online Landelijke Eredienst Zondag {date_str}, {time_for_subject}u",
             html_content=html_content,
             send_time=send_time
         )
