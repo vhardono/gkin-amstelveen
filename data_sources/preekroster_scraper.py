@@ -413,3 +413,29 @@ class PreekrosterScraper:
         elif 'avond' in service_text:
             return 'Avonddienst'
         return service_text.strip().title()
+    
+    def get_ole_service_for_date(self, selected_date: datetime) -> dict:
+        """Get OLE service details for a specific date.
+        
+        Args:
+            selected_date: The date to look up
+            
+        Returns:
+            dict with predikant, location, time for the OLE service
+        """
+        # Get preekroster data for this date
+        roster_data = self.get_preekroster(selected_date)
+        
+        # Look for OLE entry matching the date
+        if 'ole_table' in roster_data:
+            for entry in roster_data['ole_table']:
+                entry_date = self._parse_dutch_date(entry.get('date', ''))
+                if entry_date and entry_date == selected_date.date():
+                    return {
+                        'predikant': entry.get('predikant', ''),
+                        'location': entry.get('regio', ''),
+                        'time': entry.get('time', '10:00')
+                    }
+        
+        # Return empty if not found
+        return {'predikant': '', 'location': '', 'time': '10:00'}
