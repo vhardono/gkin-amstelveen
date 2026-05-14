@@ -2512,6 +2512,35 @@ def upload_to_sender():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@app.route('/campaign/upload-liturgie', methods=['POST'])
+@_password_required
+def campaign_upload_liturgie():
+    """Upload a liturgie file directly to Sender and return the URL."""
+    from sender_campaign import SenderCampaignGenerator
+    if 'file' not in request.files:
+        return jsonify({'success': False, 'error': 'No file provided'}), 400
+    f = request.files['file']
+    if not f.filename:
+        return jsonify({'success': False, 'error': 'Empty filename'}), 400
+    import tempfile, werkzeug.utils
+    safe_name = werkzeug.utils.secure_filename(f.filename)
+    with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(safe_name)[1]) as tmp:
+        f.save(tmp.name)
+        tmp_path = tmp.name
+    try:
+        generator = SenderCampaignGenerator()
+        result = generator.upload_file(tmp_path)
+        os.unlink(tmp_path)
+        if result.get('success'):
+            return jsonify({'success': True, 'url': result['url'], 'file_id': result.get('file_id')})
+        else:
+            return jsonify({'success': False, 'error': result.get('error', 'Upload failed')}), 500
+    except Exception as e:
+        try: os.unlink(tmp_path)
+        except: pass
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 # =============================================================================
 # Health Check
 # =============================================================================
