@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GKIN Amstelveen – Sender Campaign</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: { extend: { colors: { gkin: { green: '#3A7C22', dark: '#2d6119' } } } }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <header class="bg-gkin-green shadow-md">
+        <div class="max-w-2xl mx-auto px-6 py-5 flex items-center gap-4">
+            <a href="/"><img src="/static/logo2.png" alt="GKIN Logo" class="h-12 w-12 object-contain shrink-0"></a>
+            <div>
+                <h1 class="text-white text-2xl font-bold tracking-tight">GKIN Amstelveen</h1>
+                <p class="text-green-100 text-sm mt-0.5">Sender Campaign Generator</p>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-2xl mx-auto px-6 py-8">
+        <a href="/" class="inline-flex items-center gap-1 text-sm text-gkin-green hover:text-gkin-dark mb-5">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+            Terug naar dashboard
+        </a>
+
+        <div class="bg-green-50 border border-green-200 rounded-xl p-4 mb-6 text-sm text-green-800">
+            Genereer een Sender e-mailcampagne gebaseerd op mededelingen en liturgie gegevens.
+        </div>
+
+        <div id="apiStatusBox" class="hidden mb-5 rounded-lg p-3 border text-sm"></div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-5">
+            <h2 class="text-base font-semibold text-gkin-green mb-4">Datum Selectie</h2>
+            <select id="dateSelect" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green">
+                <option value="">-- Kies een datum --</option>
+                {% for d in dates %}
+                <option value="{{ d.value }}" data-predikant="{{ d.predikant }}" data-ovd="{{ d.ovd }}" data-beamer="{{ d.beamer }}" data-voorzangers="{{ d.voorzangers }}">
+                    {{ d.label }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div id="oleTemplateSection" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-5 hidden">
+            <h2 class="text-base font-semibold text-gkin-green mb-4">OLE Template Instellingen</h2>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Thema</label>
+                    <input type="text" id="theme" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green" placeholder="Sermon theme">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Bijbeltekst</label>
+                    <input type="text" id="bibleVerse" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green" placeholder="e.g., Johannes 3:16">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">YouTube Link</label>
+                    <input type="url" id="youtubeLink" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green" placeholder="https://youtube.com/...">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Liturgie URL</label>
+                    <input type="url" id="liturgieUrl" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green" placeholder="https://...">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Collecte URL (Tikkie)</label>
+                    <input type="url" id="collecteUrl" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green" placeholder="https://tikkie.me/...">
+                    <div id="qrStatus" class="mt-2 text-sm"></div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">QR Code URL</label>
+                    <input type="text" id="qrUrl" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green" placeholder="/uploads/qr_code.png">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Locatie</label>
+                    <select id="oleLocation" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green">
+                        <option value="">-- Kies locatie --</option>
+                        <option value="AM">Amstelveen</option>
+                        <option value="DH">Den Haag</option>
+                        <option value="TB">Tilburg</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Tijd</label>
+                    <input type="text" id="oleTime" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green" value="10:00">
+                </div>
+            </div>
+        </div>
+
+        <div id="campaignDetails" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-5 hidden">
+            <h2 class="text-base font-semibold text-gkin-green mb-4">Campaign Details</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Subject</label>
+                    <input type="text" id="subject" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Campaign Name</label>
+                    <input type="text" id="campaignName" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green">
+                </div>
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" id="scheduleCheck" class="rounded border-gray-300 text-gkin-green focus:ring-gkin-green">
+                    <label for="scheduleCheck" class="text-sm text-gray-700">Schedule for Saturday 09:00</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex gap-3 mb-5">
+            <button id="previewBtn" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2.5 px-4 rounded-lg text-sm transition hidden">
+                Voorbeeld vernieuwen
+            </button>
+            <button id="createBtn" class="flex-1 bg-gkin-green hover:bg-gkin-dark text-white font-medium py-2.5 px-4 rounded-lg text-sm transition hidden">
+                Campaign Aanmaken
+            </button>
+        </div>
+
+        <div id="previewSection" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-5 hidden">
+            <h2 class="text-base font-semibold text-gkin-green mb-4">Voorbeeld</h2>
+            <div id="previewContent" class="text-sm text-gray-700 overflow-auto max-h-96 border border-gray-200 rounded-lg p-4 bg-gray-50"></div>
+        </div>
+
+        <div id="resultSection" class="hidden"></div>
+    </main>
+
+    <script>
+        const dateSelect = document.getElementById('dateSelect');
+        const oleSection = document.getElementById('oleTemplateSection');
+        const campaignDetails = document.getElementById('campaignDetails');
+        const previewBtn = document.getElementById('previewBtn');
+        const createBtn = document.getElementById('createBtn');
+        const previewSection = document.getElementById('previewSection');
+        const previewContent = document.getElementById('previewContent');
+        const resultSection = document.getElementById('resultSection');
+        const qrStatus = document.getElementById('qrStatus');
+
+        // Clear all fields when date changes
+        dateSelect.addEventListener('change', async () => {
+            if (!dateSelect.value) {
+                oleSection.classList.add('hidden');
+                campaignDetails.classList.add('hidden');
+                previewBtn.classList.add('hidden');
+                createBtn.classList.add('hidden');
+                previewSection.classList.add('hidden');
+                return;
+            }
+
+            // Clear all input fields
+            document.getElementById('theme').value = '';
+            document.getElementById('bibleVerse').value = '';
+            document.getElementById('youtubeLink').value = '';
+            document.getElementById('liturgieUrl').value = '';
+            document.getElementById('collecteUrl').value = '';
+            document.getElementById('qrUrl').value = '';
+            document.getElementById('subject').value = '';
+            document.getElementById('campaignName').value = '';
+            document.getElementById('oleTime').value = '10:00';
+            document.getElementById('oleLocation').value = '';
+            if (qrStatus) qrStatus.innerHTML = '';
+            if (resultSection) resultSection.innerHTML = '';
+            previewSection.classList.add('hidden');
+
+            // Show sections
+            oleSection.classList.remove('hidden');
+            campaignDetails.classList.remove('hidden');
+            previewBtn.classList.remove('hidden');
+            createBtn.classList.remove('hidden');
+
+            // Fetch OLE data
+            await fetchOLEData(dateSelect.value);
+        });
+
+        async function fetchOLEData(date) {
+            try {
+                const resp = await fetch('/fetch-ole-preekroster', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ date })
+                });
+                const data = await resp.json();
+
+                if (data.error) return;
+
+                // Set OLE data
+                if (data.ole_predikant) window.olePredikant = data.ole_predikant;
+                if (data.ole_location) document.getElementById('oleLocation').value = data.ole_location;
+                if (data.ole_time) document.getElementById('oleTime').value = data.ole_time;
+
+                // Set URLs
+                if (data.ole_url) document.getElementById('collecteUrl').value = data.ole_url;
+
+                // Handle QR
+                if (data.ole_qr) {
+                    const localPath = data.ole_qr.startsWith('http') ? data.ole_qr : `/uploads/${data.ole_qr}`;
+                    document.getElementById('qrUrl').value = localPath;
+                    if (qrStatus) {
+                        qrStatus.innerHTML = `<span class="text-green-600">✓ QR code gevonden: ${data.ole_qr}</span>`;
+                    }
+                }
+
+                // Auto-populate subject with corrected time format
+                const timeClean = (data.ole_time || '10:00').replace('u', '').replace('U', '');
+                const dateObj = new Date(date);
+                const months = ['januari', 'februari', 'maart', 'april', 'mei', 'juni', 'juli', 'augustus', 'september', 'oktober', 'november', 'december'];
+                const dateStr = `${dateObj.getDate()} ${months[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
+                document.getElementById('subject').value = `GKIN (OLE): Online Landelijke Eredienst Zondag ${dateStr}, ${timeClean}u`;
+                document.getElementById('campaignName').value = `GKIN OLE ${date.replace(/-/g, '').substring(2)}`;
+
+            } catch (err) {
+                console.error('OLE fetch error:', err);
+            }
+        }
+
+        previewBtn.addEventListener('click', async () => {
+            const date = dateSelect.value;
+            if (!date) return;
+
+            previewBtn.disabled = true;
+            previewBtn.textContent = 'Laden...';
+
+            try {
+                const resp = await fetch('/campaign/preview', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        date,
+                        theme: document.getElementById('theme').value,
+                        bible_verse: document.getElementById('bibleVerse').value,
+                        youtube_link: document.getElementById('youtubeLink').value,
+                        liturgie_url: document.getElementById('liturgieUrl').value,
+                        collecte_url: document.getElementById('collecteUrl').value,
+                        qr_image_url: document.getElementById('qrUrl').value,
+                        ole_location: document.getElementById('oleLocation').value,
+                        ole_time: document.getElementById('oleTime').value,
+                        ole_predikant: window.olePredikant || ''
+                    })
+                });
+                const data = await resp.json();
+
+                if (data.success) {
+                    previewContent.textContent = data.html_preview;
+                    previewSection.classList.remove('hidden');
+                }
+            } catch (err) {
+                console.error('Preview error:', err);
+            } finally {
+                previewBtn.disabled = false;
+                previewBtn.textContent = 'Voorbeeld vernieuwen';
+            }
+        });
+
+        createBtn.addEventListener('click', async () => {
+            const date = dateSelect.value;
+            if (!date) return;
+
+            createBtn.disabled = true;
+            createBtn.textContent = 'Aanmaken...';
+
+            try {
+                const resp = await fetch('/campaign/create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        date,
+                        subject: document.getElementById('subject').value,
+                        name: document.getElementById('campaignName').value,
+                        schedule: document.getElementById('scheduleCheck').checked,
+                        theme: document.getElementById('theme').value,
+                        bible_verse: document.getElementById('bibleVerse').value,
+                        youtube_link: document.getElementById('youtubeLink').value,
+                        liturgie_url: document.getElementById('liturgieUrl').value,
+                        collecte_url: document.getElementById('collecteUrl').value,
+                        qr_image_url: document.getElementById('qrUrl').value,
+                        ole_location: document.getElementById('oleLocation').value,
+                        ole_time: document.getElementById('oleTime').value,
+                        ole_predikant: window.olePredikant || ''
+                    })
+                });
+                const data = await resp.json();
+
+                if (data.success) {
+                    resultSection.innerHTML = `<div class="bg-green-50 border border-green-200 rounded-lg p-4 text-green-800 text-sm">✓ Campaign aangemaakt: ${data.campaign_id}</div>`;
+                    resultSection.classList.remove('hidden');
+                } else {
+                    resultSection.innerHTML = `<div class="bg-red-50 border border-red-200 rounded-lg p-4 text-red-800 text-sm">✗ Fout: ${data.error || 'Onbekende fout'}</div>`;
+                    resultSection.classList.remove('hidden');
+                }
+            } catch (err) {
+                console.error('Create error:', err);
+            } finally {
+                createBtn.disabled = false;
+                createBtn.textContent = 'Campaign Aanmaken';
+            }
+        });
+    </script>
+</body>
+</html>
