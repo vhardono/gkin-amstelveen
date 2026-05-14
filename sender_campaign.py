@@ -84,8 +84,10 @@ class SenderCampaignGenerator:
             "name": name,
             "subject": subject,
             "type": "regular",
+            "content_type": "html",
             "content": html_content,
-            "from": {"email": self.sender_email, "name": self.sender_name},
+            "from": self.sender_email,
+            "reply_to": self.sender_email,
             "lists": list_ids
         }
         if scheduled_at:
