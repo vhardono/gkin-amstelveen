@@ -2426,7 +2426,7 @@ def campaign_create():
     iso_date = data.get('date', '')
     subject = data.get('subject', '')
     name = data.get('name', '')
-    schedule = data.get('schedule', False)
+    scheduled_at_input = data.get('scheduled_at', None)
     
     if not iso_date:
         return jsonify({'error': 'no date'}), 400
@@ -2483,13 +2483,8 @@ def campaign_create():
         date_str = f"{selected_date.day} {months[selected_date.month - 1]} {selected_date.year}"
         time_clean = (ole_time if ole_time else '10:00').replace('u', '').replace('U', '')
         
-        # Calculate schedule time (Saturday 09:00)
-        scheduled_at = None
-        if schedule:
-            service_weekday = selected_date.weekday()
-            saturday = selected_date - timedelta(days=1) if service_weekday == 6 else selected_date - timedelta(days=service_weekday + 2)
-            send_datetime = datetime.combine(saturday, datetime.min.time()) + timedelta(hours=9)
-            scheduled_at = send_datetime.strftime('%Y-%m-%dT%H:%M:%S') + '+02:00'
+        # Use scheduled_at from frontend if provided
+        scheduled_at = scheduled_at_input if scheduled_at_input else None
         
         result = generator.create_campaign(
             name=name or f"GKIN OLE {selected_date.strftime('%y%m%d')}",
