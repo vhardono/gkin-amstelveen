@@ -1054,6 +1054,28 @@ class OutlookCollecteReader:
             result['bible_verse'] = bible_match.group(1).strip()
 
         result['source_subject'] = match_msg.get('subject', '')
+
+        # Download liturgie attachment (PDF or DOCX)
+        try:
+            import base64 as _b64
+            atts = self._graph_get(
+                f"/me/messages/{match_msg['id']}/attachments",
+                params={'$select': 'id,name,contentType,size,contentBytes'}
+            ).get('value', [])
+            for att in atts:
+                name = att.get('name', '').lower()
+                ctype = att.get('contentType', '').lower()
+                if name.endswith('.pdf') or name.endswith('.docx') or name.endswith('.doc') \
+                        or 'pdf' in ctype or 'wordprocessingml' in ctype:
+                    cb = att.get('contentBytes', '')
+                    if cb:
+                        result['liturgie_attachment_bytes'] = _b64.b64decode(cb)
+                        result['liturgie_attachment_name'] = att.get('name', 'liturgie.pdf')
+                        print(f"[OLE Meded] Found liturgie attachment: {att.get('name')}")
+                        break
+        except Exception as e:
+            print(f"[OLE Meded] Attachment fetch error: {e}")
+
         return result
 
 

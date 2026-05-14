@@ -236,7 +236,15 @@
                 if (data.ole_thema) document.getElementById('theme').value = data.ole_thema;
                 if (data.ole_bible_verse) document.getElementById('bibleVerse').value = data.ole_bible_verse;
                 if (data.ole_youtube_link) document.getElementById('youtubeLink').value = data.ole_youtube_link;
-                console.log('[Frontend] Mededeling data - thema:', data.ole_thema, 'bijbel:', data.ole_bible_verse, 'youtube:', data.ole_youtube_link);
+                if (data.ole_liturgie_url) {
+                    document.getElementById('liturgieUrl').value = data.ole_liturgie_url;
+                    document.getElementById('liturgieUploadStatus').innerHTML =
+                        `<span class="text-green-600">✓ Liturgie automatisch opgehaald uit e-mail en geüpload naar Sender</span>`;
+                } else {
+                    document.getElementById('liturgieUploadStatus').innerHTML =
+                        `<span class="text-gray-400">Geen liturgie bijlage gevonden in e-mail – upload handmatig</span>`;
+                }
+                console.log('[Frontend] Mededeling - thema:', data.ole_thema, 'bijbel:', data.ole_bible_verse, 'youtube:', data.ole_youtube_link, 'liturgie:', data.ole_liturgie_url);
 
                 // Set URLs
                 console.log('[Frontend] Setting URL:', data.ole_url);

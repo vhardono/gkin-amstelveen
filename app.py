@@ -2249,20 +2249,43 @@ def fetch_ole_data():
         }
         location_full = location_names.get(location_code, location_code)
 
-        # Fetch thema, bijbeltekst, youtube from OLE mededeling email
+        # Fetch thema, bijbeltekst, youtube and liturgie attachment from OLE mededeling email
         thema = ''
         bible_verse = ''
         youtube_link = ''
+        liturgie_url = ''
         try:
             from data_sources.email_reader import EmailReader
             reader2 = EmailReader()
             meded = reader2.fetch_ole_mededeling(target_date=selected_date)
-            print(f"[OLE Fetch] Mededeling data: {meded}")
+            print(f"[OLE Fetch] Mededeling data (excl. bytes): { {k:v for k,v in meded.items() if k != 'liturgie_attachment_bytes'} }")
             thema = meded.get('thema', '')
             bible_verse = meded.get('bible_verse', '')
             youtube_link = meded.get('youtube_link', '')
+            # Auto-upload liturgie attachment to Sender
+            att_bytes = meded.get('liturgie_attachment_bytes')
+            att_name = meded.get('liturgie_attachment_name', 'liturgie.pdf')
+            if att_bytes:
+                import tempfile
+                suffix = os.path.splitext(att_name)[1] or '.pdf'
+                with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+                    tmp.write(att_bytes)
+                    tmp_path = tmp.name
+                try:
+                    from sender_campaign import SenderCampaignGenerator
+                    gen = SenderCampaignGenerator()
+                    upload_result = gen.upload_file(tmp_path)
+                    if upload_result.get('success'):
+                        liturgie_url = upload_result.get('url', '')
+                        print(f"[OLE Fetch] Liturgie uploaded to Sender: {liturgie_url}")
+                    else:
+                        print(f"[OLE Fetch] Liturgie upload failed: {upload_result.get('error')}")
+                finally:
+                    try: os.unlink(tmp_path)
+                    except: pass
         except Exception as e:
             print(f"[OLE Fetch] Mededeling fetch error: {e}")
+            import traceback; traceback.print_exc()
 
         result = {
             'ole_predikant': ole_data.get('predikant', ''),
@@ -2274,6 +2297,7 @@ def fetch_ole_data():
             'ole_thema': thema,
             'ole_bible_verse': bible_verse,
             'ole_youtube_link': youtube_link,
+            'ole_liturgie_url': liturgie_url,
             'success': True
         }
         print(f"[OLE Fetch] Returning result: {result}")
