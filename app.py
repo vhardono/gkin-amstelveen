@@ -2212,8 +2212,8 @@ def fetch_ole_data():
         return jsonify({'error': 'invalid date format'}), 400
 
     try:
-        from data_sources.preekroster_scraper import PreekroosterScraper
-        scraper = PreekroosterScraper()
+        from data_sources.preekroster_scraper import PreekrosterScraper
+        scraper = PreekrosterScraper()
         print("[OLE Fetch] Scraper initialized")
 
         # Fetch OLE data for the selected date
