@@ -2249,6 +2249,21 @@ def fetch_ole_data():
         }
         location_full = location_names.get(location_code, location_code)
 
+        # Fetch thema, bijbeltekst, youtube from OLE mededeling email
+        thema = ''
+        bible_verse = ''
+        youtube_link = ''
+        try:
+            from data_sources.email_reader import EmailReader
+            reader2 = EmailReader()
+            meded = reader2.fetch_ole_mededeling(target_date=selected_date)
+            print(f"[OLE Fetch] Mededeling data: {meded}")
+            thema = meded.get('thema', '')
+            bible_verse = meded.get('bible_verse', '')
+            youtube_link = meded.get('youtube_link', '')
+        except Exception as e:
+            print(f"[OLE Fetch] Mededeling fetch error: {e}")
+
         result = {
             'ole_predikant': ole_data.get('predikant', ''),
             'ole_location_code': location_code,
@@ -2256,6 +2271,9 @@ def fetch_ole_data():
             'ole_time': ole_data.get('time', '10:00'),
             'ole_qr': qr_filename,
             'ole_url': ole_url,
+            'ole_thema': thema,
+            'ole_bible_verse': bible_verse,
+            'ole_youtube_link': youtube_link,
             'success': True
         }
         print(f"[OLE Fetch] Returning result: {result}")

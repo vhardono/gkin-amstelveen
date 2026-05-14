@@ -227,14 +227,16 @@
                     return;
                 }
 
-                // Set OLE data
-                console.log('[Frontend] Setting predikant:', data.ole_predikant);
+                // Set OLE data from preekroster
                 document.getElementById('olePredikant').value = data.ole_predikant || '';
                 window.olePredikant = data.ole_predikant || '';
-                console.log('[Frontend] Setting location:', data.ole_location);
                 document.getElementById('oleLocation').value = data.ole_location || '';
-                console.log('[Frontend] Setting time:', data.ole_time);
                 document.getElementById('oleTime').value = data.ole_time || '';
+                // Set OLE data from mededeling email
+                if (data.ole_thema) document.getElementById('theme').value = data.ole_thema;
+                if (data.ole_bible_verse) document.getElementById('bibleVerse').value = data.ole_bible_verse;
+                if (data.ole_youtube_link) document.getElementById('youtubeLink').value = data.ole_youtube_link;
+                console.log('[Frontend] Mededeling data - thema:', data.ole_thema, 'bijbel:', data.ole_bible_verse, 'youtube:', data.ole_youtube_link);
 
                 // Set URLs
                 console.log('[Frontend] Setting URL:', data.ole_url);

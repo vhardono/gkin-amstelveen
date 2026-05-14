@@ -964,5 +964,98 @@ class OutlookCollecteReader:
         return result
 
 
+    def fetch_ole_mededeling(self, target_date: datetime = None, since_days: int = 30) -> Dict[str, Any]:
+        """Fetch OLE mededeling from scribagkin@gmail.com.
+        Subject patterns: 'Mededeling: GKIN OLE zo 10 mei 2026',
+                          'Mededeling OLE 14 mei donderdag (Hemelvaartsdag)',
+                          'Mededeling OLE zo 3 mei 2026'
+        Extracts: thema, bijbeltekst (bible_verse), youtube_link from email body.
+        """
+        NL_MONTHS = ['','januari','februari','maart','april','mei','juni',
+                     'juli','augustus','september','oktober','november','december']
+
+        since = (datetime.utcnow() - timedelta(days=since_days)).strftime('%Y-%m-%dT00:00:00Z')
+
+        result: Dict[str, Any] = {
+            'thema': '', 'bible_verse': '', 'youtube_link': '',
+            'not_found': [],
+        }
+
+        date_variants = []
+        if target_date:
+            d, m, y = target_date.day, target_date.month, target_date.year
+            date_variants = [
+                f"{d} {NL_MONTHS[m]}",
+                f"{d} {NL_MONTHS[m]} {y}",
+                f"{d:02d}-{m:02d}-{y}",
+                f"{d}-{m}-{y}",
+            ]
+
+        def _date_matches(text: str) -> bool:
+            if not date_variants:
+                return True
+            tl = text.lower()
+            return any(v.lower() in tl for v in date_variants)
+
+        try:
+            msgs = self._graph_get('/me/messages', params={
+                '$filter': f"receivedDateTime ge {since} and contains(subject,'OLE')",
+                '$top': 20,
+                '$select': 'id,subject,from,body,receivedDateTime',
+                '$orderby': 'receivedDateTime desc',
+            }).get('value', [])
+        except Exception as e:
+            result['not_found'].append(f'Fout bij ophalen e-mails: {e}')
+            return result
+
+        scriba_msgs = [m for m in msgs if 'scribagkin@gmail.com' in
+                       m.get('from', {}).get('emailAddress', {}).get('address', '').lower()]
+
+        match_msg = None
+        for msg in scriba_msgs:
+            subj = msg.get('subject', '')
+            if 'mededeling' in subj.lower() and _date_matches(subj):
+                match_msg = msg
+                break
+
+        if not match_msg:
+            result['not_found'].append('OLE Mededeling e-mail niet gevonden voor deze datum')
+            return result
+
+        body_html = match_msg.get('body', {}).get('content', '')
+        # Strip HTML tags for plain text parsing
+        import html as _html
+        body_text = re.sub(r'<[^>]+>', ' ', body_html)
+        body_text = _html.unescape(body_text)
+        body_text = re.sub(r'\s+', ' ', body_text).strip()
+
+        # Extract YouTube link
+        yt_match = re.search(r'https?://(?:www\.)?(?:youtube\.com/watch\?[^\s<>"]+|youtu\.be/[^\s<>"]+)', body_text)
+        if yt_match:
+            result['youtube_link'] = yt_match.group(0).rstrip('.,)')
+
+        # Extract thema - look for patterns like 'Thema: "..."' or 'Thema: ...'
+        thema_match = re.search(r'[Tt]hema\s*:?\s*["\u201c]?([^\n""\u201d]{3,80})["\u201d]?', body_text)
+        if thema_match:
+            result['thema'] = thema_match.group(1).strip().strip('"')
+
+        # Extract bijbeltekst / schriftlezing - bible reference pattern
+        bible_match = re.search(
+            r'(?:[Ss]chriftlezing|[Bb]ijbeltekst|[Tt]ekst)\s*:?\s*([A-Za-z\u00C0-\u024F]+\.?\s*\d+\s*:\s*\d+[^\n<]{0,60})',
+            body_text
+        )
+        if not bible_match:
+            # Fallback: bare bible ref like "Johannes 3:16" or "Psalm 23:1-6"
+            bible_match = re.search(
+                r'\b([A-Za-z\u00C0-\u024F]+\s+\d+\s*:\s*\d+(?:\s*[-\u2013]\s*\d+)?)\b',
+                body_text
+            )
+        if bible_match:
+            result['bible_verse'] = bible_match.group(1).strip()
+
+        result['source_subject'] = match_msg.get('subject', '')
+        return result
+
+
 # Alias for backward compatibility
 EmailReader = OutlookCollecteReader
