@@ -1029,29 +1029,44 @@ class OutlookCollecteReader:
         body_text = _html.unescape(body_text)
         body_text = re.sub(r'\s+', ' ', body_text).strip()
 
-        # Extract YouTube link
-        yt_match = re.search(r'https?://(?:www\.)?(?:youtube\.com/watch\?[^\s<>"]+|youtu\.be/[^\s<>"]+)', body_text)
+        # Extract YouTube link - match youtube.com or youtu.be URLs
+        yt_match = re.search(r'https?://(?:www\.)?(?:youtube\.com|youtu\.be)/[^\s<>"]*', body_text)
         if yt_match:
             result['youtube_link'] = yt_match.group(0).rstrip('.,)')
 
-        # Extract thema - look for patterns like 'Thema: "..."' or 'Thema: ...'
-        thema_match = re.search(r'[Tt]hema\s*:?\s*["\u201c]?([^\n""\u201d]{3,80})["\u201d]?', body_text)
-        if thema_match:
-            result['thema'] = thema_match.group(1).strip().strip('"')
-
-        # Extract bijbeltekst / schriftlezing - bible reference pattern
-        bible_match = re.search(
-            r'(?:[Ss]chriftlezing|[Bb]ijbeltekst|[Tt]ekst)\s*:?\s*([A-Za-z\u00C0-\u024F]+\.?\s*\d+\s*:\s*\d+[^\n<]{0,60})',
-            body_text
+        # Extract thema - text between 'Het thema van de dienst is:' and 'genomen uit'
+        thema_match = re.search(
+            r'[Hh]et thema van de dienst is\s*:\s*(.+?)(?=\s*genomen uit\s)',
+            body_text, re.DOTALL
         )
-        if not bible_match:
-            # Fallback: bare bible ref like "Johannes 3:16" or "Psalm 23:1-6"
-            bible_match = re.search(
+        if thema_match:
+            thema_raw = thema_match.group(1).strip()
+            # Clean up quotes and extra whitespace
+            thema_raw = re.sub(r'\s+', ' ', thema_raw).strip().strip('\u201c\u201d"\'')
+            result['thema'] = thema_raw
+        else:
+            # Fallback: 'thema' keyword
+            thema_match2 = re.search(r'[Tt]hema\s*[:\-]\s*["\u201c]?([^\n]{3,120})["\u201d]?', body_text)
+            if thema_match2:
+                result['thema'] = thema_match2.group(1).strip().strip('\u201c\u201d"\'')
+
+        # Extract bijbeltekst - text after 'genomen uit' up to next sentence
+        bible_match = re.search(
+            r'genomen uit\s+(.+?)(?=\s+De\s|\s+In\s|\s+Het\s|\s+U\s|\s+Wij\s|\s{3,}|$)',
+            body_text, re.DOTALL
+        )
+        if bible_match:
+            bible_raw = bible_match.group(1).strip()
+            bible_raw = re.sub(r'\s+', ' ', bible_raw).strip()
+            result['bible_verse'] = bible_raw
+        else:
+            # Fallback: bare bible ref
+            bible_match2 = re.search(
                 r'\b([A-Za-z\u00C0-\u024F]+\s+\d+\s*:\s*\d+(?:\s*[-\u2013]\s*\d+)?)\b',
                 body_text
             )
-        if bible_match:
-            result['bible_verse'] = bible_match.group(1).strip()
+            if bible_match2:
+                result['bible_verse'] = bible_match2.group(1).strip()
 
         result['source_subject'] = match_msg.get('subject', '')
 
