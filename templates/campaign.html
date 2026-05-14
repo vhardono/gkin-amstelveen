@@ -78,17 +78,16 @@
                     <input type="text" id="qrUrl" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green" placeholder="/uploads/qr_code.png">
                 </div>
                 <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Predikant</label>
+                    <input type="text" id="olePredikant" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green" placeholder="Wordt automatisch ingevuld">
+                </div>
+                <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Locatie</label>
-                    <select id="oleLocation" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green">
-                        <option value="">-- Kies locatie --</option>
-                        <option value="AM">Amstelveen</option>
-                        <option value="DH">Den Haag</option>
-                        <option value="TB">Tilburg</option>
-                    </select>
+                    <input type="text" id="oleLocation" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green" placeholder="Wordt automatisch ingevuld">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Tijd</label>
-                    <input type="text" id="oleTime" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green" value="10:00">
+                    <input type="text" id="oleTime" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green" placeholder="Wordt automatisch ingevuld" value="">
                 </div>
             </div>
         </div>
@@ -159,8 +158,9 @@
             document.getElementById('qrUrl').value = '';
             document.getElementById('subject').value = '';
             document.getElementById('campaignName').value = '';
-            document.getElementById('oleTime').value = '10:00';
+            document.getElementById('oleTime').value = '';
             document.getElementById('oleLocation').value = '';
+            document.getElementById('olePredikant').value = '';
             if (qrStatus) qrStatus.innerHTML = '';
             if (resultSection) resultSection.innerHTML = '';
             previewSection.classList.add('hidden');
@@ -194,11 +194,12 @@
 
                 // Set OLE data
                 console.log('[Frontend] Setting predikant:', data.ole_predikant);
-                if (data.ole_predikant) window.olePredikant = data.ole_predikant;
+                document.getElementById('olePredikant').value = data.ole_predikant || '';
+                window.olePredikant = data.ole_predikant || '';
                 console.log('[Frontend] Setting location:', data.ole_location);
-                if (data.ole_location) document.getElementById('oleLocation').value = data.ole_location;
+                document.getElementById('oleLocation').value = data.ole_location || '';
                 console.log('[Frontend] Setting time:', data.ole_time);
-                if (data.ole_time) document.getElementById('oleTime').value = data.ole_time;
+                document.getElementById('oleTime').value = data.ole_time || '';
 
                 // Set URLs
                 console.log('[Frontend] Setting URL:', data.ole_url);
@@ -249,7 +250,7 @@
                         qr_image_url: document.getElementById('qrUrl').value,
                         ole_location: document.getElementById('oleLocation').value,
                         ole_time: document.getElementById('oleTime').value,
-                        ole_predikant: window.olePredikant || ''
+                        ole_predikant: document.getElementById('olePredikant').value || ''
                     })
                 });
                 const data = await resp.json();
