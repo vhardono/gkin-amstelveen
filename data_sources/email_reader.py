@@ -999,8 +999,8 @@ class OutlookCollecteReader:
 
         try:
             msgs = self._graph_get('/me/messages', params={
-                '$filter': f"receivedDateTime ge {since} and contains(subject,'OLE')",
-                '$top': 20,
+                '$filter': f"receivedDateTime ge {since} and contains(subject,'Mededeling')",
+                '$top': 50,
                 '$select': 'id,subject,from,body,receivedDateTime,hasAttachments',
                 '$orderby': 'receivedDateTime desc',
             }).get('value', [])
@@ -1008,15 +1008,36 @@ class OutlookCollecteReader:
             result['not_found'].append(f'Fout bij ophalen e-mails: {e}')
             return result
 
+        print(f"[OLE Meded] Total 'Mededeling' msgs fetched: {len(msgs)}")
+        for m in msgs:
+            print(f"  subj={m.get('subject','')!r}  from={m.get('from',{}).get('emailAddress',{}).get('address','')}")
+
         scriba_msgs = [m for m in msgs if 'scribagkin@gmail.com' in
                        m.get('from', {}).get('emailAddress', {}).get('address', '').lower()]
+        print(f"[OLE Meded] From scribagkin: {len(scriba_msgs)} msgs")
 
+        # Priority 1: subject has both 'mededeling'/'ole' AND date match
         match_msg = None
         for msg in scriba_msgs:
             subj = msg.get('subject', '')
-            if 'mededeling' in subj.lower() and _date_matches(subj):
+            if ('ole' in subj.lower() or 'mededeling' in subj.lower()) and _date_matches(subj):
                 match_msg = msg
+                print(f"[OLE Meded] Matched by subject+date: {subj!r}")
                 break
+
+        # Priority 2: any scriba msg with 'mededeling' and date match (subject may not have OLE)
+        if not match_msg:
+            for msg in scriba_msgs:
+                subj = msg.get('subject', '')
+                if _date_matches(subj):
+                    match_msg = msg
+                    print(f"[OLE Meded] Matched by date only: {subj!r}")
+                    break
+
+        # Priority 3: most recent scriba mededeling (no date filter)
+        if not match_msg and scriba_msgs:
+            match_msg = scriba_msgs[0]
+            print(f"[OLE Meded] Fallback to most recent scriba msg: {match_msg.get('subject','')!r}")
 
         if not match_msg:
             result['not_found'].append('OLE Mededeling e-mail niet gevonden voor deze datum')
