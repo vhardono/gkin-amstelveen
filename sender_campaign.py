@@ -141,7 +141,7 @@ class SenderCampaignGenerator:
 <!-- Header with Logo -->
 <tr>
     <td style="background:#000000;padding:30px;text-align:center;">
-        <img src="https://gkin-amstelveen.nl/static/logo2.png" alt="GKIN Logo" style="height:60px;width:auto;margin-bottom:10px;">
+        <img src="https://gkin.org/main/images/banners/logo.png" alt="GKIN Logo" style="height:60px;width:auto;margin-bottom:10px;">
         <h1 style="color:#ffffff;font-family:Arial,sans-serif;margin:0;font-size:24px;font-weight:bold;">GKIN Amstelveen</h1>
         <p style="color:#cccccc;font-family:Arial,sans-serif;margin:5px 0 0 0;font-size:12px;">Online Landelijke Eredienst (OLE)</p>
     </td>
