@@ -962,3 +962,7 @@ class OutlookCollecteReader:
         result['content']      = content
         result['source_subject'] = match_msg.get('subject', '')
         return result
+
+
+# Alias for backward compatibility
+EmailReader = OutlookCollecteReader
