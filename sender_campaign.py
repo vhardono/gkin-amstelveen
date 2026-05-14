@@ -234,7 +234,7 @@ class SenderCampaignGenerator:
             <td width="40"></td>
             <td align="left" width="250" valign="top">
                 <p style="margin:0 0 6px 0;">Wilt u deze e-mails niet meer ontvangen?</p>
-                <p style="margin:8px 0 0 0;"><a href="{{unsubscribe_link}}" style="color:#515856;text-decoration:underline;">uitschrijven</a></p>
+                <p style="margin:8px 0 0 0;"><a href="{{unsubscribe_link}}" style="color:#515856;text-decoration:underline;">{{unsubscribe_text}}</a></p>
             </td>
         </tr>
     </table>
