@@ -428,14 +428,18 @@ class PreekrosterScraper:
         
         # Look for OLE entry matching the date
         if 'ole_table' in roster_data:
+            target = selected_date.date() if hasattr(selected_date, 'date') else selected_date
             for entry in roster_data['ole_table']:
-                entry_date = self._parse_dutch_date(entry.get('date', ''))
-                if entry_date and entry_date == selected_date.date():
-                    return {
-                        'predikant': entry.get('predikant', ''),
-                        'location': entry.get('regio', ''),
-                        'time': entry.get('time', '10:00')
-                    }
+                # Try matching via raw roster entry dates
+                for raw_entry in roster_data.get('roster', []):
+                    raw_date = self._parse_dutch_date(raw_entry.get('date', ''))
+                    fmt_date = self._format_date(raw_entry.get('date', ''))
+                    if fmt_date == entry.get('date') and raw_date == target:
+                        return {
+                            'predikant': entry.get('predikant', ''),
+                            'location': entry.get('regio', ''),
+                            'time': entry.get('time', '10:00')
+                        }
         
         # Return empty if not found
         return {'predikant': '', 'location': '', 'time': '10:00'}
