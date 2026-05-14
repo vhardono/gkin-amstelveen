@@ -2192,6 +2192,64 @@ def preview_working_file():
 # Sender Campaign Routes
 # =============================================================================
 
+@app.route('/fetch-ole-preekroster', methods=['POST'])
+@_password_required
+def fetch_ole_preekroster():
+    """Fetch OLE preekroster data for a given date."""
+    data = request.get_json() or {}
+    iso_date = data.get('date', '')
+
+    if not iso_date:
+        return jsonify({'error': 'no date provided'}), 400
+
+    try:
+        selected_date = datetime.strptime(iso_date, '%Y-%m-%d')
+    except ValueError:
+        return jsonify({'error': 'invalid date format'}), 400
+
+    try:
+        from data_sources.preekroster_scraper import PreekroosterScraper
+        scraper = PreekroosterScraper()
+
+        # Fetch OLE data for the selected date
+        ole_data = scraper.get_ole_service_for_date(selected_date)
+
+        # Also try to get QR code and Tikkie URL from recent emails
+        qr_filename = None
+        ole_url = None
+
+        try:
+            from data_sources.email_reader import EmailReader
+            reader = EmailReader()
+            # Look for OLE emails from the past week
+            emails = reader.fetch_recent_ole_emails(days=7)
+
+            for email in emails:
+                # Check if email matches the selected date
+                if reader.extract_date_from_email(email) == selected_date:
+                    # Get QR code
+                    qr_filename = reader.download_ole_qr(email)
+                    # Get Tikkie URL
+                    ole_url = reader.extract_tikkie_url(email)
+                    break
+        except Exception as e:
+            print(f"Email fetch error: {e}")
+
+        return jsonify({
+            'ole_predikant': ole_data.get('predikant', ''),
+            'ole_location': ole_data.get('location', ''),
+            'ole_time': ole_data.get('time', '10:00'),
+            'ole_qr': qr_filename,
+            'ole_url': ole_url,
+            'success': True
+        })
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/campaign')
 @_password_required
 def campaign_index():
