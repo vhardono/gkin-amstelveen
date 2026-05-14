@@ -426,20 +426,27 @@ class PreekrosterScraper:
         # Get preekroster data for this date
         roster_data = self.get_preekroster(selected_date)
         
-        # Look for OLE entry matching the date
-        if 'ole_table' in roster_data:
-            target = selected_date.date() if hasattr(selected_date, 'date') else selected_date
-            for entry in roster_data['ole_table']:
-                # Try matching via raw roster entry dates
-                for raw_entry in roster_data.get('roster', []):
-                    raw_date = self._parse_dutch_date(raw_entry.get('date', ''))
-                    fmt_date = self._format_date(raw_entry.get('date', ''))
-                    if fmt_date == entry.get('date') and raw_date == target:
-                        return {
-                            'predikant': entry.get('predikant', ''),
-                            'location': entry.get('regio', ''),
-                            'time': entry.get('time', '10:00')
-                        }
-        
+        # Match directly from raw roster entries by date - find OLE entries for this date
+        target = selected_date.date() if hasattr(selected_date, 'date') and callable(selected_date.date) else selected_date
+        for raw_entry in roster_data.get('roster', []):
+            raw_date = self._parse_dutch_date(raw_entry.get('date', ''))
+            if raw_date != target:
+                continue
+            # Check if this entry is OLE
+            if 'OLE' not in raw_entry.get('additional_info', '').upper():
+                continue
+            region = raw_entry.get('region', '')
+            # Get time from region_times via a fresh parse or from ole_table
+            time_val = '10:00'
+            for ole_entry in roster_data.get('ole_table', []):
+                if ole_entry.get('regio') == region:
+                    time_val = ole_entry.get('time', '10:00')
+                    break
+            return {
+                'predikant': raw_entry.get('speaker', ''),
+                'location': region,
+                'time': time_val
+            }
+
         # Return empty if not found
-        return {'predikant': '', 'location': '', 'time': '10:00'}
+        return {'predikant': '', 'location': '', 'time': ''}
