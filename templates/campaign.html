@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GKIN Amstelveen – Brevo Campaign</title>
+    <title>GKIN Amstelveen – Sender Campaign</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -25,7 +25,7 @@
             <a href="/"><img src="/static/logo2.png" alt="GKIN Logo" class="h-12 w-12 object-contain shrink-0"></a>
             <div>
                 <h1 class="text-white text-2xl font-bold tracking-tight">GKIN Amstelveen</h1>
-                <p class="text-green-100 text-sm mt-0.5">Brevo Campaign Generator</p>
+                <p class="text-green-100 text-sm mt-0.5">Sender Campaign Generator</p>
             </div>
         </div>
     </header>
@@ -41,7 +41,7 @@
 
         <!-- Info card -->
         <div class="bg-green-50 border border-green-200 rounded-xl p-4 mb-6 text-sm text-green-800">
-            Genereer een Brevo e-mailcampagne gebaseerd op mededelingen en liturgie gegevens.
+            Genereer een Sender e-mailcampagne gebaseerd op mededelingen en liturgie gegevens.
         </div>
 
         <!-- API Status -->
@@ -329,12 +329,25 @@
                     collecteField.value = data.ole_url;
                 }
                 
-                // Handle QR code - skip upload, use local path (Brevo free plan doesn't support file uploads)
+                // Handle QR code - upload to Sender
                 if (data.ole_qr) {
-                    // Use local path directly (QR will be embedded as base64 in final email)
-                    const localPath = data.ole_qr.startsWith('http') ? data.ole_qr : `/uploads/${data.ole_qr}`;
-                    qrField.value = localPath;
-                    qrStatus.innerHTML = `<span class="text-green-600">✓ QR code gevonden: ${data.ole_qr}<br><small>QR zal als base64 in e-mail worden ingesloten (geen upload nodig)</small></span>`;
+                    // Upload to Sender and get URL
+                    const uploadResp = await fetch('/upload-to-sender', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ local_path: data.ole_qr })
+                    });
+                    const uploadData = await uploadResp.json();
+                    
+                    if (uploadData.success) {
+                        qrField.value = uploadData.url;
+                        qrStatus.innerHTML = `<span class="text-green-600">✓ QR code gevonden en geüpload: ${data.ole_qr}</span>`;
+                    } else {
+                        // Fallback: use local path (Sender will embed as base64)
+                        const localPath = data.ole_qr.startsWith('http') ? data.ole_qr : `/uploads/${data.ole_qr}`;
+                        qrField.value = localPath;
+                        qrStatus.innerHTML = `<span class="text-amber-600">⚠ Upload mislukt: ${uploadData.error || 'Onbekende fout'}<br>QR zal als base64 worden ingesloten</span>`;
+                    }
                 } else {
                     qrStatus.innerHTML = `<span class="text-amber-600">⚠ Geen OLE QR code gevonden in e-mail</span>`;
                 }

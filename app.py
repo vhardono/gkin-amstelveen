@@ -2223,9 +2223,9 @@ def campaign_index():
 @app.route('/campaign/api-status', methods=['GET'])
 @_password_required
 def campaign_api_status():
-    """Check Brevo API connection status."""
-    from brevo_campaign import BrevoCampaignGenerator
-    generator = BrevoCampaignGenerator()
+    """Check Sender API connection status."""
+    from sender_campaign import SenderCampaignGenerator
+    generator = SenderCampaignGenerator()
     
     try:
         # Try to fetch lists to verify API connection
@@ -2252,10 +2252,10 @@ def campaign_api_status():
         }), 500
 
 
-@app.route('/upload-to-brevo', methods=['POST'])
+@app.route('/upload-to-sender', methods=['POST'])
 @_password_required
-def upload_to_brevo():
-    """Upload a local file to Brevo and return the file ID."""
+def upload_to_sender():
+    """Upload a local file to Sender and return the URL."""
     data = request.get_json() or {}
     local_path = data.get('local_path', '')
     
@@ -2285,14 +2285,15 @@ def upload_to_brevo():
         }), 404
     
     try:
-        from brevo_campaign import BrevoCampaignGenerator
-        generator = BrevoCampaignGenerator()
+        from sender_campaign import SenderCampaignGenerator
+        generator = SenderCampaignGenerator()
         
         result = generator.upload_file(full_path)
         
         if result.get('success'):
             return jsonify({
                 'success': True,
+                'url': result['url'],
                 'file_id': result['file_id'],
                 'name': result['name']
             })
@@ -2369,7 +2370,7 @@ def campaign_qr_code(date):
 @_password_required
 def campaign_preview():
     """Generate campaign preview based on selected date."""
-    from brevo_campaign import BrevoCampaignGenerator
+    from sender_campaign import SenderCampaignGenerator
     
     data = request.get_json() or {}
     iso_date = data.get('date', '')
@@ -2414,7 +2415,7 @@ def campaign_preview():
         predikant_to_use = ole_predikant if ole_predikant else entry.get('predikant', '')
         
         # Generate HTML with template
-        generator = BrevoCampaignGenerator()
+        generator = SenderCampaignGenerator()
         html_content = generator.generate_html_from_mededelingen(
             service_date=selected_date,
             predikant=predikant_to_use,
@@ -2460,8 +2461,8 @@ def campaign_preview():
 @app.route('/campaign/create', methods=['POST'])
 @_password_required
 def campaign_create():
-    """Create the actual Brevo campaign."""
-    from brevo_campaign import BrevoCampaignGenerator
+    """Create the actual Sender campaign."""
+    from sender_campaign import SenderCampaignGenerator
     
     data = request.get_json() or {}
     iso_date = data.get('date', '')
@@ -2510,7 +2511,7 @@ def campaign_create():
         predikant_to_use = ole_predikant if ole_predikant else entry.get('predikant', '')
         
         # Generate HTML content with OLE template
-        generator = BrevoCampaignGenerator()
+        generator = SenderCampaignGenerator()
         html_content = generator.generate_html_from_mededelingen(
             service_date=selected_date,
             predikant=predikant_to_use,
@@ -2582,7 +2583,7 @@ def campaign_create():
                 # Check for specific errors
                 if isinstance(details, dict):
                     if details.get('code') == 'invalid_parameter' and 'sender' in str(details.get('message', '')).lower():
-                        error_msg = f"Sender email '{generator.sender_email}' not verified in Brevo. Please verify this email in Brevo Settings > Senders & IP, or set BREVO_SENDER_EMAIL environment variable to a verified email address."
+                        error_msg = f"Sender email '{generator.sender_email}' not verified in Sender. Please verify this email in Sender Settings > Senders, or set SENDER_SENDER_EMAIL environment variable to a verified email address."
             
             if result.get('response_text'):
                 error_msg += f" - Response: {result['response_text'][:200]}"
