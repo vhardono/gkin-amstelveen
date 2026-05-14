@@ -111,10 +111,20 @@ class SenderCampaignGenerator:
             'DH': 'vanuit de Marcuskerk in Den Haag',
             'TB': 'vanuit de Pauluskerk te Tilburg'
         }
-        location_display = f" ({ole_location}-OLE)" if ole_location else ""
-        location_body = LOCATION_MAP.get(ole_location, ole_location) if ole_location else ""
+        # Reverse map: full name -> code
+        REVERSE_MAP = {
+            'Kerkgebouw in Amstelveen': 'AM',
+            'Kerkgebouw in Den Haag': 'DH',
+            'Pauluskerk te Tilburg': 'TB'
+        }
+        # Resolve location code (handle both code 'DH' and full name)
+        location_code = REVERSE_MAP.get(ole_location, ole_location).upper() if ole_location else ''
+        if location_code not in LOCATION_MAP:
+            location_code = ole_location  # fallback
+        location_display = f" ({location_code}-OLE)" if location_code else ""
+        location_body = LOCATION_MAP.get(location_code, location_code) if location_code else ""
         time_clean = ole_time.replace('u', '').replace('U', '') if ole_time else "10:00"
-        location_ole_tag = f"{ole_location}-OLE" if ole_location else "OLE"
+        location_ole_tag = f"{location_code}-OLE" if location_code else "OLE"
         date_numeric = f"{service_date.day:02d}-{service_date.month:02d}-{service_date.year}"
 
         # Handle QR image
@@ -200,7 +210,7 @@ class SenderCampaignGenerator:
 </table>
 <!-- Collecte -->
 <p style="margin:0 0 10px 0;">In deze dienst wordt er 1 keer gecollecteerd.<br><br>De collecte is bestemd voor Landelijke kas (OLE). U kunt dit overmaken via: <a href="{collecte_url}" style="color:#2CB191;text-decoration:underline;">{collecte_url}</a></p>
-<p style="margin:0 0 25px 0;">of door overmaking aan GEREJA KRISTEN INDONESIA NEDERLAND, IBAN: NL19 INGB 0002 6182 90 o.v.v. Collecte OLE ({date_numeric}).</p>
+<p style="margin:0 0 25px 0;">of door overmaking aan GEREJA KRISTEN INDONESIA NEDERLAND, IBAN: NL19 INGB 0002 6182 90 o.v.v. Collecte OLE {date_numeric}.</p>
 <!-- QR Code centered -->
 <table width="100%" cellpadding="0" cellspacing="0" style="margin:25px 0;">
     <tr>
