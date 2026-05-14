@@ -176,26 +176,37 @@
         });
 
         async function fetchOLEData(date) {
+            console.log('[Frontend] Fetching OLE data for date:', date);
             try {
                 const resp = await fetch('/fetch-ole-preekroster', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ date })
                 });
+                console.log('[Frontend] Response status:', resp.status);
                 const data = await resp.json();
+                console.log('[Frontend] Response data:', data);
 
-                if (data.error) return;
+                if (data.error) {
+                    console.error('[Frontend] Error from server:', data.error);
+                    return;
+                }
 
                 // Set OLE data
+                console.log('[Frontend] Setting predikant:', data.ole_predikant);
                 if (data.ole_predikant) window.olePredikant = data.ole_predikant;
+                console.log('[Frontend] Setting location:', data.ole_location);
                 if (data.ole_location) document.getElementById('oleLocation').value = data.ole_location;
+                console.log('[Frontend] Setting time:', data.ole_time);
                 if (data.ole_time) document.getElementById('oleTime').value = data.ole_time;
 
                 // Set URLs
+                console.log('[Frontend] Setting URL:', data.ole_url);
                 if (data.ole_url) document.getElementById('collecteUrl').value = data.ole_url;
 
                 // Handle QR
                 if (data.ole_qr) {
+                    console.log('[Frontend] Setting QR:', data.ole_qr);
                     const localPath = data.ole_qr.startsWith('http') ? data.ole_qr : `/uploads/${data.ole_qr}`;
                     document.getElementById('qrUrl').value = localPath;
                     if (qrStatus) {
@@ -210,9 +221,10 @@
                 const dateStr = `${dateObj.getDate()} ${months[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
                 document.getElementById('subject').value = `GKIN (OLE): Online Landelijke Eredienst Zondag ${dateStr}, ${timeClean}u`;
                 document.getElementById('campaignName').value = `GKIN OLE ${date.replace(/-/g, '').substring(2)}`;
+                console.log('[Frontend] Auto-population complete');
 
             } catch (err) {
-                console.error('OLE fetch error:', err);
+                console.error('[Frontend] OLE fetch error:', err);
             }
         }
 

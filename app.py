@@ -2192,6 +2192,82 @@ def preview_working_file():
 # Sender Campaign Routes
 # =============================================================================
 
+@app.route('/fetch-ole-preekroster', methods=['POST'])
+@_password_required
+def fetch_ole_preekroster():
+    """Fetch OLE preekroster data for a given date."""
+    data = request.get_json() or {}
+    iso_date = data.get('date', '')
+    print(f"[OLE Fetch] Received request for date: {iso_date}")
+
+    if not iso_date:
+        print("[OLE Fetch] Error: no date provided")
+        return jsonify({'error': 'no date provided'}), 400
+
+    try:
+        selected_date = datetime.strptime(iso_date, '%Y-%m-%d')
+        print(f"[OLE Fetch] Parsed date: {selected_date}")
+    except ValueError as e:
+        print(f"[OLE Fetch] Error parsing date: {e}")
+        return jsonify({'error': 'invalid date format'}), 400
+
+    try:
+        from data_sources.preekroster_scraper import PreekroosterScraper
+        scraper = PreekroosterScraper()
+        print("[OLE Fetch] Scraper initialized")
+
+        # Fetch OLE data for the selected date
+        ole_data = scraper.get_ole_service_for_date(selected_date)
+        print(f"[OLE Fetch] OLE data retrieved: {ole_data}")
+
+        # Also try to get QR code and Tikkie URL from recent emails
+        qr_filename = None
+        ole_url = None
+
+        try:
+            from data_sources.email_reader import EmailReader
+            reader = EmailReader()
+            print("[OLE Fetch] Email reader initialized")
+            # Look for OLE emails from the past week
+            emails = reader.fetch_recent_ole_emails(days=7)
+            print(f"[OLE Fetch] Found {len(emails)} recent OLE emails")
+
+            for email in emails:
+                email_date = reader.extract_date_from_email(email)
+                print(f"[OLE Fetch] Checking email with date: {email_date}")
+                # Check if email matches the selected date
+                if email_date == selected_date:
+                    print("[OLE Fetch] Found matching email!")
+                    # Get QR code
+                    qr_filename = reader.download_ole_qr(email)
+                    print(f"[OLE Fetch] QR filename: {qr_filename}")
+                    # Get Tikkie URL
+                    ole_url = reader.extract_tikkie_url(email)
+                    print(f"[OLE Fetch] Tikkie URL: {ole_url}")
+                    break
+        except Exception as e:
+            print(f"[OLE Fetch] Email fetch error: {e}")
+            import traceback
+            traceback.print_exc()
+
+        result = {
+            'ole_predikant': ole_data.get('predikant', ''),
+            'ole_location': ole_data.get('location', ''),
+            'ole_time': ole_data.get('time', '10:00'),
+            'ole_qr': qr_filename,
+            'ole_url': ole_url,
+            'success': True
+        }
+        print(f"[OLE Fetch] Returning result: {result}")
+        return jsonify(result)
+
+    except Exception as e:
+        print(f"[OLE Fetch] Error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/campaign')
 @_password_required
 def campaign_index():
