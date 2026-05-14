@@ -111,9 +111,11 @@ class SenderCampaignGenerator:
             'DH': 'vanuit de Marcuskerk in Den Haag',
             'TB': 'vanuit de Pauluskerk te Tilburg'
         }
-        location_display = f" ({ole_location})" if ole_location else ""
+        location_display = f" ({ole_location}-OLE)" if ole_location else ""
         location_body = LOCATION_MAP.get(ole_location, ole_location) if ole_location else ""
         time_clean = ole_time.replace('u', '').replace('U', '') if ole_time else "10:00"
+        location_ole_tag = f"{ole_location}-OLE" if ole_location else "OLE"
+        date_numeric = f"{service_date.day:02d}-{service_date.month:02d}-{service_date.year}"
 
         # Handle QR image
         qr_img = ""
@@ -176,7 +178,7 @@ class SenderCampaignGenerator:
                 <tr>
                     <th align="center" style="background-color:#000000;border-radius:6px;padding:10px 25px;">
                         <a href="{liturgie_url}" style="display:block;font-family:'Inter',Arial,sans-serif;font-size:14px;color:#ffffff;text-decoration:none;line-height:16px;font-weight:normal;">
-                            Liturgie<br>({ole_location or 'OLE'})
+                            Liturgie<br>({location_ole_tag})
                         </a>
                     </th>
                 </tr>
@@ -188,7 +190,7 @@ class SenderCampaignGenerator:
                 <tr>
                     <th align="center" style="background-color:#000000;border-radius:6px;padding:10px 25px;">
                         <a href="{youtube_link}" style="display:block;font-family:'Inter',Arial,sans-serif;font-size:14px;color:#ffffff;text-decoration:none;line-height:16px;font-weight:normal;">
-                            Webvideo<br>({ole_location or 'OLE'})
+                            Webvideo<br>({location_ole_tag})
                         </a>
                     </th>
                 </tr>
@@ -198,7 +200,7 @@ class SenderCampaignGenerator:
 </table>
 <!-- Collecte -->
 <p style="margin:0 0 10px 0;">In deze dienst wordt er 1 keer gecollecteerd.<br><br>De collecte is bestemd voor Landelijke kas (OLE). U kunt dit overmaken via: <a href="{collecte_url}" style="color:#2CB191;text-decoration:underline;">{collecte_url}</a></p>
-<p style="margin:0 0 25px 0;">of door overmaking aan GEREJA KRISTEN INDONESIA NEDERLAND, IBAN: NL19 INGB 0002 6182 90 o.v.v. Collecte OLE.</p>
+<p style="margin:0 0 25px 0;">of door overmaking aan GEREJA KRISTEN INDONESIA NEDERLAND, IBAN: NL19 INGB 0002 6182 90 o.v.v. Collecte OLE ({date_numeric}).</p>
 <!-- QR Code centered -->
 <table width="100%" cellpadding="0" cellspacing="0" style="margin:25px 0;">
     <tr>
