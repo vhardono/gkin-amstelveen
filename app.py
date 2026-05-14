@@ -2214,7 +2214,7 @@ def fetch_ole_data():
     try:
         from data_sources.preekroster_scraper import PreekrosterScraper
         scraper = PreekrosterScraper()
-        print("[OLE Fetch] Scraper initialized")
+        print("[OLE Fetch] Scraper initialized - fixed import")
 
         # Fetch OLE data for the selected date
         ole_data = scraper.get_ole_service_for_date(selected_date)
