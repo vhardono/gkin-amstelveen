@@ -138,9 +138,14 @@ class SenderCampaignGenerator:
 <body style="margin:0;padding:0;background:#ffffff;">
 <table width="100%" cellpadding="0" cellspacing="0" bgcolor="#ffffff"><tr><td align="center">
 <table width="640" cellpadding="0" cellspacing="0" style="background:#ffffff;">
-<tr><td style="background:#000000;padding:25px;text-align:center;">
-<h1 style="color:#ffffff;font-family:Arial,sans-serif;margin:0;">GKIN Amstelveen</h1>
-</td></tr>
+<!-- Header with Logo -->
+<tr>
+    <td style="background:#000000;padding:30px;text-align:center;">
+        <img src="https://gkin-amstelveen.nl/static/logo2.png" alt="GKIN Logo" style="height:60px;width:auto;margin-bottom:10px;">
+        <h1 style="color:#ffffff;font-family:Arial,sans-serif;margin:0;font-size:24px;font-weight:bold;">GKIN Amstelveen</h1>
+        <p style="color:#cccccc;font-family:Arial,sans-serif;margin:5px 0 0 0;font-size:12px;">Online Landelijke Eredienst (OLE)</p>
+    </td>
+</tr>
 <tr><td style="padding:40px 50px;font-family:Arial,sans-serif;color:#515856;font-size:16px;line-height:1.5;">
 <p>Beste broeders en zusters,</p>
 <p>Op {date_str} zal {predikant} voorgaan in de Online Landelijke Eredienst (OLE) van GKIN {location_body}, aanvang {time_clean} uur.</p>
