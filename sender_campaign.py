@@ -138,36 +138,103 @@ class SenderCampaignGenerator:
 <body style="margin:0;padding:0;background:#ffffff;">
 <table width="100%" cellpadding="0" cellspacing="0" bgcolor="#ffffff"><tr><td align="center">
 <table width="640" cellpadding="0" cellspacing="0" style="background:#ffffff;">
-<!-- Header with Logo -->
+<!-- Header: Logo left, Title right -->
 <tr>
-    <td style="background:#000000;padding:30px;text-align:center;">
-        <img src="https://gkin.org/main/images/banners/logo.png" alt="GKIN Logo" style="height:60px;width:auto;margin-bottom:10px;">
-        <h1 style="color:#ffffff;font-family:Arial,sans-serif;margin:0;font-size:24px;font-weight:bold;">GKIN Amstelveen</h1>
-        <p style="color:#cccccc;font-family:Arial,sans-serif;margin:5px 0 0 0;font-size:12px;">Online Landelijke Eredienst (OLE)</p>
+    <td style="background:#ffffff;padding:20px 50px;">
+        <table width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+                <td align="left" width="60">
+                    <img src="https://gkin.org/main/images/banners/logo.png" alt="GKIN Logo" style="height:60px;width:auto;">
+                </td>
+                <td align="right" style="font-family:'Inter',Arial,sans-serif;">
+                    <h1 style="color:#000000;margin:0;font-size:18px;font-weight:bold;">GKIN Amstelveen</h1>
+                </td>
+            </tr>
+        </table>
     </td>
 </tr>
-<tr><td style="padding:40px 50px;font-family:Arial,sans-serif;color:#515856;font-size:16px;line-height:1.5;">
-<p>Beste broeders en zusters,</p>
-<p>Op {date_str} zal {predikant} voorgaan in de Online Landelijke Eredienst (OLE) van GKIN {location_body}, aanvang {time_clean} uur.</p>
+<!-- Separator line -->
+<tr><td style="padding:0 50px;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #EAECED;">
+        <tr><td height="20" style="line-height:20px;"></td></tr>
+    </table>
+</td></tr>
+<!-- Main Content -->
+<tr><td style="padding:0 50px;font-family:'Inter',Arial,sans-serif;color:#515856;font-size:16px;line-height:137%;">
+<p style="margin:0 0 10px 0;">Beste broeders en zusters,<br></p>
+<p style="margin:0 0 10px 0;">Op {date_str} zal {predikant} voorgaan in de Online Landelijke Eredienst (OLE) van GKIN {location_body}, aanvang {time_clean} uur. </p>
 {theme_html}
-<p>De dienst wordt live uitgezonden. De liturgie vindt u hieronder:</p>
-<table width="100%" style="margin:25px 0;"><tr>
-<td style="padding:10px;"><a href="{liturgie_url}" style="display:inline-block;background:#000000;color:#ffffff;padding:15px 30px;text-decoration:none;border-radius:6px;">Liturgie ({ole_location or 'OLE'})</a></td>
-<td style="padding:10px;"><a href="{youtube_link}" style="display:inline-block;background:#000000;color:#ffffff;padding:15px 30px;text-decoration:none;border-radius:6px;">Webvideo ({ole_location or 'OLE'})</a></td>
-</tr></table>
-<table width="100%" style="background:#f8f9fa;padding:25px;border-radius:8px;margin-bottom:25px;">
-<tr><td>
-<h3 style="color:#000000;margin-bottom:15px;">Collecte</h3>
-<p style="font-size:14px;">De collecte kan via de QR-code of deze link:</p>
-<p><a href="{collecte_url}" style="color:#000000;text-decoration:underline;">{collecte_url}</a></p>
-{qr_img}
-</td></tr>
+<p style="margin:0 0 25px 0;">De dienst wordt live uitgezonden. De liturgie van de dienst kunt u hieronder vinden. Door op de link te klikken kunt u het bestand bekijken en downloaden. Via de eveneens hieronder vermelde link kunt u de dienst online volgen.</p>
+<!-- Buttons -->
+<table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 25px 0;">
+    <tr>
+        <td width="250" valign="top">
+            <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;">
+                <tr>
+                    <th align="center" style="background-color:#000000;border-radius:6px;padding:10px 25px;">
+                        <a href="{liturgie_url}" style="display:block;font-family:'Inter',Arial,sans-serif;font-size:14px;color:#ffffff;text-decoration:none;line-height:16px;">
+                            Liturgie<br>({ole_location or 'OLE'})
+                        </a>
+                    </th>
+                </tr>
+            </table>
+        </td>
+        <td width="40" style="line-height:20px;"></td>
+        <td width="250" valign="top">
+            <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;">
+                <tr>
+                    <th align="center" style="background-color:#000000;border-radius:6px;padding:10px 25px;">
+                        <a href="{youtube_link}" style="display:block;font-family:'Inter',Arial,sans-serif;font-size:14px;color:#ffffff;text-decoration:none;line-height:16px;">
+                            Webvideo<br>({ole_location or 'OLE'})
+                        </a>
+                    </th>
+                </tr>
+            </table>
+        </td>
+    </tr>
 </table>
-<p style="font-size:14px;">De mededelingenbladen zijn in de bijlage te vinden.</p>
-<p>Namens de kerkenraad,<br><br>GKIN Amstelveen</p>
+<!-- Collecte -->
+<p style="margin:0 0 10px 0;">In deze dienst wordt er 1 keer gecollecteerd.<br><br>De collecte is bestemd voor Landelijke kas (OLE). U kunt dit overmaken via:&nbsp;<a href="{collecte_url}" style="color:#2CB191;text-decoration:underline;">{collecte_url}</a></p>
+<p style="margin:0 0 25px 0;">of door overmaking aan GEREJA KRISTEN INDONESIA NEDERLAND, IBAN: NL19 INGB 0002 6182 90 o.v.v. Collecte OLE.</p>
+<!-- QR Code centered -->
+<table width="100%" cellpadding="0" cellspacing="0" style="margin:25px 0;">
+    <tr>
+        <td width="160"></td>
+        <td width="320" align="center">
+            {qr_img}
+        </td>
+        <td width="160"></td>
+    </tr>
+</table>
+<!-- Signature -->
+<p style="margin:0 0 10px 0;"><br></p>
+<p style="margin:0 0 10px 0;">Wij wensen u allen een gezegende dienst toe.<br></p>
+<p style="margin:0 0 10px 0;">Met broederlijke groet in Christus,</p>
+<p style="margin:0 0 10px 0;"><br></p>
+<p style="margin:0 0 10px 0;">Namens de landelijke kerkenraad GKIN,<br></p>
+<p style="margin:0 0 20px 0;">Vega Hardono, 2e regiosecretaris (AM)<br></p>
 </td></tr>
-<tr><td style="background:#f8f9fa;padding:25px;text-align:center;font-size:12px;color:#6c757d;">
-GKIN Amstelveen | kerkenraad@gkin.nl | www.gkin.nl
+<!-- Footer separator -->
+<tr><td style="padding:0 50px;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #EAECED;">
+        <tr><td height="20" style="line-height:20px;"></td></tr>
+    </table>
+</td></tr>
+<!-- Footer -->
+<tr><td style="padding:0 50px 20px 50px;font-family:'Inter',Arial,sans-serif;color:#515856;font-size:14px;line-height:150%;">
+    <table width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+            <td align="left" width="250" valign="top">
+                <p style="margin:0 0 6px 0;"><strong>GKIN Amstelveen</strong></p>
+                <p style="margin:0;">Bouwerij 52<br>1185XX Amstelveen</p>
+            </td>
+            <td width="40"></td>
+            <td align="left" width="250" valign="top">
+                <p style="margin:0 0 6px 0;">Wilt u deze e-mails niet meer ontvangen?</p>
+                <p style="margin:8px 0 0 0;"><a href="#" style="color:#515856;text-decoration:underline;">uitschrijven</a></p>
+            </td>
+        </tr>
+    </table>
 </td></tr>
 </table>
 </td></tr></table>
