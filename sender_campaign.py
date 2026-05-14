@@ -46,8 +46,8 @@ class SenderCampaignGenerator:
             return error_response
 
     def get_lists(self) -> List[Dict]:
-        """Fetch available subscriber lists."""
-        result = self._make_request("GET", "/subscriber-lists")
+        """Fetch available subscriber groups."""
+        result = self._make_request("GET", "/groups")
         return result.get('data', [])
 
     def upload_file(self, file_path: str) -> Dict:
@@ -76,9 +76,9 @@ class SenderCampaignGenerator:
                        scheduled_at: Optional[str] = None) -> Dict:
         """Create a new email campaign."""
         if not list_ids:
-            lists = self.get_lists()
-            if lists:
-                list_ids = [lists[0].get('id')]
+            groups = self.get_lists()
+            if groups:
+                list_ids = [groups[0].get('id')]
 
         data = {
             "name": name,
@@ -89,7 +89,7 @@ class SenderCampaignGenerator:
             "from": self.sender_email,
             "from_name": self.sender_name,
             "reply_to": self.sender_email,
-            "lists": list_ids
+            "groups": list_ids
         }
         if scheduled_at:
             data['scheduled_at'] = scheduled_at
