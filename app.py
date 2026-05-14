@@ -2228,23 +2228,13 @@ def fetch_ole_data():
             from data_sources.email_reader import EmailReader
             reader = EmailReader()
             print("[OLE Fetch] Email reader initialized")
-            # Look for OLE emails from the past week
-            emails = reader.fetch_recent_ole_emails(days=7)
-            print(f"[OLE Fetch] Found {len(emails)} recent OLE emails")
-
-            for email in emails:
-                email_date = reader.extract_date_from_email(email)
-                print(f"[OLE Fetch] Checking email with date: {email_date}")
-                # Check if email matches the selected date
-                if email_date == selected_date:
-                    print("[OLE Fetch] Found matching email!")
-                    # Get QR code
-                    qr_filename = reader.download_ole_qr(email)
-                    print(f"[OLE Fetch] QR filename: {qr_filename}")
-                    # Get Tikkie URL
-                    ole_url = reader.extract_tikkie_url(email)
-                    print(f"[OLE Fetch] Tikkie URL: {ole_url}")
-                    break
+            # Fetch collecte data for the selected date
+            collecte_data = reader.fetch_collecte_data(target_date=selected_date)
+            print(f"[OLE Fetch] Collecte data: {collecte_data}")
+            if collecte_data:
+                qr_filename = collecte_data.get('ole_qr') or collecte_data.get('dankoffer_qr')
+                ole_url = collecte_data.get('ole_url') or collecte_data.get('dankoffer_url')
+                print(f"[OLE Fetch] QR filename: {qr_filename}, URL: {ole_url}")
         except Exception as e:
             print(f"[OLE Fetch] Email fetch error: {e}")
             import traceback
