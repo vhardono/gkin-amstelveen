@@ -2262,27 +2262,35 @@ def fetch_ole_data():
             thema = meded.get('thema', '')
             bible_verse = meded.get('bible_verse', '')
             youtube_link = meded.get('youtube_link', '')
-            # Auto-upload liturgie attachment to Sender
+            # Upload liturgie attachment to Dropbox and get public shared link
             att_bytes = meded.get('liturgie_attachment_bytes')
             att_name = meded.get('liturgie_attachment_name', 'liturgie.pdf')
             if att_bytes:
-                import tempfile
-                suffix = os.path.splitext(att_name)[1] or '.pdf'
-                with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-                    tmp.write(att_bytes)
-                    tmp_path = tmp.name
                 try:
-                    from sender_campaign import SenderCampaignGenerator
-                    gen = SenderCampaignGenerator()
-                    upload_result = gen.upload_file(tmp_path)
-                    if upload_result.get('success'):
-                        liturgie_url = upload_result.get('url', '')
-                        print(f"[OLE Fetch] Liturgie uploaded to Sender: {liturgie_url}")
-                    else:
-                        print(f"[OLE Fetch] Liturgie upload failed: {upload_result.get('error')}")
-                finally:
-                    try: os.unlink(tmp_path)
-                    except: pass
+                    import dropbox as _dropbox
+                    from dropbox.exceptions import ApiError as _DbxApiError
+                    dbx = _dropbox.Dropbox(
+                        oauth2_refresh_token=DROPBOX_REFRESH_L,
+                        app_key=DROPBOX_APP_KEY_L,
+                        app_secret=DROPBOX_APP_SECRET_L,
+                    )
+                    dropbox_path = f"/#Kerkbode GKIN Amstelveen/OLE-Liturgie/{att_name}"
+                    dbx.files_upload(att_bytes, dropbox_path,
+                                     mode=_dropbox.files.WriteMode.overwrite)
+                    # Get or create shared link
+                    try:
+                        link_meta = dbx.sharing_create_shared_link_with_settings(dropbox_path)
+                    except _DbxApiError as e:
+                        # Link already exists — retrieve it
+                        links = dbx.sharing_list_shared_links(path=dropbox_path, direct_only=True)
+                        link_meta = links.links[0] if links.links else None
+                    if link_meta:
+                        # Convert to direct download link (dl=1)
+                        raw = link_meta.url
+                        liturgie_url = raw.replace('www.dropbox.com', 'dl.dropboxusercontent.com').replace('?dl=0', '').replace('?dl=1', '') + '?dl=1'
+                        print(f"[OLE Fetch] Liturgie on Dropbox: {liturgie_url}")
+                except Exception as e:
+                    print(f"[OLE Fetch] Dropbox liturgie upload error: {e}")
         except Exception as e:
             print(f"[OLE Fetch] Mededeling fetch error: {e}")
             import traceback; traceback.print_exc()
