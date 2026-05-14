@@ -1001,7 +1001,7 @@ class OutlookCollecteReader:
             msgs = self._graph_get('/me/messages', params={
                 '$filter': f"receivedDateTime ge {since} and contains(subject,'OLE')",
                 '$top': 20,
-                '$select': 'id,subject,from,body,receivedDateTime',
+                '$select': 'id,subject,from,body,receivedDateTime,hasAttachments',
                 '$orderby': 'receivedDateTime desc',
             }).get('value', [])
         except Exception as e:
@@ -1073,23 +1073,35 @@ class OutlookCollecteReader:
         # Download liturgie attachment (PDF or DOCX)
         try:
             import base64 as _b64
+            print(f"[OLE Meded] hasAttachments={match_msg.get('hasAttachments')}, msg_id={match_msg['id']}")
+            # Step 1: list attachments (metadata only, no contentBytes)
             atts = self._graph_get(
                 f"/me/messages/{match_msg['id']}/attachments",
-                params={'$select': 'id,name,contentType,size,contentBytes'}
+                params={'$select': 'id,name,contentType,size'}
             ).get('value', [])
+            print(f"[OLE Meded] Found {len(atts)} attachments: {[a.get('name') for a in atts]}")
             for att in atts:
-                name = att.get('name', '').lower()
+                att_name = att.get('name', '')
+                att_name_lower = att_name.lower()
                 ctype = att.get('contentType', '').lower()
-                if name.endswith('.pdf') or name.endswith('.docx') or name.endswith('.doc') \
+                if att_name_lower.endswith('.pdf') or att_name_lower.endswith('.docx') \
+                        or att_name_lower.endswith('.doc') \
                         or 'pdf' in ctype or 'wordprocessingml' in ctype:
-                    cb = att.get('contentBytes', '')
+                    # Step 2: fetch full attachment with contentBytes individually
+                    full_att = self._graph_get(
+                        f"/me/messages/{match_msg['id']}/attachments/{att['id']}"
+                    )
+                    cb = full_att.get('contentBytes', '')
+                    print(f"[OLE Meded] contentBytes present={bool(cb)} for {att_name}")
                     if cb:
                         result['liturgie_attachment_bytes'] = _b64.b64decode(cb)
-                        result['liturgie_attachment_name'] = att.get('name', 'liturgie.pdf')
-                        print(f"[OLE Meded] Found liturgie attachment: {att.get('name')}")
+                        result['liturgie_attachment_name'] = att_name or 'liturgie.pdf'
+                        print(f"[OLE Meded] Liturgie attachment loaded: {att_name}")
                         break
         except Exception as e:
+            import traceback
             print(f"[OLE Meded] Attachment fetch error: {e}")
+            traceback.print_exc()
 
         return result
 
