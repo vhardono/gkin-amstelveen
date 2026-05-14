@@ -172,7 +172,7 @@ class SenderCampaignGenerator:
             <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;">
                 <tr>
                     <th align="center" style="background-color:#000000;border-radius:6px;padding:10px 25px;">
-                        <a href="{liturgie_url}" style="display:block;font-family:'Inter',Arial,sans-serif;font-size:14px;color:#ffffff;text-decoration:none;line-height:16px;">
+                        <a href="{liturgie_url}" style="display:block;font-family:'Inter',Arial,sans-serif;font-size:14px;color:#ffffff;text-decoration:none;line-height:16px;font-weight:normal;">
                             Liturgie<br>({ole_location or 'OLE'})
                         </a>
                     </th>
@@ -184,7 +184,7 @@ class SenderCampaignGenerator:
             <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;">
                 <tr>
                     <th align="center" style="background-color:#000000;border-radius:6px;padding:10px 25px;">
-                        <a href="{youtube_link}" style="display:block;font-family:'Inter',Arial,sans-serif;font-size:14px;color:#ffffff;text-decoration:none;line-height:16px;">
+                        <a href="{youtube_link}" style="display:block;font-family:'Inter',Arial,sans-serif;font-size:14px;color:#ffffff;text-decoration:none;line-height:16px;font-weight:normal;">
                             Webvideo<br>({ole_location or 'OLE'})
                         </a>
                     </th>
@@ -194,7 +194,7 @@ class SenderCampaignGenerator:
     </tr>
 </table>
 <!-- Collecte -->
-<p style="margin:0 0 10px 0;">In deze dienst wordt er 1 keer gecollecteerd.<br><br>De collecte is bestemd voor Landelijke kas (OLE). U kunt dit overmaken via:&nbsp;<a href="{collecte_url}" style="color:#2CB191;text-decoration:underline;">{collecte_url}</a></p>
+<p style="margin:0 0 10px 0;">In deze dienst wordt er 1 keer gecollecteerd.<br><br>De collecte is bestemd voor Landelijke kas (OLE). U kunt dit overmaken via: <a href="{collecte_url}" style="color:#2CB191;text-decoration:underline;">{collecte_url}</a></p>
 <p style="margin:0 0 25px 0;">of door overmaking aan GEREJA KRISTEN INDONESIA NEDERLAND, IBAN: NL19 INGB 0002 6182 90 o.v.v. Collecte OLE.</p>
 <!-- QR Code centered -->
 <table width="100%" cellpadding="0" cellspacing="0" style="margin:25px 0;">
@@ -212,7 +212,7 @@ class SenderCampaignGenerator:
 <p style="margin:0 0 10px 0;">Met broederlijke groet in Christus,</p>
 <p style="margin:0 0 10px 0;"><br></p>
 <p style="margin:0 0 10px 0;">Namens de landelijke kerkenraad GKIN,<br></p>
-<p style="margin:0 0 20px 0;">Vega Hardono, 2e regiosecretaris (AM)<br></p>
+<p style="margin:0 0 20px 0;">Vega Hardono, Regiosecretaris (AM)<br></p>
 </td></tr>
 <!-- Footer separator -->
 <tr><td style="padding:0 50px;">
