@@ -2250,9 +2250,19 @@ def fetch_ole_data():
             import traceback
             traceback.print_exc()
 
+        # Translate location code to full name
+        location_code = ole_data.get('location', '')
+        location_names = {
+            'AM': 'Kerkgebouw in Amstelveen',
+            'DH': 'Kerkgebouw in Den Haag',
+            'TB': 'Pauluskerk te Tilburg'
+        }
+        location_full = location_names.get(location_code, location_code)
+
         result = {
             'ole_predikant': ole_data.get('predikant', ''),
-            'ole_location': ole_data.get('location', ''),
+            'ole_location_code': location_code,
+            'ole_location': location_full,
             'ole_time': ole_data.get('time', '10:00'),
             'ole_qr': qr_filename,
             'ole_url': ole_url,
