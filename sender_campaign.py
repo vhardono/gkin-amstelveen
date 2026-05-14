@@ -107,9 +107,9 @@ class SenderCampaignGenerator:
         date_str = f"{service_date.day} {months[service_date.month - 1]} {service_date.year}"
 
         LOCATION_MAP = {
-            'AM': 'in Amstelveen',
-            'DH': 'vanuit de Marcuskerk in Den Haag',
-            'TB': 'vanuit de Pauluskerk te Tilburg'
+            'AM': 'Kerkgebouw in Amstelveen',
+            'DH': 'Kerkgebouw in Den Haag',
+            'TB': 'Pauluskerk te Tilburg'
         }
         # Reverse map: full name -> code
         REVERSE_MAP = {
