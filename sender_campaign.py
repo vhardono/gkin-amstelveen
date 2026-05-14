@@ -13,7 +13,7 @@ class SenderCampaignGenerator:
     """Handles Sender.net API interactions."""
 
     def __init__(self, api_token: Optional[str] = None, sender_email: Optional[str] = None, sender_name: Optional[str] = None):
-        self.api_token = api_token or os.environ.get('SENDER_API_TOKEN')
+        self.api_token = api_token or os.environ.get('SENDER_API_KEY') or os.environ.get('SENDER_API_TOKEN')
         self.sender_email = sender_email or os.environ.get('SENDER_SENDER_EMAIL', 'noreply-am@gkin.org')
         self.sender_name = sender_name or os.environ.get('SENDER_SENDER_NAME', 'GKIN Amstelveen')
         self.base_url = "https://api.sender.net/v2"
