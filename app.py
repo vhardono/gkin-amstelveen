@@ -2364,7 +2364,7 @@ def campaign_preview():
             'location': ole_location,
             'time': time_clean,
             'subject': f"GKIN (OLE): Online Landelijke Eredienst Zondag {date_str}, {time_clean}u",
-            'html_preview': html_content[:2000] + '...' if len(html_content) > 2000 else html_content,
+            'html_preview': html_content,
             'success': True
         })
         
