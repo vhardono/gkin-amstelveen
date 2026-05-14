@@ -178,7 +178,7 @@
         async function fetchOLEData(date) {
             console.log('[Frontend] Fetching OLE data for date:', date);
             try {
-                const resp = await fetch('/fetch-ole-preekroster', {
+                const resp = await fetch('/fetch-ole-data', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ date })

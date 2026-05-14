@@ -2192,9 +2192,9 @@ def preview_working_file():
 # Sender Campaign Routes
 # =============================================================================
 
-@app.route('/fetch-ole-preekroster', methods=['POST'])
+@app.route('/fetch-ole-data', methods=['POST'])
 @_password_required
-def fetch_ole_preekroster():
+def fetch_ole_data():
     """Fetch OLE preekroster data for a given date."""
     data = request.get_json() or {}
     iso_date = data.get('date', '')
