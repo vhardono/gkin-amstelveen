@@ -2416,6 +2416,19 @@ def campaign_preview():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/campaign/lists', methods=['GET'])
+@_password_required
+def campaign_lists():
+    """Return available Sender subscriber lists."""
+    from sender_campaign import SenderCampaignGenerator
+    try:
+        gen = SenderCampaignGenerator()
+        lists = gen.get_lists()
+        return jsonify({'success': True, 'lists': lists})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @app.route('/campaign/create', methods=['POST'])
 @_password_required
 def campaign_create():
@@ -2427,6 +2440,7 @@ def campaign_create():
     subject = data.get('subject', '')
     name = data.get('name', '')
     scheduled_at_input = data.get('scheduled_at', None)
+    list_ids = data.get('list_ids', None)
     
     if not iso_date:
         return jsonify({'error': 'no date'}), 400
@@ -2490,7 +2504,8 @@ def campaign_create():
             name=name or f"GKIN OLE {selected_date.strftime('%y%m%d')}",
             subject=subject or f"GKIN (OLE): Online Landelijke Eredienst Zondag {date_str}, {time_clean}u",
             html_content=html_content,
-            scheduled_at=scheduled_at
+            scheduled_at=scheduled_at,
+            list_ids=list_ids if list_ids else None
         )
         
         if 'error' in result:
