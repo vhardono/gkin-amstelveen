@@ -2195,7 +2195,7 @@ def preview_working_file():
 @app.route('/fetch-ole-data', methods=['POST'])
 @_password_required
 def fetch_ole_data():
-    """Fetch OLE preekroster data for a given date. Deployed: 2026-05-14 19:35"""
+    """Fetch OLE preekroster data for a given date. Deployed: 2026-05-14 19:40"""
     data = request.get_json() or {}
     iso_date = data.get('date', '')
     print(f"[OLE Fetch] Received request for date: {iso_date}")
