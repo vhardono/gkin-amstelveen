@@ -73,6 +73,7 @@
                     </div>
                     <div id="liturgieUploadStatus" class="mt-2 text-xs"></div>
                     <input type="hidden" id="liturgieUrl">
+                    <p class="text-xs text-gray-400 mt-1">Kan ook handmatig worden geüpload als het niet uit e-mail wordt gevonden.</p>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Collecte URL (Tikkie)</label>
@@ -239,10 +240,11 @@
                 if (data.ole_liturgie_url) {
                     document.getElementById('liturgieUrl').value = data.ole_liturgie_url;
                     document.getElementById('liturgieUploadStatus').innerHTML =
-                        `<span class="text-green-600">✓ Liturgie automatisch opgehaald uit e-mail en geüpload naar Sender</span>`;
+                        `<span class="text-green-600">✓ Liturgie opgehaald uit e-mail en geüpload naar Sender – klik dropzone om te vervangen</span>`;
                 } else {
+                    document.getElementById('liturgieUrl').value = '';
                     document.getElementById('liturgieUploadStatus').innerHTML =
-                        `<span class="text-gray-400">Geen liturgie bijlage gevonden in e-mail – upload handmatig</span>`;
+                        `<span class="text-amber-600">⚠ Niet gevonden in e-mail – upload handmatig hieronder</span>`;
                 }
                 console.log('[Frontend] Mededeling - thema:', data.ole_thema, 'bijbel:', data.ole_bible_verse, 'youtube:', data.ole_youtube_link, 'liturgie:', data.ole_liturgie_url);
 
@@ -274,9 +276,39 @@
             }
         }
 
+        function getMissingFields() {
+            const checks = [
+                { id: 'olePredikant', label: 'Predikant' },
+                { id: 'oleLocation',  label: 'Locatie' },
+                { id: 'oleTime',      label: 'Tijd' },
+                { id: 'theme',        label: 'Thema' },
+                { id: 'bibleVerse',   label: 'Bijbeltekst' },
+                { id: 'youtubeLink',  label: 'YouTube Link' },
+                { id: 'liturgieUrl',  label: 'Liturgie bestand' },
+                { id: 'collecteUrl',  label: 'Collecte URL (Tikkie)' },
+            ];
+            return checks.filter(c => !document.getElementById(c.id).value.trim()).map(c => c.label);
+        }
+
+        function showMissingAlert(missing) {
+            let box = document.getElementById('missingAlert');
+            if (!box) {
+                box = document.createElement('div');
+                box.id = 'missingAlert';
+                box.className = 'mb-4 rounded-lg p-3 border border-amber-300 bg-amber-50 text-sm text-amber-800';
+                document.getElementById('oleTemplateSection').insertAdjacentElement('afterend', box);
+            }
+            if (missing.length === 0) { box.classList.add('hidden'); return false; }
+            box.innerHTML = '<strong>⚠ Ontbrekende velden – vul handmatig in:</strong><ul class="mt-1 list-disc list-inside">' + missing.map(m => '<li>' + m + '</li>').join('') + '</ul>';
+            box.classList.remove('hidden');
+            box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            return true;
+        }
+
         previewBtn.addEventListener('click', async () => {
             const date = dateSelect.value;
             if (!date) return;
+            showMissingAlert(getMissingFields());
 
             previewBtn.disabled = true;
             previewBtn.textContent = 'Laden...';
@@ -327,6 +359,11 @@
         createBtn.addEventListener('click', async () => {
             const date = dateSelect.value;
             if (!date) return;
+            const missing = getMissingFields();
+            if (missing.length > 0) {
+                showMissingAlert(missing);
+                if (!confirm('Er zijn ' + missing.length + ' ontbrekende velden:\n- ' + missing.join('\n- ') + '\n\nToch doorgaan?')) return;
+            }
 
             createBtn.disabled = true;
             createBtn.textContent = 'Aanmaken...';
@@ -348,7 +385,7 @@
                         qr_image_url: document.getElementById('qrUrl').value,
                         ole_location: document.getElementById('oleLocation').value,
                         ole_time: document.getElementById('oleTime').value,
-                        ole_predikant: window.olePredikant || ''
+                        ole_predikant: document.getElementById('olePredikant').value || ''
                     })
                 });
                 const data = await resp.json();
