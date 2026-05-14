@@ -87,6 +87,7 @@ class SenderCampaignGenerator:
             "content_type": "html",
             "content": html_content,
             "from": self.sender_email,
+            "from_name": self.sender_name,
             "reply_to": self.sender_email,
             "lists": list_ids
         }
