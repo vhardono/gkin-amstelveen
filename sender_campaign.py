@@ -344,13 +344,18 @@ class SenderCampaignGenerator:
         # ------------------------------------------------------------------ #
         # Button helpers
         # ------------------------------------------------------------------ #
-        def btn(width: int, label_html: str, href: str) -> str:
+        def btn(width: int, line1: str, line2: str, href: str) -> str:
+            """Two-line button. Pass line2='' for a blank second line that still occupies height."""
+            line2_html = (f'<span style="display:block;line-height:16px;">{line2}</span>'
+                          if line2
+                          else '<span style="display:block;line-height:16px;visibility:hidden;">&#160;</span>')
             return f"""<td class="btn-td" width="{width}" valign="top">
             <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;">
                 <tr>
                     <th align="center" style="background-color:#000000;border-radius:6px;padding:10px 25px;">
-                        <a href="{href}" target="_blank" style="display:block;font-family:'Inter',Arial,sans-serif;font-size:14px;color:#ffffff;text-decoration:none;line-height:16px;font-weight:normal;">
-                            {label_html}
+                        <a href="{href}" target="_blank" style="display:block;font-family:'Inter',Arial,sans-serif;font-size:14px;color:#ffffff;text-decoration:none;font-weight:normal;">
+                            <span style="display:block;line-height:16px;">{line1}</span>
+                            {line2_html}
                         </a>
                     </th>
                 </tr>
@@ -366,36 +371,37 @@ class SenderCampaignGenerator:
         am_only = (loc_code == 'AM')
 
         if am_only:
-            # 3 buttons in a single row, 160px each — Mededelingen | Preek AM | Webvideo
-            # Mededelingen gets a blank 2nd line to match height of Preek (AM)+predikant
+            # 3 buttons, 160px each
+            # Mededelingen: 2 lines (blank 2nd) to match Preek AM height
+            # Webvideo: 2 lines natural ("Webvideo" / "(AM-OLE)")
             btn_width = 160
             buttons_html = f"""<table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 25px 0;">
     <tr>
-        {btn(btn_width, 'Mededelingen (AM)<br>&nbsp;', mededelingen_url or '#')}
+        {btn(btn_width, 'Mededelingen (AM)', '', mededelingen_url or '#')}
         {spacer}
-        {btn(btn_width, f'Preek (AM)<br>{am_predikant}', preek_am_url or '#')}
+        {btn(btn_width, 'Preek (AM)', am_predikant, preek_am_url or '#')}
         {spacer}
-        {btn(btn_width, f'Webvideo<br>(AM-OLE)', youtube_href)}
+        {btn(btn_width, 'Webvideo', '(AM-OLE)', youtube_href)}
     </tr>
 </table>"""
         else:
-            # 2×2 grid in ONE table
-            # Row 1: Mededelingen (AM) | Preek (AM) + predikant  — Mededelingen gets blank 2nd line
-            # Row 2: Preek (LOC-OLE) + predikant | Webvideo (LOC-OLE) — Webvideo gets blank 2nd line
+            # 2×2 grid
+            # Row 1: Mededelingen (blank 2nd) | Preek AM + predikant
+            # Row 2: Preek OLE + predikant     | Webvideo (blank 2nd)
             btn_width = 250
             loc_tag = f"{loc_code}-OLE"
             preek_ole_href = preek_ole_url or '#'
             buttons_html = f"""<table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 25px 0;">
     <tr>
-        {btn(btn_width, 'Mededelingen (AM)<br>&nbsp;', mededelingen_url or '#')}
+        {btn(btn_width, 'Mededelingen (AM)', '', mededelingen_url or '#')}
         {spacer}
-        {btn(btn_width, f'Preek (AM)<br>{am_predikant}', preek_am_url or '#')}
+        {btn(btn_width, 'Preek (AM)', am_predikant, preek_am_url or '#')}
     </tr>
     {row_gap}
     <tr>
-        {btn(btn_width, f'Preek ({loc_tag})<br>{ole_predikant or "kunt u hier later terugvinden"}', preek_ole_href)}
+        {btn(btn_width, f'Preek ({loc_tag})', ole_predikant or 'kunt u hier later terugvinden', preek_ole_href)}
         {spacer}
-        {btn(btn_width, f'Webvideo ({loc_tag})<br>&nbsp;', youtube_href)}
+        {btn(btn_width, f'Webvideo ({loc_tag})', '', youtube_href)}
     </tr>
 </table>"""
 
