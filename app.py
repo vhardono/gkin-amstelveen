@@ -2255,6 +2255,7 @@ def fetch_ole_data():
         youtube_link = ''
         liturgie_url = ''
         qr_image_b64 = ''
+        collecte_ovv = ''
         try:
             from data_sources.gkin_ole_scraper import GKINOLEScraper
             scraper = GKINOLEScraper()
@@ -2278,7 +2279,8 @@ def fetch_ole_data():
                     ole_data['time'] = web_data['time']
                 if web_data.get('collecte_url') and not ole_url:
                     ole_url = web_data['collecte_url']
-                print(f"[OLE Fetch] Website data: thema={thema!r}, bible={bible_verse!r}, yt={youtube_link!r}, liturgie={liturgie_url!r}, qr_b64={bool(qr_image_b64)}")
+                collecte_ovv = web_data.get('collecte_ovv', '')
+                print(f"[OLE Fetch] Website data: thema={thema!r}, bible={bible_verse!r}, yt={youtube_link!r}, liturgie={liturgie_url!r}, qr_b64={bool(qr_image_b64)}, ovv={collecte_ovv!r}")
             else:
                 print(f"[OLE Fetch] No OLE article found on GKIN website for {selected_date.strftime('%d-%m-%Y')}")
         except Exception as e:
@@ -2297,6 +2299,7 @@ def fetch_ole_data():
             'ole_bible_verse': bible_verse,
             'ole_youtube_link': youtube_link,
             'ole_liturgie_url': liturgie_url,
+            'ole_collecte_ovv': collecte_ovv,
             'success': True
         }
         print(f"[OLE Fetch] Returning result: {result}")
@@ -2380,6 +2383,7 @@ def campaign_preview():
         ole_location = data.get('ole_location', '')
         ole_time = data.get('ole_time', '10:00')
         ole_predikant = data.get('ole_predikant', '')
+        collecte_ovv = data.get('collecte_ovv', '')
         
         predikant_to_use = ole_predikant if ole_predikant else entry.get('predikant', '')
         
@@ -2394,7 +2398,8 @@ def campaign_preview():
             collecte_url=collecte_url,
             qr_image_url=qr_image_url,
             ole_location=ole_location,
-            ole_time=ole_time
+            ole_time=ole_time,
+            collecte_ovv=collecte_ovv
         )
         
         nl_months = ['januari', 'februari', 'maart', 'april', 'mei', 'juni',
@@ -2480,6 +2485,7 @@ def campaign_create():
         ole_location = data.get('ole_location', '')
         ole_time = data.get('ole_time', '10:00')
         ole_predikant = data.get('ole_predikant', '')
+        collecte_ovv = data.get('collecte_ovv', '')
         
         predikant_to_use = ole_predikant if ole_predikant else entry.get('predikant', '')
         
@@ -2494,7 +2500,8 @@ def campaign_create():
             collecte_url=collecte_url,
             qr_image_url=qr_image_url,
             ole_location=ole_location,
-            ole_time=ole_time
+            ole_time=ole_time,
+            collecte_ovv=collecte_ovv
         )
         
         nl_months = ['januari', 'februari', 'maart', 'april', 'mei', 'juni',

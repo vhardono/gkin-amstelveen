@@ -123,7 +123,8 @@ class SenderCampaignGenerator:
                      theme: str = "", bible_verse: str = "",
                      youtube_link: str = "", liturgie_url: str = "",
                      collecte_url: str = "", qr_image_url: str = "",
-                     ole_location: str = "", ole_time: str = "10:00") -> str:
+                     ole_location: str = "", ole_time: str = "10:00",
+                     collecte_ovv: str = "") -> str:
         """Generate HTML email for OLE service."""
         months = ['januari', 'februari', 'maart', 'april', 'mei', 'juni',
                   'juli', 'augustus', 'september', 'oktober', 'november', 'december']
@@ -246,7 +247,7 @@ class SenderCampaignGenerator:
 </table>
 <!-- Collecte -->
 <p style="margin:0 0 10px 0;">In deze dienst wordt er 1 keer gecollecteerd.<br><br>De collecte is bestemd voor Landelijke kas (OLE). U kunt dit overmaken via: <a href="{collecte_url}" style="color:#2CB191;text-decoration:underline;">{collecte_url}</a></p>
-<p style="margin:0 0 25px 0;">of door overmaking aan GEREJA KRISTEN INDONESIA NEDERLAND, IBAN: NL19 INGB 0002 6182 90 o.v.v. Collecte OLE {date_numeric}.</p>
+<p style="margin:0 0 25px 0;">of door overmaking aan GEREJA KRISTEN INDONESIA NEDERLAND, IBAN: NL19 INGB 0002 6182 90 o.v.v. {collecte_ovv if collecte_ovv else f'Collecte OLE {date_numeric}'}.</p>
 <!-- QR Code centered -->
 <table width="100%" cellpadding="0" cellspacing="0" style="margin:25px 0;">
     <tr>

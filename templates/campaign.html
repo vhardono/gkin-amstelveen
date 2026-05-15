@@ -82,6 +82,7 @@
                     <label class="block text-sm font-medium text-gray-700 mb-1">QR Code</label>
                     <input type="text" id="qrUrl" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green" placeholder="Wordt automatisch opgehaald van gkin.org">
                     <input type="hidden" id="qrB64">
+                    <input type="hidden" id="collecteOvv">
                     <div id="qrPreview" class="mt-2 hidden"><img id="qrPreviewImg" src="" alt="QR" class="h-20 rounded border border-gray-200"></div>
                 </div>
                 <div>
@@ -223,6 +224,7 @@
             document.getElementById('collecteUrl').value = '';
             document.getElementById('qrUrl').value = '';
             document.getElementById('qrB64').value = '';
+            document.getElementById('collecteOvv').value = '';
             document.getElementById('qrPreview').classList.add('hidden');
             document.getElementById('subject').value = '';
             document.getElementById('campaignName').value = '';
@@ -286,6 +288,7 @@
 
                 // Set URLs
                 if (data.ole_url) document.getElementById('collecteUrl').value = data.ole_url;
+                if (data.ole_collecte_ovv) document.getElementById('collecteOvv').value = data.ole_collecte_ovv;
 
                 // Handle QR
                 if (data.ole_qr_b64) {
@@ -411,7 +414,8 @@
                         qr_image_url: document.getElementById('qrB64').value || document.getElementById('qrUrl').value,
                         ole_location: document.getElementById('oleLocation').value,
                         ole_time: document.getElementById('oleTime').value,
-                        ole_predikant: document.getElementById('olePredikant').value || ''
+                        ole_predikant: document.getElementById('olePredikant').value || '',
+                        collecte_ovv: document.getElementById('collecteOvv').value || ''
                     })
                 });
                 const data = await resp.json();
@@ -472,6 +476,7 @@
                         ole_location: document.getElementById('oleLocation').value,
                         ole_time: document.getElementById('oleTime').value,
                         ole_predikant: document.getElementById('olePredikant').value || '',
+                        collecte_ovv: document.getElementById('collecteOvv').value || '',
                         list_ids: Array.from(document.querySelectorAll('.list-checkbox:checked')).map(el => el.value)
                     })
                 });

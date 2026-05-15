@@ -181,6 +181,11 @@ class GKINOLEScraper:
                 result['collecte_url'] = href
                 break
 
+        # --- Collecte o.v.v. text (everything after 'o.v.v.' or 'O.v.v.') ---
+        ovv_m = re.search(r'[Oo]\.?v\.?v\.?\s+(.+?)(?=\.|$)', text)
+        if ovv_m:
+            result['collecte_ovv'] = re.sub(r'\s+', ' ', ovv_m.group(1)).strip()
+
         # --- QR image (download and encode as base64 data URI) ---
         for img in article.find_all('img', src=True):
             src = img['src']
