@@ -144,39 +144,9 @@
                 </button>
             </div>
             <div id="opbrengstFetchStatus" class="hidden mb-3 text-xs rounded-lg p-2 border"></div>
-            <div class="grid grid-cols-2 gap-4 mb-4">
-                {% for label, name in [('1. Contant', 'collecte_contant'), ('2. Collectebonnen', 'collecte_bonnen'), ('3. Bankoverschrijving', 'collecte_bank'), ('4. Tikkie', 'collecte_tikkie')] %}
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ label }} (€)</label>
-                    <div class="relative">
-                        <span class="absolute inset-y-0 left-3 flex items-center text-gray-400 text-sm pointer-events-none">€</span>
-                        <input type="text" name="{{ name }}" placeholder="0,00"
-                               class="w-full rounded-lg border border-gray-300 pl-7 pr-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gkin-green">
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-            <div class="grid grid-cols-3 gap-4 pt-4 border-t border-gray-100">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">OLE Collecte (€)</label>
-                    <div class="relative">
-                        <span class="absolute inset-y-0 left-3 flex items-center text-gray-400 text-sm pointer-events-none">€</span>
-                        <input type="text" name="collecte_ole" placeholder="0,00"
-                               class="w-full rounded-lg border border-gray-300 pl-7 pr-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gkin-green">
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Bezoekers volwassenen</label>
-                    <input type="number" name="bezoekers_volwassenen" min="0" placeholder="0"
-                           class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gkin-green">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Bezoekers kinderen</label>
-                    <input type="number" name="bezoekers_kinderen" min="0" placeholder="0"
-                           class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gkin-green">
-                </div>
-            </div>
-            <!-- Hidden field stores email-fetched entries JSON for multi-table generation -->
+            <!-- Dynamic cards: one per dienst -->
+            <div id="opbrengstCards"></div>
+            <!-- Hidden field stores entries JSON for generate endpoint -->
             <input type="hidden" name="opbrengst_entries_json" id="opbrengst_entries_json">
         </div>
 
@@ -582,6 +552,81 @@
 
         function escHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;'); }
 
+        const inputCls2 = 'w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gkin-green';
+
+        function renderOpbrengstCards(entries) {
+            const container = document.getElementById('opbrengstCards');
+            container.innerHTML = '';
+            const list = entries && entries.length ? entries : [{}];
+            list.forEach((e, i) => {
+                const label = list.length > 1 ? `Dienst ${i+1}${e.service_date ? ' – ' + e.service_date : ''}` : 'Collecte opbrengsten';
+                const card = document.createElement('div');
+                card.className = 'mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200';
+                card.dataset.idx = i;
+                card.innerHTML = `
+                    <p class="text-xs font-semibold text-gray-600 mb-3 uppercase tracking-wide">${label}</p>
+                    <div class="grid grid-cols-2 gap-3 mb-3">
+                        ${[['1. Contant','collecte_contant'],['2. Collectebonnen','collecte_bonnen'],['3. Bankoverschrijving','collecte_bank'],['4. Tikkie','collecte_tikkie']].map(([lbl,nm]) => `
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">${lbl} (€)</label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-3 flex items-center text-gray-400 text-xs pointer-events-none">€</span>
+                                <input type="text" name="${nm}_${i}" value="${escHtml(e[nm]||'')}" placeholder="0,00"
+                                    class="w-full rounded-lg border border-gray-300 pl-6 pr-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gkin-green">
+                            </div>
+                        </div>`).join('')}
+                    </div>
+                    <div class="grid grid-cols-3 gap-3 pt-3 border-t border-gray-200">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">OLE Collecte (€)</label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-3 flex items-center text-gray-400 text-xs pointer-events-none">€</span>
+                                <input type="text" name="collecte_ole_${i}" value="${escHtml(e.collecte_ole||'')}" placeholder="0,00"
+                                    class="w-full rounded-lg border border-gray-300 pl-6 pr-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gkin-green">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Bezoekers volwassenen</label>
+                            <input type="number" name="bezoekers_volwassenen_${i}" value="${e.bezoekers_volwassenen||''}" min="0" placeholder="0"
+                                class="${inputCls2}">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Bezoekers kinderen</label>
+                            <input type="number" name="bezoekers_kinderen_${i}" value="${e.bezoekers_kinderen||''}" min="0" placeholder="0"
+                                class="${inputCls2}">
+                        </div>
+                    </div>`;
+                container.appendChild(card);
+            });
+            // Sync entries JSON from card inputs on change
+            container.querySelectorAll('input').forEach(inp => {
+                inp.addEventListener('input', syncOpbrengstJson);
+            });
+            syncOpbrengstJson();
+        }
+
+        function syncOpbrengstJson() {
+            const container = document.getElementById('opbrengstCards');
+            const cards = container.querySelectorAll('[data-idx]');
+            const entries = Array.from(cards).map(card => {
+                const i = card.dataset.idx;
+                const g = name => { const el = card.querySelector(`[name="${name}_${i}"]`); return el ? el.value : ''; };
+                return {
+                    collecte_contant: g('collecte_contant'),
+                    collecte_bonnen:  g('collecte_bonnen'),
+                    collecte_bank:    g('collecte_bank'),
+                    collecte_tikkie:  g('collecte_tikkie'),
+                    collecte_ole:     g('collecte_ole'),
+                    bezoekers_volwassenen: g('bezoekers_volwassenen'),
+                    bezoekers_kinderen:    g('bezoekers_kinderen'),
+                };
+            });
+            document.getElementById('opbrengst_entries_json').value = JSON.stringify(entries);
+        }
+
+        // Initialize with one empty card
+        renderOpbrengstCards([]);
+
         // Start with 1 empty row
         addActRow();
 
@@ -863,29 +908,15 @@
                 }
                 if (data.error) throw new Error(data.error);
 
-                // Store all entries as JSON for the generate endpoint (multi-table)
+                // Store all entries as JSON for generate endpoint
                 const entries = data.entries || [];
                 document.getElementById('opbrengst_entries_json').value =
                     entries.length ? JSON.stringify(entries) : '';
 
-                // Fill flat fields from the last entry for display
-                const fieldMap = {
-                    collecte_contant: data.collecte_contant,
-                    collecte_bonnen:  data.collecte_bonnen,
-                    collecte_bank:    data.collecte_bank,
-                    collecte_tikkie:  data.collecte_tikkie,
-                    collecte_ole:     data.collecte_ole,
-                    bezoekers_volwassenen: data.bezoekers_volwassenen,
-                    bezoekers_kinderen:    data.bezoekers_kinderen,
-                };
-                for (const [name, val] of Object.entries(fieldMap)) {
-                    if (val) {
-                        const el = document.querySelector(`[name="${name}"]`);
-                        if (el) el.value = val;
-                    }
-                }
+                // Render dynamic cards
+                renderOpbrengstCards(entries);
 
-                // Build status lines — one block per entry
+                // Build status lines
                 const lines = [];
                 entries.forEach((e, i) => {
                     const parts = [`Dienst ${i+1}: ${e.service_date}`];
@@ -899,7 +930,6 @@
                 });
                 const notFound = data.not_found || [];
                 notFound.forEach(w => lines.push('⚠ ' + w));
-
                 const type = notFound.length === 2 ? 'err' : notFound.length === 1 ? 'info' : 'ok';
                 statusEl.textContent = lines.join(' · ') || 'Geen opbrengst e-mails gevonden voor deze datum.';
                 statusEl.className = `mb-3 text-xs rounded-lg p-2 border ${
