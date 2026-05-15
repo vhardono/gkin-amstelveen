@@ -11,15 +11,21 @@
         }
     </script>
 <style>html { overflow-y: scroll; }</style>
+<script src="/static/i18n.js"></script>
 </head>
 <body class="bg-gray-50 min-h-screen">
 
     <header class="bg-gkin-green shadow-md">
         <div class="max-w-2xl mx-auto px-6 py-5 flex items-center gap-4">
             <img src="/static/logo2.png" alt="GKIN Logo" class="h-12 w-12 object-contain shrink-0">
-            <div>
+            <div class="flex-1">
                 <h1 class="text-white text-2xl font-bold tracking-tight">GKIN Amstelveen</h1>
-                <p class="text-green-100 text-sm mt-0.5">Kies een tool</p>
+                <p class="text-green-100 text-sm mt-0.5" data-i18n="nav.subtitle">Kies een tool</p>
+            </div>
+            <div class="flex items-center gap-1 bg-gkin-dark rounded-lg p-1">
+                <button class="lang-btn text-xs px-2 py-1 rounded" data-lang="nl">NL</button>
+                <button class="lang-btn text-xs px-2 py-1 rounded" data-lang="id">ID</button>
+                <button class="lang-btn text-xs px-2 py-1 rounded" data-lang="en">EN</button>
             </div>
         </div>
     </header>
@@ -37,11 +43,11 @@
                     </svg>
                 </div>
                 <div>
-                    <h2 class="text-lg font-semibold text-gray-800 group-hover:text-gkin-green transition">Preekbevestiging</h2>
-                    <p class="text-sm text-gray-500 mt-1">Stuur preekbevestiging e-mail naar de predikant</p>
+                    <h2 class="text-lg font-semibold text-gray-800 group-hover:text-gkin-green transition" data-i18n="home.preek.title">Preekbevestiging</h2>
+                    <p class="text-sm text-gray-500 mt-1" data-i18n="home.preek.desc">Stuur preekbevestiging e-mail naar de predikant</p>
                 </div>
                 <span class="mt-auto text-sm font-medium text-gkin-green flex items-center gap-1">
-                    Openen
+                    <span data-i18n="common.open">Openen</span>
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                     </svg>
@@ -58,11 +64,11 @@
                     </svg>
                 </div>
                 <div>
-                    <h2 class="text-lg font-semibold text-gray-800 group-hover:text-gkin-green transition">Liturgie</h2>
-                    <p class="text-sm text-gray-500 mt-1">Genereer liturgie documenten en beamer PPT</p>
+                    <h2 class="text-lg font-semibold text-gray-800 group-hover:text-gkin-green transition" data-i18n="home.liturgie.title">Liturgie</h2>
+                    <p class="text-sm text-gray-500 mt-1" data-i18n="home.liturgie.desc">Genereer liturgie documenten en beamer PPT</p>
                 </div>
                 <span class="mt-auto text-sm font-medium text-gkin-green flex items-center gap-1">
-                    Openen
+                    <span data-i18n="common.open">Openen</span>
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                     </svg>
@@ -79,11 +85,11 @@
                     </svg>
                 </div>
                 <div>
-                    <h2 class="text-lg font-semibold text-gray-800 group-hover:text-gkin-green transition">Mededelingen</h2>
-                    <p class="text-sm text-gray-500 mt-1">Genereer het wekelijkse mededelingen bulletin</p>
+                    <h2 class="text-lg font-semibold text-gray-800 group-hover:text-gkin-green transition" data-i18n="home.meded.title">Mededelingen</h2>
+                    <p class="text-sm text-gray-500 mt-1" data-i18n="home.meded.desc">Genereer het wekelijkse mededelingen bulletin</p>
                 </div>
                 <span class="mt-auto text-sm font-medium text-gkin-green flex items-center gap-1">
-                    Openen
+                    <span data-i18n="common.open">Openen</span>
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                     </svg>
@@ -100,11 +106,11 @@
                     </svg>
                 </div>
                 <div>
-                    <h2 class="text-lg font-semibold text-gray-800 group-hover:text-gkin-green transition">Mailing List</h2>
-                    <p class="text-sm text-gray-500 mt-1">Creëer een Sender e-mailcampagne</p>
+                    <h2 class="text-lg font-semibold text-gray-800 group-hover:text-gkin-green transition" data-i18n="home.mailing.title">Mailing List</h2>
+                    <p class="text-sm text-gray-500 mt-1" data-i18n="home.mailing.desc">Creëer een Sender e-mailcampagne</p>
                 </div>
                 <span class="mt-auto text-sm font-medium text-gkin-green flex items-center gap-1">
-                    Openen
+                    <span data-i18n="common.open">Openen</span>
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                     </svg>

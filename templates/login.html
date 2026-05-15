@@ -11,15 +11,21 @@
         }
     </script>
     <style>html { overflow-y: scroll; }</style>
+    <script src="/static/i18n.js"></script>
 </head>
 <body class="bg-gray-50 min-h-screen flex flex-col">
 
     <header class="bg-gkin-green shadow-md">
         <div class="max-w-2xl mx-auto px-6 py-5 flex items-center gap-4">
             <img src="/static/logo2.png" alt="GKIN Logo" class="h-12 w-12 object-contain shrink-0">
-            <div>
+            <div class="flex-1">
                 <h1 class="text-white text-2xl font-bold tracking-tight">GKIN Amstelveen</h1>
-                <p class="text-green-100 text-sm mt-0.5">Beveiligde toegang</p>
+                <p class="text-green-100 text-sm mt-0.5" data-i18n="login.subtitle">Beveiligde toegang</p>
+            </div>
+            <div class="flex items-center gap-1 bg-gkin-dark rounded-lg p-1">
+                <button class="lang-btn text-xs px-2 py-1 rounded" data-lang="nl">NL</button>
+                <button class="lang-btn text-xs px-2 py-1 rounded" data-lang="id">ID</button>
+                <button class="lang-btn text-xs px-2 py-1 rounded" data-lang="en">EN</button>
             </div>
         </div>
     </header>
@@ -34,8 +40,8 @@
                     </svg>
                 </div>
             </div>
-            <h2 class="text-lg font-semibold text-gray-800 text-center mb-1">Inloggen vereist</h2>
-            <p class="text-sm text-gray-500 text-center mb-6">Voer het wachtwoord in om verder te gaan.</p>
+            <h2 class="text-lg font-semibold text-gray-800 text-center mb-1" data-i18n="login.title">Inloggen vereist</h2>
+            <p class="text-sm text-gray-500 text-center mb-6" data-i18n="login.desc">Voer het wachtwoord in om verder te gaan.</p>
 
             {% if error %}
             <div class="mb-4 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3">
@@ -45,14 +51,14 @@
 
             <form method="POST" action="/login?next={{ next }}">
                 <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Wachtwoord</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-1" data-i18n="login.password">Wachtwoord</label>
                     <input type="password" name="password" autofocus
                            class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green"
                            placeholder="••••••••">
                 </div>
                 <button type="submit"
                         class="w-full bg-gkin-green hover:bg-gkin-dark text-white font-semibold py-2.5 rounded-lg transition text-sm">
-                    Inloggen
+                    <span data-i18n="login.btn">Inloggen</span>
                 </button>
             </form>
         </div>

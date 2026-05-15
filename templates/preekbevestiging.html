@@ -15,6 +15,7 @@
         @keyframes spin { to { transform: rotate(360deg); } }
         .spinner { animation: spin 1s linear infinite; }
     </style>
+    <script src="/static/i18n.js"></script>
 </head>
 <body class="bg-gray-50 min-h-screen">
 
@@ -22,9 +23,14 @@
     <header class="bg-gkin-green shadow-md">
         <div class="max-w-2xl mx-auto px-6 py-5 flex items-center gap-4">
             <a href="/"><img src="/static/logo2.png" alt="GKIN Logo" class="h-12 w-12 object-contain shrink-0"></a>
-            <div>
+            <div class="flex-1">
                 <h1 class="text-white text-2xl font-bold tracking-tight">GKIN Amstelveen</h1>
-                <p class="text-green-100 text-sm mt-0.5">Preekbevestiging</p>
+                <p class="text-green-100 text-sm mt-0.5" data-i18n="pb.subtitle">Preekbevestiging</p>
+            </div>
+            <div class="flex items-center gap-1 bg-gkin-dark rounded-lg p-1">
+                <button class="lang-btn text-xs px-2 py-1 rounded" data-lang="nl">NL</button>
+                <button class="lang-btn text-xs px-2 py-1 rounded" data-lang="id">ID</button>
+                <button class="lang-btn text-xs px-2 py-1 rounded" data-lang="en">EN</button>
             </div>
         </div>
     </header>

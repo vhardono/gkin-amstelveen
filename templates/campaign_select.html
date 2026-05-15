@@ -10,14 +10,20 @@
             theme: { extend: { colors: { gkin: { green: '#3A7C22', dark: '#2d6119' } } } }
         }
     </script>
+    <script src="/static/i18n.js"></script>
 </head>
 <body class="bg-gray-50 min-h-screen">
     <header class="bg-gkin-green shadow-md">
         <div class="max-w-2xl mx-auto px-6 py-5 flex items-center gap-4">
             <a href="/"><img src="/static/logo2.png" alt="GKIN Logo" class="h-12 w-12 object-contain shrink-0"></a>
-            <div>
+            <div class="flex-1">
                 <h1 class="text-white text-2xl font-bold tracking-tight">GKIN Amstelveen</h1>
-                <p class="text-green-100 text-sm mt-0.5">Mailing List</p>
+                <p class="text-green-100 text-sm mt-0.5" data-i18n="cs.subtitle">Mailing List</p>
+            </div>
+            <div class="flex items-center gap-1 bg-gkin-dark rounded-lg p-1">
+                <button class="lang-btn text-xs px-2 py-1 rounded" data-lang="nl">NL</button>
+                <button class="lang-btn text-xs px-2 py-1 rounded" data-lang="id">ID</button>
+                <button class="lang-btn text-xs px-2 py-1 rounded" data-lang="en">EN</button>
             </div>
         </div>
     </header>
@@ -27,11 +33,11 @@
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
             </svg>
-            Terug naar dashboard
+            <span data-i18n="nav.back_dashboard">Terug naar dashboard</span>
         </a>
 
-        <h2 class="text-xl font-semibold text-gray-800 mb-2">Kies een e-mail template</h2>
-        <p class="text-sm text-gray-500 mb-6">Selecteer het type campagne dat u wilt aanmaken.</p>
+        <h2 class="text-xl font-semibold text-gray-800 mb-2" data-i18n="cs.heading">Kies een e-mail template</h2>
+        <p class="text-sm text-gray-500 mb-6" data-i18n="cs.subheading">Selecteer het type campagne dat u wilt aanmaken.</p>
 
         <div class="grid gap-4">
             <!-- OLE Information -->
@@ -44,8 +50,8 @@
                     </svg>
                 </div>
                 <div class="flex-1">
-                    <h3 class="text-base font-semibold text-gray-800 group-hover:text-gkin-green transition">OLE Informatie</h3>
-                    <p class="text-sm text-gray-500 mt-1">Te verzenden <strong>vóór</strong> de dienst. Bevat predikant, thema, bijbeltekst, liturgie en YouTube link.</p>
+                    <h3 class="text-base font-semibold text-gray-800 group-hover:text-gkin-green transition" data-i18n="cs.ole.title">OLE Informatie</h3>
+                    <p class="text-sm text-gray-500 mt-1" data-i18n="cs.ole.desc">Te verzenden <strong>vóór</strong> de dienst. Bevat predikant, thema, bijbeltekst, liturgie en YouTube link.</p>
                 </div>
                 <svg class="w-5 h-5 text-gray-400 group-hover:text-gkin-green transition shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
@@ -62,10 +68,10 @@
                 </div>
                 <div class="flex-1">
                     <div class="flex items-center gap-2">
-                        <h3 class="text-base font-semibold text-gray-500">Preek &amp; Mededelingen Informatie</h3>
-                        <span class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-medium">Binnenkort</span>
+                        <h3 class="text-base font-semibold text-gray-500" data-i18n="cs.pm.title">Preek &amp; Mededelingen Informatie</h3>
+                        <span class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-medium" data-i18n="cs.pm.soon">Binnenkort</span>
                     </div>
-                    <p class="text-sm text-gray-400 mt-1">Te verzenden <strong>na</strong> de dienst. Bevat preek opname, mededelingen en collecte informatie.</p>
+                    <p class="text-sm text-gray-400 mt-1" data-i18n="cs.pm.desc">Te verzenden <strong>na</strong> de dienst. Bevat preek opname, mededelingen en collecte informatie.</p>
                 </div>
                 <svg class="w-5 h-5 text-gray-300 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
