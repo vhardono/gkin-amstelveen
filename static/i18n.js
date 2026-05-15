@@ -66,6 +66,12 @@ const GKIN_I18N = {
     'camp.preview':           'Voorbeeld bekijken',
     'camp.create':            'Campagne aanmaken',
     'camp.campaign_name':     'Campagnenaam',
+    'camp.ole_settings':      'OLE Template Instellingen',
+    'camp.fetching_gkin':     'Gegevens ophalen van gkin.org...',
+    'camp.liturgie_fetched':  'Liturgie opgehaald van gkin.org',
+    'camp.liturgie_not_found':'Nog niet gepubliceerd op gkin.org – vul URL handmatig in',
+    'camp.qr_fetched':        'QR opgehaald van gkin.org',
+    'camp.missing_fields':    'Ontbrekende velden – vul handmatig in:',
 
     /* --- PM Campaign --- */
     'pm.info':                'Te verzenden na de dienst. Bevat links naar de preek opname, mededelingen en YouTube webvideo.',
@@ -280,6 +286,12 @@ const GKIN_I18N = {
     'camp.preview':           'Lihat pratinjau',
     'camp.create':            'Buat kampanye',
     'camp.campaign_name':     'Nama kampanye',
+    'camp.ole_settings':      'Pengaturan Template OLE',
+    'camp.fetching_gkin':     'Mengambil data dari gkin.org...',
+    'camp.liturgie_fetched':  'Liturgi diambil dari gkin.org',
+    'camp.liturgie_not_found':'Belum dipublikasikan di gkin.org – isi URL secara manual',
+    'camp.qr_fetched':        'QR diambil dari gkin.org',
+    'camp.missing_fields':    'Kolom belum diisi – isi secara manual:',
 
     /* --- PM Campaign --- */
     'pm.info':                'Dikirim setelah ibadah. Berisi link rekaman khotbah, mededelingen dan video YouTube.',
@@ -494,6 +506,12 @@ const GKIN_I18N = {
     'camp.preview':           'Preview',
     'camp.create':            'Create campaign',
     'camp.campaign_name':     'Campaign name',
+    'camp.ole_settings':      'OLE Template Settings',
+    'camp.fetching_gkin':     'Fetching data from gkin.org...',
+    'camp.liturgie_fetched':  'Liturgy fetched from gkin.org',
+    'camp.liturgie_not_found':'Not yet published on gkin.org – fill in URL manually',
+    'camp.qr_fetched':        'QR fetched from gkin.org',
+    'camp.missing_fields':    'Missing fields – fill in manually:',
 
     /* --- PM Campaign --- */
     'pm.info':                'To be sent after the service. Contains links to the sermon recording, announcements and YouTube webvideo.',

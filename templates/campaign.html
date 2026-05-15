@@ -56,9 +56,9 @@
 
         <div id="oleTemplateSection" class="relative bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-5 hidden">
             <div id="oleLoadingOverlay" class="hidden absolute inset-0 bg-white/70 flex items-center justify-center rounded-xl z-10">
-                <div class="flex items-center gap-2 text-gkin-green font-medium text-sm"><svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg> Gegevens ophalen van gkin.org...</div>
+                <div class="flex items-center gap-2 text-gkin-green font-medium text-sm"><svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg> <span data-i18n="camp.fetching_gkin">Gegevens ophalen van gkin.org...</span></div>
             </div>
-            <h2 class="text-base font-semibold text-gkin-green mb-4">OLE Template Instellingen</h2>
+            <h2 class="text-base font-semibold text-gkin-green mb-4" data-i18n="camp.ole_settings">OLE Template Instellingen</h2>
             
             <div class="space-y-4">
                 <div>
@@ -284,11 +284,11 @@
                 if (data.ole_liturgie_url) {
                     document.getElementById('liturgieUrl').value = data.ole_liturgie_url;
                     document.getElementById('liturgieUploadStatus').innerHTML =
-                        `<span class="text-green-600">✓ Liturgie opgehaald van gkin.org</span>`;
+                        `<span class="text-green-600">✓ ${t('camp.liturgie_fetched')}</span>`;
                 } else {
                     document.getElementById('liturgieUrl').value = '';
                     document.getElementById('liturgieUploadStatus').innerHTML =
-                        `<span class="text-amber-600">⚠ Nog niet gepubliceerd op gkin.org – vul URL handmatig in</span>`;
+                        `<span class="text-amber-600">⚠ ${t('camp.liturgie_not_found')}</span>`;
                 }
                 console.log('[Frontend] Website - thema:', data.ole_thema, 'bijbel:', data.ole_bible_verse, 'youtube:', data.ole_youtube_link, 'liturgie:', data.ole_liturgie_url);
 
@@ -304,7 +304,7 @@
                     const img = document.getElementById('qrPreviewImg');
                     img.src = data.ole_qr_b64;
                     preview.classList.remove('hidden');
-                    if (qrStatus) qrStatus.innerHTML = `<span class="text-green-600">✓ QR opgehaald van gkin.org</span>`;
+                    if (qrStatus) qrStatus.innerHTML = `<span class="text-green-600">✓ ${t('camp.qr_fetched')}</span>`;
                 } else if (data.ole_qr) {
                     const localPath = data.ole_qr.startsWith('http') ? data.ole_qr : `/uploads/${data.ole_qr}`;
                     document.getElementById('qrUrl').value = localPath;
@@ -392,7 +392,7 @@
                 document.getElementById('oleTemplateSection').insertAdjacentElement('afterend', box);
             }
             if (missing.length === 0) { box.classList.add('hidden'); return false; }
-            box.innerHTML = '<strong>⚠ Ontbrekende velden – vul handmatig in:</strong><ul class="mt-1 list-disc list-inside">' + missing.map(m => '<li>' + m + '</li>').join('') + '</ul>';
+            box.innerHTML = `<strong>⚠ ${t('camp.missing_fields')}</strong><ul class="mt-1 list-disc list-inside">` + missing.map(m => '<li>' + m + '</li>').join('') + '</ul>';
             box.classList.remove('hidden');
             box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             return true;
