@@ -134,11 +134,11 @@ class GKINOLEScraper:
 
         # --- Thema ---
         thema_m = re.search(
-            r'thema van de dienst is\s*[:\-]?\s*["\u201c]?(.+?)(?=["\u201d]?\s*genomen uit)',
+            r'thema(?:\s+van\s+de\s+dienst)?(?:\s+is)?\s*[:\-]?\s*["\u201c\u201e\u201f]?(.+?)(?=["\u201d\u201f]?\s*(?:genomen\s+)?uit\s+[A-Z1-9])',
             text, re.IGNORECASE | re.DOTALL
         )
         if thema_m:
-            result['thema'] = re.sub(r'\s+', ' ', thema_m.group(1)).strip().strip('\u201c\u201d"\'')
+            result['thema'] = re.sub(r'\s+', ' ', thema_m.group(1)).strip().strip('\u201c\u201d\u201e\u201f"\'')
         else:
             # fallback: title of the article often contains the thema
             h_tag = soup.find(['h1', 'h2'])
@@ -150,8 +150,8 @@ class GKINOLEScraper:
 
         # --- Bible verse ---
         bible_m = re.search(
-            r'genomen uit\s+(.+?)(?=\s+De dienst|\s+De liturgie|\s+In deze|\s{3,}|$)',
-            text, re.IGNORECASE | re.DOTALL
+            r'(?:genomen\s+)?uit\s+([A-Z1-9][^\n]+?)(?=\s+De dienst|\s+De liturgie|\s+In deze|\s{3,}|\.\s+[A-Z]|$)',
+            text, re.DOTALL
         )
         if bible_m:
             result['bible_verse'] = re.sub(r'\s+', ' ', bible_m.group(1)).strip()
