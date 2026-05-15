@@ -159,11 +159,11 @@ class GKINOLEScraper:
 
         # --- Thema ---
         thema_m = re.search(
-            r'thema(?:\s+van\s+de\s+dienst)?(?:\s+is)?\s*[:\-]?\s*["\u201c\u201e\u201f]?(.+?)(?=["\u201d\u201f]?\s*(?:genomen\s+)?uit\s+[A-Z1-9])',
+            r'thema(?:\s+van\s+de\s+dienst)?(?:\s+is)?\s*[:\-]?\s*["\u201c\u201e\u201f]?(.+?)["\u201d\u201f]?\s*(?:genomen\s+)?(?=uit\s+[A-Z1-9])',
             text, re.IGNORECASE | re.DOTALL
         )
         if thema_m:
-            result['thema'] = re.sub(r'\s+', ' ', thema_m.group(1)).strip().strip('\u201c\u201d\u201e\u201f"\'')
+            result['thema'] = re.sub(r'\s+', ' ', thema_m.group(1)).strip().strip('\u201c\u201d\u201e\u201f"\',.')
         else:
             # fallback: title of the article often contains the thema
             h_tag = soup.find(['h1', 'h2'])
