@@ -345,11 +345,12 @@ class SenderCampaignGenerator:
         # Button helpers
         # ------------------------------------------------------------------ #
         def btn(width: int, label_html: str, href: str) -> str:
-            return f"""<td class="btn-td" width="{width}" valign="top">
-            <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;">
-                <tr>
-                    <th align="center" style="background-color:#000000;border-radius:6px;padding:10px 25px;">
-                        <a href="{href}" target="_blank" style="display:block;font-family:'Inter',Arial,sans-serif;font-size:14px;color:#ffffff;text-decoration:none;line-height:16px;font-weight:normal;">
+            """Button td — height stretches to tallest sibling via valign=middle on th."""
+            return f"""<td class="btn-td" width="{width}" valign="top" style="padding:0;">
+            <table width="100%" height="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;height:100%;">
+                <tr style="height:100%;">
+                    <th align="center" valign="middle" style="background-color:#000000;border-radius:6px;padding:12px 20px;height:100%;">
+                        <a href="{href}" target="_blank" style="display:block;font-family:'Inter',Arial,sans-serif;font-size:14px;color:#ffffff;text-decoration:none;line-height:20px;font-weight:normal;">
                             {label_html}
                         </a>
                     </th>
@@ -357,7 +358,8 @@ class SenderCampaignGenerator:
             </table>
         </td>"""
 
-        spacer = '<td class="btn-spacer" width="30" style="line-height:20px;"></td>'
+        spacer = '<td class="btn-spacer" width="20" style="line-height:1px;font-size:1px;">&nbsp;</td>'
+        row_gap = '<tr><td colspan="3" height="10" style="line-height:10px;font-size:10px;">&nbsp;</td></tr>'
 
         # ------------------------------------------------------------------ #
         # Decide layout
@@ -365,9 +367,9 @@ class SenderCampaignGenerator:
         am_only = (loc_code == 'AM')
 
         if am_only:
-            # 3 buttons in a row, 160px each
+            # 3 buttons in a single row, 160px each — Mededelingen | Preek AM | Webvideo
             btn_width = 160
-            buttons_html = f"""<table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 25px 0;">
+            buttons_html = f"""<table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 25px 0;border-collapse:collapse;">
     <tr>
         {btn(btn_width, 'Mededelingen (AM)', mededelingen_url or '#')}
         {spacer}
@@ -377,22 +379,23 @@ class SenderCampaignGenerator:
     </tr>
 </table>"""
         else:
-            # 2×2 grid, 250px buttons
+            # 2×2 grid in ONE table so rows share height context
+            # Row 1: Mededelingen (AM) | Preek (AM) + predikant
+            # Row 2: Preek (LOC-OLE) + predikant | Webvideo (LOC-OLE)
             btn_width = 250
             loc_tag = f"{loc_code}-OLE"
             preek_ole_href = preek_ole_url or '#'
-            buttons_html = f"""<table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 10px 0;">
+            buttons_html = f"""<table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 25px 0;border-collapse:collapse;">
     <tr>
         {btn(btn_width, 'Mededelingen (AM)', mededelingen_url or '#')}
         {spacer}
         {btn(btn_width, f'Preek (AM)<br>{am_predikant}', preek_am_url or '#')}
     </tr>
-</table>
-<table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 25px 0;">
+    {row_gap}
     <tr>
         {btn(btn_width, f'Preek ({loc_tag})<br>{ole_predikant or "kunt u hier later terugvinden"}', preek_ole_href)}
         {spacer}
-        {btn(btn_width, f'Webvideo<br>({loc_tag})', youtube_href)}
+        {btn(btn_width, f'Webvideo ({loc_tag})', youtube_href)}
     </tr>
 </table>"""
 
