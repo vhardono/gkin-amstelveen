@@ -14,7 +14,7 @@ class SenderCampaignGenerator:
 
     def __init__(self, api_token: Optional[str] = None, sender_email: Optional[str] = None, sender_name: Optional[str] = None):
         self.api_token = api_token or os.environ.get('SENDER_API_KEY') or os.environ.get('SENDER_API_TOKEN')
-        self.sender_email = sender_email or os.environ.get('SENDER_SENDER_EMAIL', 'noreply-am@gkin.org')
+        self.sender_email = sender_email or os.environ.get('SENDER_SENDER_EMAIL', 'newsletter@gkin-amstelveen.top')
         self.sender_name = sender_name or os.environ.get('SENDER_SENDER_NAME', 'GKIN Amstelveen')
         self.base_url = "https://api.sender.net/v2"
         self.headers = {
@@ -127,10 +127,25 @@ class SenderCampaignGenerator:
         location_ole_tag = f"{location_code}-OLE" if location_code else "OLE"
         date_numeric = f"{service_date.day:02d}-{service_date.month:02d}-{service_date.year}"
 
-        # Handle QR image
+        # Handle QR image — embed as base64 so Sender.net can render it
         qr_img = ""
         if qr_image_url:
-            if qr_image_url.startswith('/uploads/'):
+            if qr_image_url.startswith('data:'):
+                # Already a data URI (from website scraper)
+                qr_img = f'<img src="{qr_image_url}" style="max-width:200px;border-radius:8px;">'
+            elif qr_image_url.startswith('http'):
+                # Remote URL — fetch and embed as base64
+                try:
+                    import requests as _req
+                    r = _req.get(qr_image_url, timeout=10)
+                    r.raise_for_status()
+                    ext = qr_image_url.rsplit('.', 1)[-1].lower().split('?')[0]
+                    mime = {'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'gif': 'image/gif'}.get(ext, 'image/png')
+                    b64 = base64.b64encode(r.content).decode('utf-8')
+                    qr_img = f'<img src="data:{mime};base64,{b64}" style="max-width:200px;border-radius:8px;">'
+                except Exception:
+                    qr_img = f'<img src="{qr_image_url}" style="max-width:200px;border-radius:8px;">'
+            elif qr_image_url.startswith('/uploads/'):
                 try:
                     upload_dir = os.environ.get('UPLOAD_DIR', '/app/uploads')
                     full_path = os.path.join(upload_dir, qr_image_url.replace('/uploads/', ''))
@@ -140,10 +155,8 @@ class SenderCampaignGenerator:
                             ext = os.path.splitext(full_path)[1].lower()
                             mime = 'image/png' if ext == '.png' else 'image/jpeg'
                             qr_img = f'<img src="data:{mime};base64,{b64}" style="max-width:200px;border-radius:8px;">'
-                except:
+                except Exception:
                     pass
-            if not qr_img:
-                qr_img = f'<img src="{qr_image_url}" style="max-width:200px;border-radius:8px;">'
 
         theme_html = f'<p>Het thema is: <strong>"{theme}"</strong>{f" uit {bible_verse}" if bible_verse else ""}.</p>' if theme else ""
 

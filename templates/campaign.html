@@ -48,7 +48,10 @@
             </select>
         </div>
 
-        <div id="oleTemplateSection" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-5 hidden">
+        <div id="oleTemplateSection" class="relative bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-5 hidden">
+            <div id="oleLoadingOverlay" class="hidden absolute inset-0 bg-white/70 flex items-center justify-center rounded-xl z-10">
+                <div class="flex items-center gap-2 text-gkin-green font-medium text-sm"><svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg> Gegevens ophalen van gkin.org...</div>
+            </div>
             <h2 class="text-base font-semibold text-gkin-green mb-4">OLE Template Instellingen</h2>
             
             <div class="space-y-4">
@@ -71,13 +74,15 @@
                     <p class="text-xs text-gray-400 mt-1">Automatisch opgehaald van gkin.org · handmatig overschrijven mag.</p>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Collecte URL (Tikkie)</label>
-                    <input type="url" id="collecteUrl" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green" placeholder="https://tikkie.me/...">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Collecte URL (OLE - ING)</label>
+                    <input type="url" id="collecteUrl" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green" placeholder="https://www.ing.nl/payreq/...">
                     <div id="qrStatus" class="mt-2 text-sm"></div>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">QR Code URL</label>
-                    <input type="text" id="qrUrl" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green" placeholder="/uploads/qr_code.png">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">QR Code</label>
+                    <input type="text" id="qrUrl" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green" placeholder="Wordt automatisch opgehaald van gkin.org">
+                    <input type="hidden" id="qrB64">
+                    <div id="qrPreview" class="mt-2 hidden"><img id="qrPreviewImg" src="" alt="QR" class="h-20 rounded border border-gray-200"></div>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Predikant</label>
@@ -217,6 +222,8 @@
             document.getElementById('liturgieUploadStatus').innerHTML = '';
             document.getElementById('collecteUrl').value = '';
             document.getElementById('qrUrl').value = '';
+            document.getElementById('qrB64').value = '';
+            document.getElementById('qrPreview').classList.add('hidden');
             document.getElementById('subject').value = '';
             document.getElementById('campaignName').value = '';
             document.getElementById('oleTime').value = '';
@@ -233,8 +240,11 @@
             createBtn.classList.remove('hidden');
             loadSenderLists();
 
-            // Fetch OLE data
+            // Show loading overlay and fetch OLE data
+            const overlay = document.getElementById('oleLoadingOverlay');
+            if (overlay) overlay.classList.remove('hidden');
             await fetchOLEData(dateSelect.value);
+            if (overlay) overlay.classList.add('hidden');
         });
 
         async function fetchOLEData(date) {
@@ -275,25 +285,31 @@
                 console.log('[Frontend] Website - thema:', data.ole_thema, 'bijbel:', data.ole_bible_verse, 'youtube:', data.ole_youtube_link, 'liturgie:', data.ole_liturgie_url);
 
                 // Set URLs
-                console.log('[Frontend] Setting URL:', data.ole_url);
                 if (data.ole_url) document.getElementById('collecteUrl').value = data.ole_url;
 
                 // Handle QR
-                if (data.ole_qr) {
-                    console.log('[Frontend] Setting QR:', data.ole_qr);
+                if (data.ole_qr_b64) {
+                    document.getElementById('qrB64').value = data.ole_qr_b64;
+                    document.getElementById('qrUrl').value = data.ole_qr || 'Van gkin.org';
+                    const preview = document.getElementById('qrPreview');
+                    const img = document.getElementById('qrPreviewImg');
+                    img.src = data.ole_qr_b64;
+                    preview.classList.remove('hidden');
+                    if (qrStatus) qrStatus.innerHTML = `<span class="text-green-600">✓ QR opgehaald van gkin.org</span>`;
+                } else if (data.ole_qr) {
                     const localPath = data.ole_qr.startsWith('http') ? data.ole_qr : `/uploads/${data.ole_qr}`;
                     document.getElementById('qrUrl').value = localPath;
-                    if (qrStatus) {
-                        qrStatus.innerHTML = `<span class="text-green-600">✓ QR code gevonden: ${data.ole_qr}</span>`;
-                    }
+                    if (qrStatus) qrStatus.innerHTML = `<span class="text-green-600">✓ QR gevonden: ${data.ole_qr}</span>`;
                 }
 
-                // Auto-populate subject with corrected time format
+                // Auto-populate subject with corrected time format and Dutch day name
                 const timeClean = (data.ole_time || '10:00').replace('u', '').replace('U', '');
                 const dateObj = new Date(date);
                 const months = ['januari', 'februari', 'maart', 'april', 'mei', 'juni', 'juli', 'augustus', 'september', 'oktober', 'november', 'december'];
+                const days = ['zondag', 'maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag'];
+                const dayName = days[dateObj.getDay()];
                 const dateStr = `${dateObj.getDate()} ${months[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
-                document.getElementById('subject').value = `GKIN (OLE): Online Landelijke Eredienst Zondag ${dateStr}, ${timeClean}u`;
+                document.getElementById('subject').value = `GKIN (OLE): Online Landelijke Eredienst ${dayName} ${dateStr}, ${timeClean}u`;
                 document.getElementById('campaignName').value = `GKIN OLE ${date.replace(/-/g, '').substring(2)}`;
                 // Auto-suggest Saturday before the service date
                 const d = new Date(date);
@@ -317,12 +333,14 @@
                 const data = await resp.json();
                 if (data.success && data.lists && data.lists.length > 0) {
                     loading.classList.add('hidden');
-                    container.innerHTML = data.lists.map(l =>
-                        `<label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer hover:bg-white rounded px-1 py-0.5">
+                    container.innerHTML = data.lists.map(l => {
+                        const count = l.subscribers_count ?? l.activeSubscribersCount ?? l.total ?? l.count ?? l.subscribersCount ?? '?';
+                        const name = l.title || l.name || l.id;
+                        return `<label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer hover:bg-white rounded px-1 py-0.5">
                             <input type="checkbox" class="list-checkbox rounded border-gray-300 text-gkin-green" value="${l.id}">
-                            ${l.title || l.name || l.id} <span class="text-xs text-gray-400">(${l.subscribers_count ?? l.count ?? '?'} leden)</span>
-                        </label>`
-                    ).join('');
+                            ${name}${count !== '?' ? ` <span class="text-xs text-gray-400">(${count} leden)</span>` : ''}
+                        </label>`;
+                    }).join('');
                     container.classList.remove('hidden');
                 } else {
                     loading.textContent = 'Geen lijsten gevonden of API niet beschikbaar';
@@ -389,7 +407,7 @@
                         youtube_link: document.getElementById('youtubeLink').value,
                         liturgie_url: document.getElementById('liturgieUrl').value,
                         collecte_url: document.getElementById('collecteUrl').value,
-                        qr_image_url: document.getElementById('qrUrl').value,
+                        qr_image_url: document.getElementById('qrB64').value || document.getElementById('qrUrl').value,
                         ole_location: document.getElementById('oleLocation').value,
                         ole_time: document.getElementById('oleTime').value,
                         ole_predikant: document.getElementById('olePredikant').value || ''
@@ -449,7 +467,7 @@
                         youtube_link: document.getElementById('youtubeLink').value,
                         liturgie_url: document.getElementById('liturgieUrl').value,
                         collecte_url: document.getElementById('collecteUrl').value,
-                        qr_image_url: document.getElementById('qrUrl').value,
+                        qr_image_url: document.getElementById('qrB64').value || document.getElementById('qrUrl').value,
                         ole_location: document.getElementById('oleLocation').value,
                         ole_time: document.getElementById('oleTime').value,
                         ole_predikant: document.getElementById('olePredikant').value || '',

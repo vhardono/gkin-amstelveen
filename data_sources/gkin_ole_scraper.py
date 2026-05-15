@@ -156,8 +156,8 @@ class GKINOLEScraper:
         if bible_m:
             result['bible_verse'] = re.sub(r'\s+', ' ', bible_m.group(1)).strip()
 
-        # --- YouTube link ---
-        yt_m = re.search(r'https?://(?:www\.)?(?:youtube\.com|youtu\.be)/[^\s<>"\']+', text)
+        # --- YouTube link --- must have a non-empty path segment after the domain/path
+        yt_m = re.search(r'https?://(?:www\.)?(?:youtube\.com/(?:live|watch)/[A-Za-z0-9_\-]{5,}|youtu\.be/[A-Za-z0-9_\-]{5,})[^\s<>"\']*', text)
         if yt_m:
             result['youtube_link'] = yt_m.group(0).rstrip('.,)')
 
@@ -168,11 +168,31 @@ class GKINOLEScraper:
                 result['liturgie_url'] = href if href.startswith('http') else f"https://gkin.org{href}"
                 break
 
-        # --- Collecte URL (ING payment link) ---
+        # --- Collecte URL (ING / OLE payment link) ---
         for a in article.find_all('a', href=True):
             href = a['href']
-            if 'ing.nl/payreq' in href or 'tikkie.me' in href:
+            if 'ing.nl/payreq' in href or 'tikkie.me' in href or 'ing.nl' in href:
                 result['collecte_url'] = href
+                break
+
+        # --- QR image (download and encode as base64 data URI) ---
+        for img in article.find_all('img', src=True):
+            src = img['src']
+            src_lower = src.lower()
+            if 'qr' in src_lower or 'collecte' in src_lower or 'betaal' in src_lower:
+                full_src = src if src.startswith('http') else f'https://gkin.org{src}'
+                try:
+                    r = self.session.get(full_src, timeout=10)
+                    r.raise_for_status()
+                    import base64 as _b64
+                    ext = full_src.rsplit('.', 1)[-1].lower().split('?')[0]
+                    mime = {'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'gif': 'image/gif'}.get(ext, 'image/png')
+                    b64 = _b64.b64encode(r.content).decode('utf-8')
+                    result['qr_image_b64'] = f'data:{mime};base64,{b64}'
+                    result['qr_image_url'] = full_src
+                    print(f'[GKINScraper] QR image fetched: {full_src} ({len(r.content)} bytes)')
+                except Exception as e:
+                    print(f'[GKINScraper] QR image fetch error: {e}')
                 break
 
         return result

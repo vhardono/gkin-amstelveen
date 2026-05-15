@@ -2254,6 +2254,7 @@ def fetch_ole_data():
         bible_verse = ''
         youtube_link = ''
         liturgie_url = ''
+        qr_image_b64 = ''
         try:
             from data_sources.gkin_ole_scraper import GKINOLEScraper
             scraper = GKINOLEScraper()
@@ -2263,6 +2264,10 @@ def fetch_ole_data():
                 bible_verse = web_data.get('bible_verse', '')
                 youtube_link = web_data.get('youtube_link', '')
                 liturgie_url = web_data.get('liturgie_url', '')
+                qr_image_b64 = web_data.get('qr_image_b64', '')
+                # QR from website overrides local file
+                if web_data.get('qr_image_url'):
+                    qr_filename = web_data['qr_image_url']
                 # Override predikant/location/time from website if better
                 if web_data.get('predikant') and not ole_data.get('predikant'):
                     ole_data['predikant'] = web_data['predikant']
@@ -2271,10 +2276,9 @@ def fetch_ole_data():
                     location_full = web_data.get('location', location_full)
                 if web_data.get('time'):
                     ole_data['time'] = web_data['time']
-                # Use collecte URL from website if not already found via email
                 if web_data.get('collecte_url') and not ole_url:
                     ole_url = web_data['collecte_url']
-                print(f"[OLE Fetch] Website data: thema={thema!r}, bible={bible_verse!r}, yt={youtube_link!r}, liturgie={liturgie_url!r}")
+                print(f"[OLE Fetch] Website data: thema={thema!r}, bible={bible_verse!r}, yt={youtube_link!r}, liturgie={liturgie_url!r}, qr_b64={bool(qr_image_b64)}")
             else:
                 print(f"[OLE Fetch] No OLE article found on GKIN website for {selected_date.strftime('%d-%m-%Y')}")
         except Exception as e:
@@ -2287,6 +2291,7 @@ def fetch_ole_data():
             'ole_location': location_full,
             'ole_time': ole_data.get('time', '10:00'),
             'ole_qr': qr_filename,
+            'ole_qr_b64': qr_image_b64,
             'ole_url': ole_url,
             'ole_thema': thema,
             'ole_bible_verse': bible_verse,
@@ -2392,9 +2397,11 @@ def campaign_preview():
             ole_time=ole_time
         )
         
-        months = ['januari', 'februari', 'maart', 'april', 'mei', 'juni',
-                  'juli', 'augustus', 'september', 'oktober', 'november', 'december']
-        date_str = f"{selected_date.day} {months[selected_date.month - 1]} {selected_date.year}"
+        nl_months = ['januari', 'februari', 'maart', 'april', 'mei', 'juni',
+                     'juli', 'augustus', 'september', 'oktober', 'november', 'december']
+        nl_days = ['maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag', 'zondag']
+        date_str = f"{selected_date.day} {nl_months[selected_date.month - 1]} {selected_date.year}"
+        day_name = nl_days[selected_date.weekday()]
         time_clean = (ole_time if ole_time else '10:00').replace('u', '').replace('U', '')
         
         return jsonify({
@@ -2402,7 +2409,7 @@ def campaign_preview():
             'predikant': predikant_to_use,
             'location': ole_location,
             'time': time_clean,
-            'subject': f"GKIN (OLE): Online Landelijke Eredienst Zondag {date_str}, {time_clean}u",
+            'subject': f"GKIN (OLE): Online Landelijke Eredienst {day_name} {date_str}, {time_clean}u",
             'html_preview': html_content,
             'success': True
         })
@@ -2421,6 +2428,7 @@ def campaign_lists():
     try:
         gen = SenderCampaignGenerator()
         lists = gen.get_lists()
+        print(f"[Campaign Lists] Raw groups: {lists[:2] if lists else lists}")
         return jsonify({'success': True, 'lists': lists})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -2489,9 +2497,11 @@ def campaign_create():
             ole_time=ole_time
         )
         
-        months = ['januari', 'februari', 'maart', 'april', 'mei', 'juni',
-                  'juli', 'augustus', 'september', 'oktober', 'november', 'december']
-        date_str = f"{selected_date.day} {months[selected_date.month - 1]} {selected_date.year}"
+        nl_months = ['januari', 'februari', 'maart', 'april', 'mei', 'juni',
+                     'juli', 'augustus', 'september', 'oktober', 'november', 'december']
+        nl_days = ['maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag', 'zondag']
+        date_str = f"{selected_date.day} {nl_months[selected_date.month - 1]} {selected_date.year}"
+        day_name = nl_days[selected_date.weekday()]
         time_clean = (ole_time if ole_time else '10:00').replace('u', '').replace('U', '')
         
         # Use scheduled_at from frontend if provided
@@ -2499,7 +2509,7 @@ def campaign_create():
         
         result = generator.create_campaign(
             name=name or f"GKIN OLE {selected_date.strftime('%y%m%d')}",
-            subject=subject or f"GKIN (OLE): Online Landelijke Eredienst Zondag {date_str}, {time_clean}u",
+            subject=subject or f"GKIN (OLE): Online Landelijke Eredienst {day_name} {date_str}, {time_clean}u",
             html_content=html_content,
             scheduled_at=scheduled_at,
             list_ids=list_ids if list_ids else None
