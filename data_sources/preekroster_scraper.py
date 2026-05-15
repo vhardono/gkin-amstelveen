@@ -400,8 +400,15 @@ class PreekrosterScraper:
         return date_text.strip()
     
     def _clean_name(self, name_text: str) -> str:
-        """Clean speaker/preacher name"""
-        return name_text.strip().title()
+        """Clean speaker/preacher name, normalizing salutation to lowercase."""
+        import re as _re
+        name = name_text.strip().title()
+        return _re.sub(
+            r'^(Ds|Zr|Br|Mw|Mevr|Dhr|Dr)\.',
+            lambda m: m.group(0).lower(),
+            name,
+            flags=_re.IGNORECASE
+        )
     
     def _clean_service_type(self, service_text: str) -> str:
         """Clean service type information"""

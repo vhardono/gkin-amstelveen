@@ -5,6 +5,7 @@ Extracts dates, predikant, and OvD (with full name lookup from People tab).
 """
 
 import os
+import re
 import pandas as pd
 import dropbox
 from dropbox.exceptions import ApiError
@@ -444,6 +445,14 @@ class DropboxExcelReader:
 
             # Get unique unresolved names
             unresolved = list(dict.fromkeys(self._unresolved_names))  # preserve order, remove duplicates
+
+            # Normalize predikant salutation to lowercase (ds./zr./br./mw./mevr./dhr./dr.)
+            predikant = re.sub(
+                r'^(Ds|Zr|Br|Mw|Mevr|Dhr|Dr)\.',
+                lambda m: m.group(0).lower(),
+                predikant,
+                flags=re.IGNORECASE
+            )
 
             # Resolve predikant email from People tab
             pred_email  = self._predikant_email_map.get(predikant.lower(), '')
