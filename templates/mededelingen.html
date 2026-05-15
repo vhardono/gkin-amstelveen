@@ -558,9 +558,8 @@
             const container = document.getElementById('opbrengstCards');
             container.innerHTML = '';
             const list = entries && entries.length ? entries : [{}];
+            container._entriesData = list;
             list.forEach((e, i) => {
-                // Store full entry data on the card element for JSON sync
-                container._entriesData = list;
                 const label = list.length > 1 ? `Dienst ${i+1}${e.service_date ? ' – ' + e.service_date : ''}` : 'Collecte opbrengsten';
                 const card = document.createElement('div');
                 card.className = 'mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200';

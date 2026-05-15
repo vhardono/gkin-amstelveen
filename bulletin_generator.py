@@ -478,10 +478,27 @@ class BulletinGenerator:
 
     def _fill_collecte_table(self, table, entry: Dict[str, Any]):
         """Fill a single collecte table from one opbrengst entry dict."""
+        import re as _re
         service_date = entry.get('service_date', '')
 
-        # R0: header
+        # R0: header — ensure day name is included
         if service_date:
+            dutch_days  = ['maandag','dinsdag','woensdag','donderdag','vrijdag','zaterdag','zondag']
+            dutch_months = {'januari':1,'februari':2,'maart':3,'april':4,'mei':5,'juni':6,
+                            'juli':7,'augustus':8,'september':9,'oktober':10,'november':11,'december':12}
+            has_day = any(d in service_date.lower() for d in dutch_days)
+            if not has_day:
+                dm = _re.match(r'(\d{1,2})\s+(\w+)(?:\s+(\d{4}))?', service_date.strip())
+                if dm:
+                    try:
+                        day = int(dm.group(1))
+                        mon = dutch_months.get(dm.group(2).lower(), 0)
+                        yr  = int(dm.group(3)) if dm.group(3) else datetime.now().year
+                        if mon:
+                            wd  = datetime(yr, mon, day).weekday()
+                            service_date = f"{dutch_days[wd]} {service_date}"
+                    except Exception:
+                        pass
             header_text = f"GKIN Amstelveen {service_date}"
             for c in range(2):
                 self._set_cell_text_preserving(table.cell(0, c), header_text)
@@ -522,13 +539,22 @@ class BulletinGenerator:
         # Extra items (HSK, bijbelstudie, etc.) — insert rows before OLE row
         extra_items = entry.get('extra_items', [])
         tbl_el = table._tbl
-        rows = tbl_el.findall(qn('w:tr'))
-        ole_row_el = rows[9]  # R9 is the OLE row
 
         # Remove any previously inserted extra rows (marked with custom attr)
         for r in list(tbl_el.findall(qn('w:tr'))):
             if r.get('w:customExtra') == '1':
                 tbl_el.remove(r)
+
+        # Find OLE row by cell text content (more robust than hardcoded index)
+        rows = tbl_el.findall(qn('w:tr'))
+        ole_row_el = rows[9] if len(rows) > 9 else rows[-1]  # fallback to index 9
+        for r in rows:
+            cells = r.findall(qn('w:tc'))
+            if cells:
+                cell_text = ''.join(t.text or '' for t in cells[0].iter(qn('w:t'))).lower()
+                if 'ole' in cell_text or 'collecte opbrengst ole' in cell_text:
+                    ole_row_el = r
+                    break
 
         def _set_tc_text(tc_el, text: str):
             """Clear all runs in a table cell and write a single clean run."""
