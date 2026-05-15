@@ -103,19 +103,30 @@ class GKINOLEScraper:
         text = article.get_text(' ', strip=True)
         text = re.sub(r'\s+', ' ', text)
 
+        # Also grab meta description / og:description as a richer fallback text source
+        meta_desc = ''
+        for sel in [('meta', {'name': 'description'}), ('meta', {'property': 'og:description'})]:
+            tag = soup.find(sel[0], sel[1])
+            if tag and tag.get('content'):
+                meta_desc = tag['content'].strip()
+                break
+        # Prepend meta_desc so regexes can match it even if article body is sparse
+        if meta_desc:
+            text = meta_desc + ' ' + text
+
         # --- Date ---
         result['date'] = self._parse_date_from_text(text)
 
         # --- Predikant ---
         pred_m = re.search(
-            r'\b(ds\.|zr\.|br\.)\s+([A-Z][^\.,]+?)(?=\s+voorgaan|\s+zal\s|\s+in\s+de\s+OLE)',
+            r'\b(ds\.|zr\.|br\.)\s+([A-Za-z][^\.,]{2,40}?)(?=\s+(?:voorgaan|voor\b|zal\s|in\s+de\s+OLE|ging))',
             text, re.IGNORECASE
         )
         if pred_m:
             result['predikant'] = pred_m.group(0).strip().rstrip(',')
 
         # --- Location ---
-        loc_m = re.search(r'vanuit\s+(?:de\s+)?([^\.,]+?)(?:\s+te\s+([A-Za-z\s]+?))?(?:,|\.|aanvang)', text, re.IGNORECASE)
+        loc_m = re.search(r'vanuit\s+(?:de\s+)?([^\.,]+?)(?:\s+te\s+([A-Za-z][A-Za-z\s]{2,20}?))?(?:,|\.|\s+aanvang|$)', text, re.IGNORECASE)
         if loc_m:
             loc_raw = (loc_m.group(2) or loc_m.group(1)).strip().lower()
             for key, (code, full) in LOCATION_MAP.items():
@@ -127,9 +138,9 @@ class GKINOLEScraper:
                 result['location'] = (loc_m.group(2) or loc_m.group(1)).strip()
 
         # --- Time ---
-        time_m = re.search(r'aanvang\s+(\d{1,2}[:.]\d{2})\s*uur', text, re.IGNORECASE)
+        time_m = re.search(r'aanvang\s+(\d{1,2}[:.\s]\d{2})\s*(?:uur|u\b)', text, re.IGNORECASE)
         if time_m:
-            result['time'] = time_m.group(1).replace('.', ':') + 'u'
+            result['time'] = time_m.group(1).strip().replace('.', ':') + 'u'
 
         # --- Thema ---
         thema_m = re.search(
