@@ -182,7 +182,7 @@ class SenderCampaignGenerator:
                 except Exception:
                     pass
 
-        bible_suffix = f" uit {bible_verse}" if bible_verse else ""
+        bible_suffix = f" genomen uit {bible_verse}" if bible_verse else ""
         theme_html = f'<p>Het thema is: <strong>"{theme}"</strong>{bible_suffix}.</p>' if theme else ""
         collecte_ovv_text = collecte_ovv if collecte_ovv else f"Collecte OLE {date_numeric}"
         youtube_href = ('https://www.' + re.sub(r'^https?://(?:www\.)?', '', youtube_link)) if youtube_link else '#'
