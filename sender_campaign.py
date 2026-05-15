@@ -82,14 +82,11 @@ class SenderCampaignGenerator:
                 list_ids = [groups[0].get('id')]
 
         data = {
-            "name": name,
+            "title": name,
             "subject": subject,
-            "type": "regular",
             "content_type": "html",
             "content": html_content,
-            "from": self.sender_email,
-            "from_name": self.sender_name,
-            "sender_name": self.sender_name,
+            "from": self.sender_name,
             "reply_to": self.sender_email,
             "groups": list_ids
         }
