@@ -185,6 +185,7 @@ class SenderCampaignGenerator:
         bible_suffix = f" uit {bible_verse}" if bible_verse else ""
         theme_html = f'<p>Het thema is: <strong>"{theme}"</strong>{bible_suffix}.</p>' if theme else ""
         collecte_ovv_text = collecte_ovv if collecte_ovv else f"Collecte OLE {date_numeric}"
+        youtube_href = ('https://www.' + re.sub(r'^https?://(?:www\.)?', '', youtube_link)) if youtube_link else '#'
 
         return f"""<!DOCTYPE html>
 <html lang="nl">
@@ -238,7 +239,7 @@ class SenderCampaignGenerator:
             <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;">
                 <tr>
                     <th align="center" style="background-color:#000000;border-radius:6px;padding:10px 25px;">
-                        <a href="{('https://www.' + re.sub(r'^https?://(?:www\.)?', '', youtube_link)) if youtube_link else '#'}" style="display:block;font-family:'Inter',Arial,sans-serif;font-size:14px;color:#ffffff;text-decoration:none;line-height:16px;font-weight:normal;">
+                        <a href="{youtube_href}" style="display:block;font-family:'Inter',Arial,sans-serif;font-size:14px;color:#ffffff;text-decoration:none;line-height:16px;font-weight:normal;">
                             Webvideo<br>({location_ole_tag})
                         </a>
                     </th>
