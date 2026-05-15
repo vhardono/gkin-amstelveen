@@ -205,28 +205,28 @@ class GKINOLEScraper:
             result['collecte_ovv'] = raw_ovv[:80] if len(raw_ovv) > 80 else raw_ovv
 
         # --- QR image (download and encode as base64 data URI) ---
-        for img in article.find_all('img', src=True):
+        # Only search within the article body div, not the whole page
+        article_body = soup.find('div', class_='item-page') or soup.find('article')
+        img_scope = article_body if article_body else article
+        for img in img_scope.find_all('img', src=True):
             src = img['src']
             src_lower = src.lower()
-            skip = any(x in src_lower for x in ['logo', 'banner', 'icon', 'flag', 'menu', 'arrow', 'button'])
-            is_qr = any(x in src_lower for x in ['qr', 'collecte', 'betaal', 'payment', 'codes'])
-            if is_qr or (not skip and ('images' in src_lower or src_lower.endswith(('.jpg','.jpeg','.png')))):
-                if not is_qr and result.get('qr_image_b64'):
-                    continue  # already found a better match
-                full_src = src if src.startswith('http') else f'https://gkin.org{src}'
-                try:
-                    r = self.session.get(full_src, timeout=10)
-                    r.raise_for_status()
-                    import base64 as _b64
-                    ext = full_src.rsplit('.', 1)[-1].lower().split('?')[0]
-                    mime = {'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'gif': 'image/gif'}.get(ext, 'image/png')
-                    b64 = _b64.b64encode(r.content).decode('utf-8')
-                    result['qr_image_b64'] = f'data:{mime};base64,{b64}'
-                    result['qr_image_url'] = full_src
-                    print(f'[GKINScraper] QR image fetched: {full_src} ({len(r.content)} bytes)')
-                except Exception as e:
-                    print(f'[GKINScraper] QR image fetch error: {e}')
+            if not any(x in src_lower for x in ['qr', 'collecte', 'betaal', 'payment', 'codes', 'qrcode']):
+                continue
+            full_src = src if src.startswith('http') else f'https://gkin.org{src}'
+            try:
+                r = self.session.get(full_src, timeout=10)
+                r.raise_for_status()
+                import base64 as _b64
+                ext = full_src.rsplit('.', 1)[-1].lower().split('?')[0]
+                mime = {'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'gif': 'image/gif'}.get(ext, 'image/png')
+                b64 = _b64.b64encode(r.content).decode('utf-8')
+                result['qr_image_b64'] = f'data:{mime};base64,{b64}'
+                result['qr_image_url'] = full_src
+                print(f'[GKINScraper] QR image fetched: {full_src} ({len(r.content)} bytes)')
                 break
+            except Exception as e:
+                print(f'[GKINScraper] QR image fetch error: {e}')
 
         return result
 
