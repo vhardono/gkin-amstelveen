@@ -301,7 +301,7 @@ class SenderCampaignGenerator:
             <td class="footer-spacer" width="40"></td>
             <td class="footer-col" align="left" width="250" valign="top">
                 <p style="margin:0 0 6px 0;">Wilt u deze e-mails niet meer ontvangen?</p>
-                <a href="{{{{unsubscribe_link}}}}">{{{{unsubscribe_text}}}}</a>
+                <a href="{{{{unsubscribe_link}}}}">uitschrijven</a>
             </td>
         </tr>
     </table>
