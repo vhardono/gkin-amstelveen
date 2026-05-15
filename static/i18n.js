@@ -727,6 +727,13 @@ window.GKIN_I18N = GKIN_I18N;
     });
     localStorage.setItem(STORAGE_KEY, lang);
     window.GKIN_APPLY_LANG = applyLang;
+
+    // Global translation function for inline JS use
+    window.t = function(key) {
+      const lang = getLang();
+      const dict = GKIN_I18N[lang] || GKIN_I18N[DEFAULT_LANG];
+      return dict[key] || key;
+    };
   }
 
   function initSwitcher() {
