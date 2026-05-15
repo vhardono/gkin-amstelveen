@@ -372,12 +372,10 @@ class SenderCampaignGenerator:
 
         if am_only:
             # 3 buttons, 160px each
-            # Mededelingen: 2 lines (blank 2nd) to match Preek AM height
-            # Webvideo: 2 lines natural ("Webvideo" / "(AM-OLE)")
             btn_width = 160
             buttons_html = f"""<table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 25px 0;">
     <tr>
-        {btn(btn_width, 'Mededelingen (AM)', '', mededelingen_url or '#')}
+        {btn(btn_width, 'Mededelingen', '(AM)', mededelingen_url or '#')}
         {spacer}
         {btn(btn_width, 'Preek (AM)', am_predikant, preek_am_url or '#')}
         {spacer}
@@ -386,14 +384,12 @@ class SenderCampaignGenerator:
 </table>"""
         else:
             # 2×2 grid
-            # Row 1: Mededelingen (blank 2nd) | Preek AM + predikant
-            # Row 2: Preek OLE + predikant     | Webvideo (blank 2nd)
             btn_width = 250
             loc_tag = f"{loc_code}-OLE"
             preek_ole_href = preek_ole_url or '#'
             buttons_html = f"""<table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 25px 0;">
     <tr>
-        {btn(btn_width, 'Mededelingen (AM)', '', mededelingen_url or '#')}
+        {btn(btn_width, 'Mededelingen', '(AM)', mededelingen_url or '#')}
         {spacer}
         {btn(btn_width, 'Preek (AM)', am_predikant, preek_am_url or '#')}
     </tr>
@@ -401,7 +397,7 @@ class SenderCampaignGenerator:
     <tr>
         {btn(btn_width, f'Preek ({loc_tag})', ole_predikant or 'kunt u hier later terugvinden', preek_ole_href)}
         {spacer}
-        {btn(btn_width, f'Webvideo ({loc_tag})', '', youtube_href)}
+        {btn(btn_width, 'Webvideo', f'({loc_tag})', youtube_href)}
     </tr>
 </table>"""
 
