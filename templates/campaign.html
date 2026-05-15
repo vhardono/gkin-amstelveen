@@ -281,7 +281,8 @@
                 });
                 console.log('[Frontend] Response status:', resp.status);
                 const data = await resp.json();
-                console.log('[Frontend] Response data:', data);
+                console.log('[Frontend] Response keys:', Object.keys(data));
+                console.log('[Frontend] ole_url:', data.ole_url, '| ole_qr:', data.ole_qr, '| qr_b64 len:', (data.ole_qr_b64||'').length);
 
                 if (data.error) {
                     console.error('[Frontend] Error from server:', data.error);
@@ -309,8 +310,10 @@
                 console.log('[Frontend] Website - thema:', data.ole_thema, 'bijbel:', data.ole_bible_verse, 'youtube:', data.ole_youtube_link, 'liturgie:', data.ole_liturgie_url);
 
                 // Set URLs
+                console.log('[Frontend] Setting collecteUrl:', data.ole_url);
                 if (data.ole_url) document.getElementById('collecteUrl').value = data.ole_url;
                 if (data.ole_collecte_ovv) document.getElementById('collecteOvv').value = data.ole_collecte_ovv;
+                console.log('[Frontend] collecteUrl field value:', document.getElementById('collecteUrl').value);
 
                 // Handle QR
                 if (data.ole_qr_b64) {
