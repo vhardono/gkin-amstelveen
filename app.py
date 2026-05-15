@@ -590,7 +590,7 @@ def _extract_welkom_paragraphs(selected_date: datetime, entry: dict, meded: dict
 
 @app.route('/get-mededelingen', methods=['POST'])
 def get_mededelingen_data():
-    """Fetch mededelingen for a date and parse activities from both sections."""
+    """Fetch mededelingen for a date; load activities from the year tab of the Excel file."""
     date_str = request.form.get('date')
     if not date_str:
         return jsonify({'error': 'No date'}), 400
@@ -598,7 +598,7 @@ def get_mededelingen_data():
     try:
         reader = DropboxExcelReader()
         meded = reader.get_mededelingen(mededelingen_date=selected_date)
-        activities = _parse_activities_from_mededelingen(meded, selected_date)
+        activities = reader.get_activiteiten_kalender(mededelingen_date=selected_date)
         return jsonify({
             'regionale_nl': meded.get('regionale_nl', ''),
             'landelijke_nl': meded.get('landelijke_nl', ''),

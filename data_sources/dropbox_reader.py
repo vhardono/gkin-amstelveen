@@ -107,6 +107,174 @@ class DropboxExcelReader:
             return {'error': str(e), 'regionale_nl': '', 'landelijke_nl': '',
                     'regionale_id': '', 'landelijke_id': ''}
 
+    def get_activiteiten_kalender(self, mededelingen_date: datetime = None) -> List[Dict[str, Any]]:
+        """Read Activiteiten Kalender from the year tab (e.g. '2026') of Mededelingen Overzicht.
+
+        Sheet columns (0-indexed, no header row used):
+          A(0): Category (Regionale/Landelijke)
+          B(1): Type     (Activity/Overlijden/Huwelijks/etc) — used as activity name
+          C(2): Details - Nederlands — first line = title, body parsed for time/olv/locatie
+          G(6): Event Date (datetime) — used directly for datum
+          I(8): Status   (Active / Future) — filter
+
+        Returns list of dicts: datum, tijd, activiteit, olv, locatie  sorted by event date.
+        """
+        import re
+
+        if mededelingen_date is None:
+            year = datetime.now().year
+        else:
+            year = mededelingen_date.year
+
+        path = MEDEDELINGEN_PATH_TEMPLATE.format(year=year)
+        sheet_name = str(year)
+
+        NL_MONTHS = ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun',
+                     'jul', 'aug', 'sep', 'okt', 'nov', 'dec']
+        NL_MONTH_NAMES = {
+            'januari': 'jan', 'februari': 'feb', 'maart': 'mrt', 'april': 'apr',
+            'mei': 'mei', 'juni': 'jun', 'juli': 'jul', 'augustus': 'aug',
+            'september': 'sep', 'oktober': 'okt', 'november': 'nov', 'december': 'dec',
+        }
+        MONTHS_PAT = r'(?:' + '|'.join(NL_MONTH_NAMES.keys()) + r')'
+
+        # Multiple dates: "6, 13, 20 en 27 juni" → "6/13/20/27 jun"
+        multi_date_re = re.compile(
+            rf'((?:\d{{1,2}}(?:[,\s]+(?:en\s+)?)?)+)\s+({MONTHS_PAT})',
+            re.IGNORECASE
+        )
+        # Time range: "van 09.00 tot 11.00 uur" → take first (start) time
+        time_range_re = re.compile(r'\bvan\s+(\d{1,2}[:.]\d{2})\s*(?:tot|–|-)', re.IGNORECASE)
+        # Single time: "10.30 uur" or "10:30u"
+        time_re = re.compile(r'\b(\d{1,2}[:.]\d{2})\s*u(?:ur)?\b', re.IGNORECASE)
+        # Free-text time: "na de dienst" / "na de eredienst" / "voor de dienst"
+        free_time_re = re.compile(r'\b(na de (?:eredienst|dienst)|voor de (?:eredienst|dienst)|na afloop)\b', re.IGNORECASE)
+
+        olv_re = re.compile(
+            r'(?:o\.?l\.?v\.?|onder leiding van|geleid door|gepresenteerd door'
+            r'|[Vv]oorganger(?:\s+is)?|waarbij\s+|waarin\s+)'
+            r'\s*((?:mw\.|dhr\.|ds\.|br\.|zr\.|dr\.)\s*\S+(?:\s+\S+){0,4}?)'
+            r'(?=\s+(?:voorgaat|spreekt|zal\b|op\s+(?:zondag|maandag|\d)|de\s)|[,.\n]|$)',
+            re.IGNORECASE
+        )
+        loc_re = re.compile(
+            r'(?:\bin\s+(?:de\s+)?([A-Z][A-Za-zÀ-ÿ\s]+\s+\d+)'
+            r'|\bte\s+([A-Z][A-Za-zÀ-ÿ\s]{2,20}?)(?=[,.\n ]|$)'
+            r'|\bin\s+(?:de\s+)?([A-Z][A-Za-zÀ-ÿ]{3,20}kerk\b))'
+        )
+
+        try:
+            print(f"Reading Activiteiten Kalender: {path}, sheet={sheet_name}")
+            _, response = self.dbx.files_download(path)
+            df = pd.read_excel(BytesIO(response.content), sheet_name=sheet_name, header=None)
+
+            activities = []
+            for _, row in df.iterrows():
+                # Filter by Type (col B = index 1): only 'Activity'
+                row_type = str(row.iloc[1]).strip() if len(row) > 1 and pd.notna(row.iloc[1]) else ''
+                if row_type.lower() != 'activity':
+                    continue
+
+                # col C (index 2): Dutch details text
+                content = str(row.iloc[2]).strip() if len(row) > 2 and pd.notna(row.iloc[2]) else ''
+                if not content or content.lower() == 'nan':
+                    continue
+
+                # col G (index 6): Event Date — already a datetime from Excel
+                event_date = row.iloc[6] if len(row) > 6 and pd.notna(row.iloc[6]) else None
+                if hasattr(event_date, 'date'):
+                    event_date = event_date
+                elif isinstance(event_date, str):
+                    try:
+                        event_date = datetime.strptime(event_date[:10], '%Y-%m-%d')
+                    except Exception:
+                        event_date = None
+
+                # Filter past events
+                if mededelingen_date and event_date:
+                    if event_date.date() < mededelingen_date.date():
+                        continue
+
+                # Activity title: first line of col C
+                first_line = content.split('\n')[0].strip().rstrip(':–-').strip()
+                activiteit = first_line
+
+                flat = ' '.join(content.split('\n'))
+
+                # Datum: check for multi-date pattern first ("6, 13, 20 en 27 juni")
+                datum = ''
+                mdm = multi_date_re.search(flat)
+                if mdm:
+                    numbers_str = mdm.group(1)
+                    month_str = mdm.group(2).lower()
+                    month_abbr = NL_MONTH_NAMES.get(month_str, month_str[:3])
+                    nums = re.findall(r'\d+', numbers_str)
+                    datum = '/'.join(nums) + ' ' + month_abbr
+                elif event_date:
+                    datum = f"{event_date.day} {NL_MONTHS[event_date.month - 1]}"
+
+                # Tijd: range → start time; free-text → as-is; single time fallback
+                tijd = ''
+                trm = time_range_re.search(flat)
+                if trm:
+                    tijd = trm.group(1).replace('.', ':')
+                else:
+                    ftm = free_time_re.search(flat)
+                    if ftm:
+                        tijd = ftm.group(1).lower()
+                    else:
+                        tm = time_re.search(flat)
+                        if tm:
+                            tijd = tm.group(1).replace('.', ':')
+
+                # o.l.v.
+                ovm = olv_re.search(flat)
+                olv = ''
+                if ovm:
+                    raw = ovm.group(1).strip()
+                    raw = re.sub(r'\b(ds|br|zr|dr|drs|mr|ir|prof|mw|dhr)\.\s*', r'\1___', raw, flags=re.IGNORECASE)
+                    raw = re.sub(r'\b([A-Z])\.\s*', r'\1___', raw)
+                    raw = re.split(r',|\.\s+[a-z]|\s+op\s+(?:zaterdag|zondag|maandag|dinsdag|woensdag|donderdag|vrijdag|\d)', raw)[0]
+                    olv = raw.replace('___', '. ').strip().rstrip('–- ').strip()
+
+                # Location
+                locatie = ''
+                flat_lower = flat.lower()
+                if re.search(r'\bzoom\b', flat_lower):
+                    locatie = 'Zoom'
+                elif re.search(r'\blive\b', flat_lower):
+                    locatie = 'Live'
+                else:
+                    for lm in loc_re.finditer(flat):
+                        cand = (lm.group(1) or lm.group(2) or lm.group(3) or '').strip().rstrip('.,')
+                        if cand and len(cand) <= 40:
+                            locatie = cand
+                            break
+                # Default locatie to Bouwerij 52 when activity is after the service
+                if not locatie and re.search(r'na de (?:eredienst|dienst)', tijd, re.IGNORECASE):
+                    locatie = 'Bouwerij 52'
+
+                activities.append({
+                    'datum': datum,
+                    'tijd': tijd,
+                    'activiteit': activiteit,
+                    'olv': olv,
+                    'locatie': locatie,
+                    '_sort_date': event_date,
+                })
+
+            # Sort by event date ascending
+            activities.sort(key=lambda x: x['_sort_date'] or datetime.max)
+            for a in activities:
+                del a['_sort_date']
+
+            print(f"Activiteiten kalender: {len(activities)} rows loaded from sheet '{sheet_name}'")
+            return activities
+
+        except Exception as e:
+            print(f"Error reading activiteiten kalender (sheet '{sheet_name}'): {e}")
+            return []
+
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
