@@ -189,10 +189,25 @@ class SenderCampaignGenerator:
 
         return f"""<!DOCTYPE html>
 <html lang="nl">
-<head><meta charset="UTF-8"><title>GKIN OLE{location_display}: {date_str}, {time_clean}u</title></head>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GKIN OLE{location_display}: {date_str}, {time_clean}u</title>
+<style>
+@media only screen and (max-width:640px) {{
+  .outer-table {{ width:100% !important; }}
+  .content-cell {{ padding:0 20px !important; }}
+  .footer-cell {{ padding:0 20px 20px 20px !important; }}
+  .btn-td {{ display:block !important; width:100% !important; padding-bottom:10px; }}
+  .btn-spacer {{ display:none !important; }}
+  .footer-col {{ display:block !important; width:100% !important; padding-bottom:16px; }}
+  .footer-spacer {{ display:none !important; }}
+}}
+</style>
+</head>
 <body style="margin:0;padding:0;background:#ffffff;">
 <table width="100%" cellpadding="0" cellspacing="0" bgcolor="#ffffff"><tr><td align="center">
-<table width="640" cellpadding="0" cellspacing="0" style="background:#ffffff;">
+<table class="outer-table" width="640" cellpadding="0" cellspacing="0" style="background:#ffffff;max-width:640px;">
 <!-- Header: Logo left, Title right -->
 <tr>
     <td style="background:#ffffff;padding:20px 50px;">
@@ -209,13 +224,13 @@ class SenderCampaignGenerator:
     </td>
 </tr>
 <!-- Separator line -->
-<tr><td style="padding:0 50px;">
+<tr><td class="content-cell" style="padding:0 50px;">
     <table width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #EAECED;">
         <tr><td height="20" style="line-height:20px;"></td></tr>
     </table>
 </td></tr>
 <!-- Main Content -->
-<tr><td style="padding:0 50px;font-family:'Inter',Arial,sans-serif;color:#515856;font-size:16px;line-height:137%;">
+<tr><td class="content-cell" style="padding:0 50px;font-family:'Inter',Arial,sans-serif;color:#515856;font-size:16px;line-height:137%;">
 <p style="margin:0 0 10px 0;">Beste broeders en zusters,<br></p>
 <p style="margin:0 0 10px 0;">Op {date_str} zal {predikant} voorgaan in de Online Landelijke Eredienst (OLE) van GKIN {location_body}, aanvang {time_clean} uur. </p>
 {theme_html}
@@ -223,7 +238,7 @@ class SenderCampaignGenerator:
 <!-- Buttons -->
 <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 25px 0;">
     <tr>
-        <td width="250" valign="top">
+        <td class="btn-td" width="250" valign="top">
             <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;">
                 <tr>
                     <th align="center" style="background-color:#000000;border-radius:6px;padding:10px 25px;">
@@ -234,8 +249,8 @@ class SenderCampaignGenerator:
                 </tr>
             </table>
         </td>
-        <td width="40" style="line-height:20px;"></td>
-        <td width="250" valign="top">
+        <td class="btn-spacer" width="40" style="line-height:20px;"></td>
+        <td class="btn-td" width="250" valign="top">
             <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;">
                 <tr>
                     <th align="center" style="background-color:#000000;border-radius:6px;padding:10px 25px;">
@@ -270,21 +285,21 @@ class SenderCampaignGenerator:
 <p style="margin:0 0 20px 0;">Vega Hardono, Regiosecretaris (AM)<br></p>
 </td></tr>
 <!-- Footer separator -->
-<tr><td style="padding:0 50px;">
+<tr><td class="content-cell" style="padding:0 50px;">
     <table width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #EAECED;">
         <tr><td height="20" style="line-height:20px;"></td></tr>
     </table>
 </td></tr>
 <!-- Footer -->
-<tr><td style="padding:0 50px 20px 50px;font-family:'Inter',Arial,sans-serif;color:#515856;font-size:14px;line-height:150%;">
+<tr><td class="footer-cell" style="padding:0 50px 20px 50px;font-family:'Inter',Arial,sans-serif;color:#515856;font-size:14px;line-height:150%;">
     <table width="100%" cellpadding="0" cellspacing="0">
         <tr>
-            <td align="left" width="250" valign="top">
+            <td class="footer-col" align="left" width="250" valign="top">
                 <p style="margin:0 0 6px 0;"><strong>GKIN Amstelveen</strong></p>
                 <p style="margin:0;">Bouwerij 52<br>1185XX Amstelveen</p>
             </td>
-            <td width="40"></td>
-            <td align="left" width="250" valign="top">
+            <td class="footer-spacer" width="40"></td>
+            <td class="footer-col" align="left" width="250" valign="top">
                 <p style="margin:0 0 6px 0;">Wilt u deze e-mails niet meer ontvangen?</p>
                 <a href="{{{{unsubscribe_link}}}}">{{{{unsubscribe_text}}}}</a>
             </td>
