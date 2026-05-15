@@ -214,22 +214,24 @@ class GKINOLEScraper:
             if yt_date:
                 result['date'] = yt_date
 
-        # --- Preek URL ("De preek kunt u hier vinden") ---
+        # --- Liturgie URL (must be checked before preek to avoid stealing the link) ---
         for a in article.find_all('a', href=True):
             href = a['href']
-            link_text = a.get_text(strip=True).lower()
-            # Check anchor text or surrounding paragraph text
-            parent_text = (a.parent.get_text(' ', strip=True) if a.parent else '').lower()
-            if (('preek' in parent_text and 'hier' in parent_text and 'vinden' in parent_text)
-                    or ('preken' in href.lower() and href.lower().endswith('.pdf'))):
-                result['preek_url'] = href if href.startswith('http') else f"https://gkin.org{href}"
+            if 'liturgie' in href.lower():
+                result['liturgie_url'] = href if href.startswith('http') else f"https://gkin.org{href}"
                 break
 
-        # --- Liturgie URL (direct link on gkin.org) ---
+        # --- Preek URL ("De preek kunt u hier vinden" → /Preken/ path) ---
         for a in article.find_all('a', href=True):
             href = a['href']
-            if 'liturgie' in href.lower() or href.lower().endswith('.pdf'):
-                result['liturgie_url'] = href if href.startswith('http') else f"https://gkin.org{href}"
+            href_lower = href.lower()
+            # Skip if this is the liturgie link
+            if 'liturgie' in href_lower:
+                continue
+            parent_text = (a.parent.get_text(' ', strip=True) if a.parent else '').lower()
+            if (('preek' in parent_text and 'hier' in parent_text and 'vinden' in parent_text)
+                    or ('/preken/' in href_lower and href_lower.endswith('.pdf'))):
+                result['preek_url'] = href if href.startswith('http') else f"https://gkin.org{href}"
                 break
 
         # --- Collecte URL (ING / Tikkie / betaal / doneer / qr payment link) ---
