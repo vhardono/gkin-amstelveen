@@ -72,10 +72,17 @@ class SenderCampaignGenerator:
         except Exception as e:
             return {'success': False, 'error': str(e)}
 
+    def schedule_campaign(self, campaign_id: str, schedule_time: str) -> Dict:
+        """Schedule a campaign. schedule_time must be 'Y-m-d H:i:s' UTC."""
+        return self._make_request("POST", f"/campaigns/{campaign_id}/schedule",
+                                  {"schedule_time": schedule_time})
+
     def create_campaign(self, name: str, subject: str, html_content: str,
                        list_ids: Optional[List[str]] = None,
                        scheduled_at: Optional[str] = None) -> Dict:
-        """Create a new email campaign."""
+        """Create campaign, then schedule it if scheduled_at provided.
+        scheduled_at should be ISO 8601 with timezone e.g. '2026-05-16T09:00:00+02:00'.
+        """
         if not list_ids:
             groups = self.get_lists()
             if groups:
@@ -90,10 +97,27 @@ class SenderCampaignGenerator:
             "reply_to": self.sender_email,
             "groups": list_ids
         }
-        if scheduled_at:
-            data['scheduled_at'] = scheduled_at
 
-        return self._make_request("POST", "/campaigns", data)
+        result = self._make_request("POST", "/campaigns", data)
+
+        # If created successfully and schedule requested, call schedule endpoint
+        if scheduled_at and result.get('data', {}).get('id'):
+            campaign_id = result['data']['id']
+            try:
+                from datetime import timezone
+                # Python 3.7+ fromisoformat handles '2026-05-16T09:00:00+02:00'
+                dt = datetime.fromisoformat(scheduled_at)
+                dt_utc = dt.astimezone(timezone.utc)
+                schedule_time = dt_utc.strftime('%Y-%m-%d %H:%M:%S')
+                sched_result = self.schedule_campaign(campaign_id, schedule_time)
+                print(f"[Sender] Schedule result for {campaign_id}: {sched_result}")
+                result['scheduled'] = sched_result.get('success', False)
+                result['schedule_time'] = schedule_time
+            except Exception as e:
+                print(f"[Sender] Schedule error: {e}")
+                result['schedule_error'] = str(e)
+
+        return result
 
     def generate_html(self, service_date: datetime, predikant: str,
                      theme: str = "", bible_verse: str = "",

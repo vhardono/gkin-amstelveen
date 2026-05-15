@@ -2527,7 +2527,10 @@ def campaign_create():
             'success': True,
             'campaign_id': result.get('data', {}).get('id', 'unknown'),
             'name': name,
-            'subject': subject
+            'subject': subject,
+            'scheduled': result.get('scheduled', False),
+            'schedule_time': result.get('schedule_time', ''),
+            'schedule_error': result.get('schedule_error', '')
         })
         
     except Exception as e:
