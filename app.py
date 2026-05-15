@@ -2640,10 +2640,21 @@ def campaign_upload_liturgie():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+def _normalize_salutation(name: str) -> str:
+    """Lowercase the salutation prefix (ds./zr./br./mw./dhr./dr.) in a predikant name."""
+    import re as _re
+    return _re.sub(
+        r'^(Ds|Zr|Br|Mw|Dhr|Dr)\.',
+        lambda m: m.group(0).lower(),
+        (name or '').strip(),
+        flags=_re.IGNORECASE
+    )
+
+
 @app.route('/fetch-pm-data', methods=['POST'])
 @_password_required
 def fetch_pm_data():
-    """Fetch AM predikant and OLE location/predikant for a given date."""
+    """Fetch AM predikant, OLE location/predikant, youtube link and preek URL for a given date."""
     data = request.get_json() or {}
     iso_date = data.get('date', '')
     if not iso_date:
@@ -2654,6 +2665,7 @@ def fetch_pm_data():
         return jsonify({'error': 'invalid date format'}), 400
     try:
         from data_sources.preekroster_scraper import PreekrosterScraper
+        from data_sources.gkin_ole_scraper import GKINOLEScraper
         scraper = PreekrosterScraper()
         # AM predikant — from takenrooster
         taken = _get_takenrooster()
@@ -2661,19 +2673,33 @@ def fetch_pm_data():
         for entry in taken['entries']:
             e_date = entry['date'].date() if hasattr(entry['date'], 'date') else entry['date']
             if e_date == selected_date.date():
-                am_predikant = entry.get('predikant', '')
+                am_predikant = _normalize_salutation(entry.get('predikant', ''))
                 break
         # OLE location + predikant — from preekroster
         ole_data = scraper.get_ole_service_for_date(selected_date)
-        location_code = ole_data.get('location', '')
-        # Normalise: strip trailing whitespace/dash artefacts
-        location_code = location_code.strip().upper() if location_code else ''
+        location_code = ole_data.get('location', '').strip().upper()
+        ole_predikant = _normalize_salutation(ole_data.get('predikant', ''))
+        # YouTube link + preek URL — from gkin.org website
+        youtube_link = ''
+        preek_url = ''
+        try:
+            web = GKINOLEScraper().fetch_for_date(selected_date)
+            if web and not web.get('not_found'):
+                youtube_link = web.get('youtube_link', '')
+                preek_url = web.get('preek_url', '')
+                # Also use website predikant if preekroster didn't return one
+                if not ole_predikant and web.get('predikant'):
+                    ole_predikant = _normalize_salutation(web.get('predikant', ''))
+        except Exception as web_err:
+            print(f'[fetch-pm-data] Website fetch error: {web_err}')
         return jsonify({
             'success': True,
             'am_predikant': am_predikant,
             'ole_location': location_code,
-            'ole_predikant': ole_data.get('predikant', ''),
+            'ole_predikant': ole_predikant,
             'ole_time': ole_data.get('time', ''),
+            'youtube_link': youtube_link,
+            'preek_ole_url': preek_url,
         })
     except Exception as e:
         import traceback; traceback.print_exc()

@@ -110,6 +110,22 @@ class GKINOLEScraper:
                         links.append({'title': title, 'url': full})
         return links
 
+    def _get_youtube_title_date(self, youtube_url: str) -> Optional[datetime]:
+        """Fetch YouTube oEmbed title and extract service date from it.
+        No API key needed. Title format: '..., DD maand YYYY ...'
+        """
+        if not youtube_url:
+            return None
+        try:
+            oembed_url = f"https://www.youtube.com/oembed?url={youtube_url}&format=json"
+            resp = self.session.get(oembed_url, timeout=10)
+            resp.raise_for_status()
+            title = resp.json().get('title', '')
+            return self._parse_date_from_text(title)
+        except Exception as e:
+            print(f"[GKINScraper] oEmbed error: {e}")
+            return None
+
     def _parse_article(self, url: str) -> Dict[str, Any]:
         """Scrape a single OLE article page and return extracted fields."""
         result: Dict[str, Any] = {
@@ -127,7 +143,7 @@ class GKINOLEScraper:
         text = article.get_text(' ', strip=True)
         text = re.sub(r'\s+', ' ', text)
 
-        # --- Date ---
+        # --- Date (from text; will be refined via YouTube oEmbed below) ---
         result['date'] = self._parse_date_from_text(text)
 
         # --- Predikant ---
@@ -191,6 +207,23 @@ class GKINOLEScraper:
             yt_m = re.search(r'https?://(?:www\.)?(?:youtube\.com/(?:live|watch)/[A-Za-z0-9_\-]{5,}|youtu\.be/[A-Za-z0-9_\-]{5,})[^\s<>"\']*', text)
             if yt_m:
                 result['youtube_link'] = yt_m.group(0).rstrip('.,)')
+
+        # --- Override date with YouTube oEmbed title (most reliable for past services) ---
+        if result['youtube_link']:
+            yt_date = self._get_youtube_title_date(result['youtube_link'])
+            if yt_date:
+                result['date'] = yt_date
+
+        # --- Preek URL ("De preek kunt u hier vinden") ---
+        for a in article.find_all('a', href=True):
+            href = a['href']
+            link_text = a.get_text(strip=True).lower()
+            # Check anchor text or surrounding paragraph text
+            parent_text = (a.parent.get_text(' ', strip=True) if a.parent else '').lower()
+            if (('preek' in parent_text and 'hier' in parent_text and 'vinden' in parent_text)
+                    or ('preken' in href.lower() and href.lower().endswith('.pdf'))):
+                result['preek_url'] = href if href.startswith('http') else f"https://gkin.org{href}"
+                break
 
         # --- Liturgie URL (direct link on gkin.org) ---
         for a in article.find_all('a', href=True):

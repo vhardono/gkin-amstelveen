@@ -286,14 +286,19 @@
                     // OLE location
                     const loc = (data.ole_location || 'AM').toUpperCase();
                     const locSelect = document.getElementById('oleLocation');
-                    // Set dropdown — fall back to AM if unknown value
                     const validOpts = ['AM','DH','TB'];
                     locSelect.value = validOpts.includes(loc) ? loc : 'AM';
                     // OLE predikant
                     document.getElementById('olePredikant').value = data.ole_predikant || '';
+                    // YouTube link + Preek OLE URL from gkin.org
+                    if (data.youtube_link) document.getElementById('youtubeLink').value = data.youtube_link;
+                    if (data.preek_ole_url) document.getElementById('preekOleUrl').value = data.preek_ole_url;
                     // Trigger conditional non-AM fields
                     onLocationChange();
                     // Status badge
+                    const missing = [];
+                    if (!data.youtube_link) missing.push('YouTube link');
+                    if (!data.preek_ole_url && loc !== 'AM') missing.push('Preek OLE URL');
                     if (data.ole_location) {
                         badge.className = 'mb-4 text-xs px-3 py-1.5 rounded-lg border border-green-200 bg-green-50 text-green-700';
                         badge.textContent = `OLE: ${loc} · ${data.ole_predikant || '—'}`;
@@ -302,6 +307,13 @@
                         badge.textContent = t('pm.ole_not_found');
                     }
                     badge.classList.remove('hidden');
+                    if (missing.length > 0) {
+                        const warn = document.createElement('div');
+                        warn.className = 'mt-3 text-xs px-3 py-2 rounded-lg border border-amber-200 bg-amber-50 text-amber-700';
+                        warn.textContent = `⚠ ${t('pm.ole_missing_manual')}: ${missing.join(', ')}`;
+                        badge.insertAdjacentElement('afterend', warn);
+                        setTimeout(() => warn.remove(), 8000);
+                    }
                 }
             } catch (err) {
                 console.error('[PM] fetch-pm-data error:', err);
