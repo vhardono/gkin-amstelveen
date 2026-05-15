@@ -43,9 +43,9 @@
         <div id="apiStatusBox" class="hidden mb-5 rounded-lg p-3 border text-sm"></div>
 
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-5">
-            <h2 class="text-base font-semibold text-gkin-green mb-4">Datum Selectie</h2>
+            <h2 class="text-base font-semibold text-gkin-green mb-4" data-i18n="camp.date_section">Datum Selectie</h2>
             <select id="dateSelect" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green">
-                <option value="">-- Kies een datum --</option>
+                <option value="" data-i18n="camp.date_placeholder">-- Kies een datum --</option>
                 {% for d in dates %}
                 <option value="{{ d.value }}" data-predikant="{{ d.predikant }}" data-ovd="{{ d.ovd }}" data-beamer="{{ d.beamer }}" data-voorzangers="{{ d.voorzangers }}">
                     {{ d.label }}

@@ -27,7 +27,7 @@ const GKIN_I18N = {
     'home.meded.title':       'Mededelingen',
     'home.meded.desc':        'Genereer het wekelijkse mededelingen bulletin',
     'home.mailing.title':     'Mailing List',
-    'home.mailing.desc':      'Creëer een Sender e-mailcampagne',
+    'home.mailing.desc':      'Maak een e-mailcampagne via Sender.net',
 
     /* --- Campaign select --- */
     'cs.subtitle':            'Mailing List',
@@ -39,11 +39,17 @@ const GKIN_I18N = {
     'cs.pm.desc':             'Te verzenden na de dienst. Bevat preek opname, mededelingen en collecte informatie.',
     'cs.pm.soon':             'Binnenkort',
 
+    /* --- Date sections --- */
+    'date.section_heading':   'Eredienst datum',
+    'date.label':             'Datum',
+    'date.placeholder':       '— Kies een datum —',
+
     /* --- Campaign (OLE) --- */
     'camp.subtitle':          'Sender Campaign Generator',
     'camp.info':              'Genereer een Sender e-mailcampagne gebaseerd op mededelingen en liturgie gegevens.',
-    'camp.date_label':        'Selecteer een datum',
+    'camp.date_section':      'Datum Selectie',
     'camp.date_placeholder':  '— Kies een datum —',
+    'camp.date_label':        'Selecteer een datum',
     'camp.fetch_ole':         'Ophalen OLE gegevens',
     'camp.section_details':   'Campagne details',
     'camp.subject':           'E-mail onderwerp',
@@ -147,9 +153,9 @@ const GKIN_I18N = {
     'home.liturgie.title':    'Liturgi',
     'home.liturgie.desc':     'Buat dokumen liturgi dan presentasi beamer',
     'home.meded.title':       'Mededelingen',
-    'home.meded.desc':        'Buat buletin mededelingen mingguan',
+    'home.meded.desc':        'Buat buletin pengumuman mingguan',
     'home.mailing.title':     'Mailing List',
-    'home.mailing.desc':      'Buat kampanye e-mail Sender',
+    'home.mailing.desc':      'Buat kampanye e-mail via Sender.net',
 
     /* --- Campaign select --- */
     'cs.subtitle':            'Mailing List',
@@ -161,9 +167,15 @@ const GKIN_I18N = {
     'cs.pm.desc':             'Dikirim setelah ibadah. Berisi rekaman khotbah, mededelingen dan informasi kolekte.',
     'cs.pm.soon':             'Segera hadir',
 
+    /* --- Date sections --- */
+    'date.section_heading':   'Tanggal ibadah',
+    'date.label':             'Tanggal',
+    'date.placeholder':       '— Pilih tanggal —',
+
     /* --- Campaign (OLE) --- */
     'camp.subtitle':          'Generator Kampanye Sender',
     'camp.info':              'Buat kampanye e-mail Sender berdasarkan data mededelingen dan liturgi.',
+    'camp.date_section':      'Pilih Tanggal',
     'camp.date_label':        'Pilih tanggal',
     'camp.date_placeholder':  '— Pilih tanggal —',
     'camp.fetch_ole':         'Ambil data OLE',
@@ -182,8 +194,8 @@ const GKIN_I18N = {
     'camp.create':            'Buat kampanye',
 
     /* --- Mededelingen --- */
-    'med.subtitle':           'Generator Mededelingen',
-    'med.info':               'Buat buletin mededelingen mingguan. Isi kolom dan klik Buat.',
+    'med.subtitle':           'Generator Pengumuman',
+    'med.info':               'Buat buletin pengumuman mingguan. Isi kolom dan klik Buat.',
     'med.date_label':         'Pilih tanggal',
     'med.sec_overdenking':    'Renungan',
     'med.predikant':          'Pendeta',
@@ -271,7 +283,7 @@ const GKIN_I18N = {
     'home.meded.title':       'Announcements',
     'home.meded.desc':        'Generate the weekly announcements bulletin',
     'home.mailing.title':     'Mailing List',
-    'home.mailing.desc':      'Create a Sender email campaign',
+    'home.mailing.desc':      'Create an email campaign via Sender.net',
 
     /* --- Campaign select --- */
     'cs.subtitle':            'Mailing List',
@@ -283,9 +295,15 @@ const GKIN_I18N = {
     'cs.pm.desc':             'Sent after the service. Contains sermon recording, announcements and collection information.',
     'cs.pm.soon':             'Coming soon',
 
+    /* --- Date sections --- */
+    'date.section_heading':   'Service date',
+    'date.label':             'Date',
+    'date.placeholder':       '— Choose a date —',
+
     /* --- Campaign (OLE) --- */
     'camp.subtitle':          'Sender Campaign Generator',
     'camp.info':              'Generate a Sender email campaign based on announcements and liturgy data.',
+    'camp.date_section':      'Date Selection',
     'camp.date_label':        'Select a date',
     'camp.date_placeholder':  '— Choose a date —',
     'camp.fetch_ole':         'Fetch OLE data',
@@ -381,6 +399,8 @@ const GKIN_I18N = {
       if (dict[key] !== undefined) {
         if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
           el.placeholder = dict[key];
+        } else if (el.tagName === 'OPTION') {
+          el.textContent = dict[key];
         } else {
           el.textContent = dict[key];
         }

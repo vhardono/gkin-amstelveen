@@ -50,12 +50,12 @@
                 <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                 </svg>
-                Eredienst datum
+                <span data-i18n="date.section_heading">Eredienst datum</span>
             </h2>
-            <label for="date" class="block text-sm font-medium text-gray-700 mb-1">Datum</label>
+            <label for="date" class="block text-sm font-medium text-gray-700 mb-1" data-i18n="date.label">Datum</label>
             <select id="date"
                     class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-gkin-green">
-                <option value="" disabled selected>— Kies een datum —</option>
+                <option value="" disabled selected data-i18n="date.placeholder">— Kies een datum —</option>
                 {% for d in dates %}
                 <option value="{{ d.value }}"
                         data-predikant="{{ d.predikant }}"
