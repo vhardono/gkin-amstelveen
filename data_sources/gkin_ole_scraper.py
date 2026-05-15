@@ -144,11 +144,11 @@ class GKINOLEScraper:
 
         # --- Thema ---
         thema_m = re.search(
-            r'thema van de dienst is\s*[:\-]?\s*["\u201c]?(.+?)(?=["\u201d]?\s*genomen uit)',
+            r'thema van de dienst is\s*[:\-]?\s*["\u201c\u201e\u2018]?(.+?)(?=["\u201d\u201f\u2019]?\s*genomen uit)',
             text, re.IGNORECASE | re.DOTALL
         )
         if thema_m:
-            result['thema'] = re.sub(r'\s+', ' ', thema_m.group(1)).strip().strip('\u201c\u201d"\'')
+            result['thema'] = re.sub(r'\s+', ' ', thema_m.group(1)).strip().strip('\u201c\u201d\u201e\u201f\u2018\u2019"\'')
         else:
             # fallback: title of the article often contains the thema
             h_tag = soup.find(['h1', 'h2'])
@@ -161,7 +161,7 @@ class GKINOLEScraper:
 
         # --- Bible verse ---
         bible_m = re.search(
-            r'(?:genomen uit|Bijbeltekst\s*:|uit\s+(?=\d*\s*[A-Z]))\.?\s*(.+?)(?=\s+De dienst|\s+De liturgie|\s+In deze|\s+U kunt|\s+De collecte|\s{3,}|\.\s+[A-Z]|$)',
+            r'genomen uit\s+(.+?)(?=\s+De dienst|\s+De liturgie|\s+In deze|\s+U kunt|\s+De collecte|\s{2,}|\.\s+[A-Z])',
             text, re.IGNORECASE | re.DOTALL
         )
         if bible_m:
@@ -181,9 +181,14 @@ class GKINOLEScraper:
         # --- Liturgie URL (direct link on gkin.org) ---
         for a in article.find_all('a', href=True):
             href = a['href']
-            if 'liturgie' in href.lower() or href.lower().endswith('.pdf'):
-                result['liturgie_url'] = href if href.startswith('http') else f"https://gkin.org{href}"
-                break
+            href_l = href.lower()
+            if 'liturgie' in href_l or 'preken' in href_l or href_l.endswith('.pdf'):
+                full_href = href if href.startswith('http') else f"https://gkin.org{href}"
+                # Prefer liturgie over preek PDF
+                if 'liturgie' in href_l or not result['liturgie_url']:
+                    result['liturgie_url'] = full_href
+                if 'liturgie' in href_l:
+                    break
 
         # --- Collecte URL (ING / OLE payment link) ---
         for a in article.find_all('a', href=True):
@@ -203,7 +208,11 @@ class GKINOLEScraper:
         for img in article.find_all('img', src=True):
             src = img['src']
             src_lower = src.lower()
-            if 'qr' in src_lower or 'collecte' in src_lower or 'betaal' in src_lower:
+            skip = any(x in src_lower for x in ['logo', 'banner', 'icon', 'flag', 'menu', 'arrow', 'button'])
+            is_qr = any(x in src_lower for x in ['qr', 'collecte', 'betaal', 'payment', 'codes'])
+            if is_qr or (not skip and ('images' in src_lower or src_lower.endswith(('.jpg','.jpeg','.png')))):
+                if not is_qr and result.get('qr_image_b64'):
+                    continue  # already found a better match
                 full_src = src if src.startswith('http') else f'https://gkin.org{src}'
                 try:
                     r = self.session.get(full_src, timeout=10)
