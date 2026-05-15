@@ -183,7 +183,7 @@ class SenderCampaignGenerator:
                     pass
 
         bible_suffix = f" genomen uit {bible_verse}" if bible_verse else ""
-        theme_html = f'<p>Het thema is: <strong>"{theme}"</strong>{bible_suffix}.</p>' if theme else ""
+        theme_html = f'<p style="margin:0 0 10px 0;">Het thema is: <strong>"{theme}"</strong>{bible_suffix}.</p>' if theme else ""
         collecte_ovv_text = collecte_ovv if collecte_ovv else f"Collecte OLE {date_numeric}"
         youtube_href = ('https://www.' + re.sub(r'^https?://(?:www\.)?', '', youtube_link)) if youtube_link else '#'
 
@@ -267,7 +267,7 @@ class SenderCampaignGenerator:
 <p style="margin:0 0 10px 0;">In deze dienst wordt er 1 keer gecollecteerd.<br><br>De collecte is bestemd voor Landelijke kas (OLE). U kunt dit overmaken via: <a href="{collecte_url}" style="color:#2CB191;text-decoration:underline;">{collecte_url}</a></p>
 <p style="margin:0 0 25px 0;">of door overmaking aan GEREJA KRISTEN INDONESIA NEDERLAND, IBAN: NL19 INGB 0002 6182 90 o.v.v. {collecte_ovv_text}.</p>
 <!-- QR Code centered -->
-<table width="100%" cellpadding="0" cellspacing="0" style="margin:25px 0;">
+<table width="100%" cellpadding="0" cellspacing="0" style="margin:10px 0;">
     <tr>
         <td width="160"></td>
         <td width="320" align="center">
@@ -277,7 +277,6 @@ class SenderCampaignGenerator:
     </tr>
 </table>
 <!-- Signature -->
-<p style="margin:0 0 10px 0;"><br></p>
 <p style="margin:0 0 10px 0;">Wij wensen u allen een gezegende dienst toe.<br></p>
 <p style="margin:0 0 10px 0;">Met broederlijke groet in Christus,</p>
 <p style="margin:0 0 10px 0;"><br></p>
