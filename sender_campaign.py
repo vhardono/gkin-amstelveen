@@ -3,6 +3,7 @@ Sender.net Campaign Automation for GKIN Amstelveen
 """
 
 import os
+import re
 import base64
 from datetime import datetime
 from typing import Dict, List, Optional, Any
@@ -213,7 +214,7 @@ class SenderCampaignGenerator:
             <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;">
                 <tr>
                     <th align="center" style="background-color:#000000;border-radius:6px;padding:10px 25px;">
-                        <a href="{'https://' + youtube_link.lstrip('https://').lstrip('http://') if youtube_link else '#'}" style="display:block;font-family:'Inter',Arial,sans-serif;font-size:14px;color:#ffffff;text-decoration:none;line-height:16px;font-weight:normal;">
+                        <a href="{('https://www.' + re.sub(r'^https?://(?:www\.)?', '', youtube_link)) if youtube_link else '#'}" style="display:block;font-family:'Inter',Arial,sans-serif;font-size:14px;color:#ffffff;text-decoration:none;line-height:16px;font-weight:normal;">
                             Webvideo<br>({location_ole_tag})
                         </a>
                     </th>
