@@ -43,12 +43,12 @@
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
             </svg>
-            Terug
+            <span data-i18n="common.back">Terug</span>
         </a>
 
         <!-- Info card -->
         <div class="bg-green-50 border border-green-200 rounded-xl p-4 mb-6 text-sm text-green-800">
-            Upload het wekelijkse Excel-bestand en optioneel de Preek.docx. Selecteer welke bestanden u wilt genereren.
+            <span data-i18n="lit.info">Upload het wekelijkse Excel-bestand en optioneel de Preek.docx. Selecteer welke bestanden u wilt genereren.</span>
         </div>
 
         <!-- Upload form -->
@@ -61,7 +61,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                               d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0119 9.414V19a2 2 0 01-2 2z"/>
                     </svg>
-                    Main Liturgy file.xlsx <span class="text-red-500 ml-1">*</span>
+                    <span data-i18n="lit.sec_main">Main Liturgy file.xlsx</span> <span class="text-red-500 ml-1">*</span>
                 </h2>
 
                 <!-- Source Selection -->
@@ -69,15 +69,15 @@
                     <label class="flex items-start gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition">
                         <input type="radio" name="excelSource" value="dropbox" class="mt-1" checked>
                         <div>
-                            <div class="font-medium text-gray-700">Gebruik huidige week bestand</div>
-                            <div class="text-xs text-gray-500">Main Liturgy file.xlsx uit werkomap (Dropbox)</div>
+                            <div class="font-medium text-gray-700" data-i18n="lit.use_current">Gebruik huidige week bestand</div>
+                            <div class="text-xs text-gray-500" data-i18n="lit.use_current_hint">Main Liturgy file.xlsx uit werkomap (Dropbox)</div>
                         </div>
                     </label>
                     <label class="flex items-start gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition">
                         <input type="radio" name="excelSource" value="upload" class="mt-1">
                         <div>
-                            <div class="font-medium text-gray-700">Upload eigen bestand</div>
-                            <div class="text-xs text-gray-500">Selecteer een lokaal .xlsx bestand</div>
+                            <div class="font-medium text-gray-700" data-i18n="lit.upload_own">Upload eigen bestand</div>
+                            <div class="text-xs text-gray-500" data-i18n="lit.upload_own_hint">Selecteer een lokaal .xlsx bestand</div>
                         </div>
                     </label>
                 </div>
@@ -132,7 +132,7 @@
                     <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                     </svg>
-                    Preek.docx <span class="text-gray-400 font-normal text-sm">(optioneel)</span>
+                    <span data-i18n="lit.sec_preek">Preek.docx</span> <span class="text-gray-400 font-normal text-sm">(optioneel)</span>
                 </h2>
 
                 <!-- Source Selection -->
@@ -140,15 +140,15 @@
                     <label class="flex items-start gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition">
                         <input type="radio" name="preekSource" value="dropbox" class="mt-1" checked>
                         <div>
-                            <div class="font-medium text-gray-700">Gebruik huidige week bestand</div>
-                            <div class="text-xs text-gray-500">Preek.docx uit werkomap (Dropbox)</div>
+                            <div class="font-medium text-gray-700" data-i18n="lit.preek_use_current">Gebruik huidige week bestand</div>
+                            <div class="text-xs text-gray-500" data-i18n="lit.preek_use_hint">Preek.docx uit werkomap (Dropbox)</div>
                         </div>
                     </label>
                     <label class="flex items-start gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition">
                         <input type="radio" name="preekSource" value="upload" class="mt-1">
                         <div>
-                            <div class="font-medium text-gray-700">Upload eigen bestand</div>
-                            <div class="text-xs text-gray-500">Selecteer een lokaal .docx bestand</div>
+                            <div class="font-medium text-gray-700" data-i18n="lit.preek_upload">Upload eigen bestand</div>
+                            <div class="text-xs text-gray-500" data-i18n="lit.preek_upload_hint">Selecteer een lokaal .docx bestand</div>
                         </div>
                     </label>
                 </div>
@@ -287,28 +287,28 @@
                     <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
                     </svg>
-                    Te genereren bestanden
+                    <span data-i18n="lit.sec_output">Te genereren bestanden</span>
                 </h2>
                 <div class="space-y-3">
                     <label class="flex items-center gap-3 cursor-pointer">
                         <input type="checkbox" id="chkA" checked class="w-4 h-4 accent-gkin-green">
                         <div>
                             <span class="text-sm font-medium text-gray-800">LiturgieA.docx</span>
-                            <span class="text-xs text-gray-400 ml-2">Liturgie (gemeente)</span>
+                            <span class="text-xs text-gray-400 ml-2" data-i18n="lit.litA_hint">Liturgie (gemeente)</span>
                         </div>
                     </label>
                     <label class="flex items-center gap-3 cursor-pointer">
                         <input type="checkbox" id="chkB" checked class="w-4 h-4 accent-gkin-green">
                         <div>
                             <span class="text-sm font-medium text-gray-800">LiturgieB.docx</span>
-                            <span class="text-xs text-gray-400 ml-2">Muziekteam</span>
+                            <span class="text-xs text-gray-400 ml-2" data-i18n="lit.litB_hint">Muziekteam</span>
                         </div>
                     </label>
                     <label class="flex items-center gap-3 cursor-pointer">
                         <input type="checkbox" id="chkP" checked class="w-4 h-4 accent-gkin-green">
                         <div>
                             <span class="text-sm font-medium text-gray-800">LiturgieP.pptx</span>
-                            <span class="text-xs text-gray-400 ml-2">Beamer presentatie</span>
+                            <span class="text-xs text-gray-400 ml-2" data-i18n="lit.litP_hint">Beamer presentatie</span>
                         </div>
                     </label>
                 </div>
@@ -324,7 +324,7 @@
                 <svg id="btnSpinner" class="w-5 h-5 spinner hidden shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <circle cx="12" cy="12" r="10" stroke-width="3" stroke-dasharray="60" stroke-dashoffset="15"/>
                 </svg>
-                <span id="btnText">Genereer</span>
+                <span id="btnText" data-i18n="lit.generate">Genereer</span>
             </button>
 
             <!-- Status / error -->

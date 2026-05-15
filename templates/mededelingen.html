@@ -41,7 +41,7 @@
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
             </svg>
-            Terug
+            <span data-i18n="common.back">Terug</span>
         </a>
         <form id="genForm" action="/generate" method="POST" enctype="multipart/form-data">
 
@@ -72,8 +72,8 @@
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 px-5 py-3 mb-5 flex items-center justify-between gap-4">
             <div class="flex items-center gap-2">
                 <svg class="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-                <span class="text-sm text-gray-600">Outlook e-mail</span>
-                <span id="outlookStatus" class="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">Niet verbonden</span>
+                <span class="text-sm text-gray-600" data-i18n="med.outlook_label">Outlook e-mail</span>
+                <span id="outlookStatus" class="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500" data-i18n="med.outlook_not_conn">Niet verbonden</span>
             </div>
             <button type="button" id="emailLoginBtn"
                     class="text-xs bg-orange-50 hover:bg-orange-100 text-orange-700 border border-orange-200 rounded-lg px-3 py-1.5 flex items-center gap-1 transition-colors disabled:opacity-50">
@@ -128,7 +128,7 @@
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">
-                    Inhoud overdenking <span class="text-gray-400 font-normal">(alinea's scheiden met een lege regel)</span>
+                    <span data-i18n="med.ovd_content_label">Inhoud overdenking</span> <span class="text-gray-400 font-normal" data-i18n="med.ovd_content_hint">(alinea's scheiden met een lege regel)</span>
                 </label>
                 <textarea name="overdenking_content" rows="8"
                           placeholder="Voer de tekst van de overdenking in..."
@@ -239,21 +239,21 @@
                 <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
                 </svg>
-                Te genereren documenten
+                <span data-i18n="med.docs_section">Te genereren documenten</span>
             </h2>
             <div class="space-y-3">
                 <label class="flex items-center gap-3 cursor-pointer">
                     <input type="checkbox" id="chkGedrukt" checked class="w-4 h-4 accent-gkin-green">
                     <div>
                         <span class="text-sm font-medium text-gray-800">Mededelingen.docx</span>
-                        <span class="text-xs text-gray-400 ml-2">Gedrukte versie</span>
+                        <span class="text-xs text-gray-400 ml-2" data-i18n="med.doc_gedrukt">Gedrukte versie</span>
                     </div>
                 </label>
                 <label class="flex items-center gap-3 cursor-pointer">
                     <input type="checkbox" id="chkVoorlezen" class="w-4 h-4 accent-gkin-green">
                     <div>
                         <span class="text-sm font-medium text-gray-800">Vertaling Mededelingen.docx</span>
-                        <span class="text-xs text-gray-400 ml-2">Voorlees versie</span>
+                        <span class="text-xs text-gray-400 ml-2" data-i18n="med.doc_voorlees">Voorlees versie</span>
                     </div>
                 </label>
             </div>
@@ -308,7 +308,7 @@
                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                 </svg>
-                Opnieuw beginnen
+                <span data-i18n="common.reset">Opnieuw beginnen</span>
             </button>
             <button id="genBtn" type="submit"
                     class="flex-[2] flex items-center justify-center gap-2 bg-gkin-green hover:bg-gkin-dark text-white font-semibold py-3.5 px-6 rounded-xl shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
@@ -328,7 +328,7 @@
         </form>
 
         <p class="text-center text-xs text-gray-400 mb-8">
-            Data bronnen: Dropbox Takenrooster &amp; Mededelingen &middot; Scipio Verjaardagen &middot; GKIN Preekrooster
+            <span data-i18n="med.footer">Data bronnen: Dropbox Takenrooster &amp; Mededelingen &middot; Scipio Verjaardagen &middot; GKIN Preekrooster</span>
         </p>
     </main>
 
