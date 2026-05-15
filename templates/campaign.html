@@ -58,8 +58,9 @@
             <div id="oleLoadingOverlay" class="hidden absolute inset-0 bg-white/70 flex items-center justify-center rounded-xl z-10">
                 <div class="flex items-center gap-2 text-gkin-green font-medium text-sm"><svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg> <span data-i18n="camp.fetching_gkin">Gegevens ophalen van gkin.org...</span></div>
             </div>
-            <h2 class="text-base font-semibold text-gkin-green mb-4" data-i18n="camp.ole_settings">OLE Template Instellingen</h2>
-            
+            <h2 class="text-base font-semibold text-gkin-green mb-2" data-i18n="camp.ole_settings">OLE Template Instellingen</h2>
+            <p class="text-xs text-gray-400 mb-4" data-i18n="camp.auto_fetched_note">Automatisch opgehaald van gkin.org · handmatig overschrijven mag.</p>
+            <div id="oleFetchStatus" class="text-sm mb-4"></div>
             <div class="space-y-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1" data-i18n="camp.thema">Thema</label>
@@ -76,7 +77,6 @@
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1" data-i18n="camp.liturgie_url">Liturgie URL</label>
                     <input type="url" id="liturgieUrl" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green" placeholder="">
-                    <p class="text-xs text-gray-400 mt-1" data-i18n="camp.auto_fetched_note">Automatisch opgehaald van gkin.org · handmatig overschrijven mag.</p>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1" data-i18n="camp.collecte_url">OLE Collecte URL</label>
