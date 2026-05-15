@@ -310,7 +310,8 @@
                 const dayName = days[dateObj.getDay()];
                 const dateStr = `${dateObj.getDate()} ${months[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
                 document.getElementById('subject').value = `GKIN (OLE): Online Landelijke Eredienst ${dayName} ${dateStr}, ${timeClean}u`;
-                document.getElementById('campaignName').value = `GKIN OLE ${date.replace(/-/g, '').substring(2)}`;
+                const [yr, mo, dy] = date.split('-');
+                document.getElementById('campaignName').value = `OLE ${dy}-${mo}-${yr}`;
                 // Auto-suggest Saturday before the service date
                 const d = new Date(date);
                 const dayOfWeek = d.getDay(); // 0=Sun,6=Sat

@@ -88,6 +88,7 @@ class SenderCampaignGenerator:
             "content": html_content,
             "from": self.sender_email,
             "from_name": self.sender_name,
+            "sender_name": self.sender_name,
             "reply_to": self.sender_email,
             "groups": list_ids
         }
@@ -212,7 +213,7 @@ class SenderCampaignGenerator:
             <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;">
                 <tr>
                     <th align="center" style="background-color:#000000;border-radius:6px;padding:10px 25px;">
-                        <a href="{youtube_link}" style="display:block;font-family:'Inter',Arial,sans-serif;font-size:14px;color:#ffffff;text-decoration:none;line-height:16px;font-weight:normal;">
+                        <a href="{'https://' + youtube_link.lstrip('https://').lstrip('http://') if youtube_link else '#'}" style="display:block;font-family:'Inter',Arial,sans-serif;font-size:14px;color:#ffffff;text-decoration:none;line-height:16px;font-weight:normal;">
                             Webvideo<br>({location_ole_tag})
                         </a>
                     </th>
@@ -259,7 +260,7 @@ class SenderCampaignGenerator:
             <td width="40"></td>
             <td align="left" width="250" valign="top">
                 <p style="margin:0 0 6px 0;">Wilt u deze e-mails niet meer ontvangen?</p>
-                <p style="margin:8px 0 0 0;"><a href="{{unsubscribe_link}}" style="color:#515856;text-decoration:underline;">{{unsubscribe_text}}</a></p>
+                <a href="{{{{unsubscribe_link}}}}">{{{{unsubscribe_text}}}}</a>
             </td>
         </tr>
     </table>

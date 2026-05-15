@@ -2508,7 +2508,7 @@ def campaign_create():
         scheduled_at = scheduled_at_input if scheduled_at_input else None
         
         result = generator.create_campaign(
-            name=name or f"GKIN OLE {selected_date.strftime('%y%m%d')}",
+            name=name or f"OLE {selected_date.strftime('%d-%m-%Y')}",
             subject=subject or f"GKIN (OLE): Online Landelijke Eredienst {day_name} {date_str}, {time_clean}u",
             html_content=html_content,
             scheduled_at=scheduled_at,
