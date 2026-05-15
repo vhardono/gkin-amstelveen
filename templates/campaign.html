@@ -75,29 +75,27 @@
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1" data-i18n="camp.liturgie_url">Liturgie URL</label>
-                    <input type="url" id="liturgieUrl" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green" placeholder="Wordt automatisch opgehaald van gkin.org">
-                    <div id="liturgieUploadStatus" class="mt-1 text-xs text-gray-500"></div>
-                    <p class="text-xs text-gray-400 mt-1">Automatisch opgehaald van gkin.org · handmatig overschrijven mag.</p>
+                    <input type="url" id="liturgieUrl" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green" placeholder="">
+                    <p class="text-xs text-gray-400 mt-1" data-i18n="camp.auto_fetched_note">Automatisch opgehaald van gkin.org · handmatig overschrijven mag.</p>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1" data-i18n="camp.collecte_url">OLE Collecte URL</label>
                     <input type="url" id="collecteUrl" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green" placeholder="https://www.ing.nl/payreq/...">
-                    <div id="qrStatus" class="mt-2 text-sm"></div>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1" data-i18n="camp.qr_code">OLE QR Code</label>
-                    <input type="text" id="qrUrl" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green" placeholder="Wordt automatisch opgehaald van gkin.org">
+                    <input type="text" id="qrUrl" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green" placeholder="">
                     <input type="hidden" id="qrB64">
                     <input type="hidden" id="collecteOvv">
                     <div id="qrPreview" class="mt-2 hidden"><img id="qrPreviewImg" src="" alt="QR" class="h-20 rounded border border-gray-200"></div>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1" data-i18n="camp.predikant">Predikant</label>
-                    <input type="text" id="olePredikant" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green" placeholder="Wordt automatisch ingevuld">
+                    <input type="text" id="olePredikant" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green" placeholder="">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1" data-i18n="common.location">Locatie</label>
-                    <input type="text" id="oleLocation" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green" placeholder="Wordt automatisch ingevuld">
+                    <input type="text" id="oleLocation" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green" placeholder="">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1" data-i18n="common.time">Tijd</label>
@@ -208,7 +206,7 @@
         const previewSection = document.getElementById('previewSection');
         const previewContent = document.getElementById('previewContent');
         const resultSection = document.getElementById('resultSection');
-        const qrStatus = document.getElementById('qrStatus');
+        const oleFetchStatus = document.getElementById('oleFetchStatus');
 
         // Clear all fields when date changes
         dateSelect.addEventListener('change', async () => {
@@ -226,7 +224,7 @@
             document.getElementById('bibleVerse').value = '';
             document.getElementById('youtubeLink').value = '';
             document.getElementById('liturgieUrl').value = '';
-            document.getElementById('liturgieUploadStatus').innerHTML = '';
+            if (oleFetchStatus) oleFetchStatus.innerHTML = '';
             document.getElementById('collecteUrl').value = '';
             document.getElementById('qrUrl').value = '';
             document.getElementById('qrB64').value = '';
@@ -237,7 +235,6 @@
             document.getElementById('oleTime').value = '';
             document.getElementById('oleLocation').value = '';
             document.getElementById('olePredikant').value = '';
-            if (qrStatus) qrStatus.innerHTML = '';
             if (resultSection) resultSection.innerHTML = '';
             previewSection.classList.add('hidden');
 
@@ -300,12 +297,8 @@
                 if (data.ole_youtube_link) document.getElementById('youtubeLink').value = data.ole_youtube_link;
                 if (data.ole_liturgie_url) {
                     document.getElementById('liturgieUrl').value = data.ole_liturgie_url;
-                    document.getElementById('liturgieUploadStatus').innerHTML =
-                        `<span class="text-green-600">✓ ${t('camp.liturgie_fetched')}</span>`;
                 } else {
                     document.getElementById('liturgieUrl').value = '';
-                    document.getElementById('liturgieUploadStatus').innerHTML =
-                        `<span class="text-amber-600">⚠ ${t('camp.liturgie_not_found')}</span>`;
                 }
                 console.log('[Frontend] Website - thema:', data.ole_thema, 'bijbel:', data.ole_bible_verse, 'youtube:', data.ole_youtube_link, 'liturgie:', data.ole_liturgie_url);
 
@@ -323,11 +316,9 @@
                     const img = document.getElementById('qrPreviewImg');
                     img.src = data.ole_qr_b64;
                     preview.classList.remove('hidden');
-                    if (qrStatus) qrStatus.innerHTML = `<span class="text-green-600">✓ ${t('camp.qr_fetched')}</span>`;
                 } else if (data.ole_qr) {
                     const localPath = data.ole_qr.startsWith('http') ? data.ole_qr : `/uploads/${data.ole_qr}`;
                     document.getElementById('qrUrl').value = localPath;
-                    if (qrStatus) qrStatus.innerHTML = `<span class="text-green-600">✓ QR gevonden: ${data.ole_qr}</span>`;
                 }
 
                 // Update subject with actual service time once data arrives
@@ -335,6 +326,20 @@
                 if (timeClean) {
                     const _curSubj = document.getElementById('subject').value;
                     document.getElementById('subject').value = _curSubj.replace(/,\s*[\d:]+u$/, `, ${timeClean}u`);
+                }
+
+                // Show consolidated status message
+                const fetchedItems = [];
+                if (data.ole_thema) fetchedItems.push(t('camp.thema'));
+                if (data.ole_bible_verse) fetchedItems.push(t('camp.bijbel'));
+                if (data.ole_youtube_link) fetchedItems.push('YouTube');
+                if (data.ole_liturgie_url) fetchedItems.push(t('camp.liturgie_url'));
+                if (data.ole_url) fetchedItems.push(t('camp.collecte_url'));
+                if (data.ole_qr_b64 || data.ole_qr) fetchedItems.push(t('camp.qr_code'));
+                if (fetchedItems.length > 0) {
+                    oleFetchStatus.innerHTML = `<span class="text-green-600">✓ ${t('camp.fetched_from_gkin')}: ${fetchedItems.join(', ')}</span>`;
+                } else {
+                    oleFetchStatus.innerHTML = `<span class="text-amber-600">⚠ ${t('camp.no_data_found')}</span>`;
                 }
                 console.log('[Frontend] Auto-population complete');
 
