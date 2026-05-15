@@ -150,7 +150,7 @@ class GKINOLEScraper:
 
         # --- Bible verse ---
         bible_m = re.search(
-            r'genomen uit\s+(.+?)(?=\s+De dienst|\s+De liturgie|\s+In deze|\s{3,}|$)',
+            r'(?:genomen uit|Bijbeltekst\s*:|uit\s+(?=\d*\s*[A-Z]))\.?\s*(.+?)(?=\s+De dienst|\s+De liturgie|\s+In deze|\s+U kunt|\s+De collecte|\s{3,}|\.\s+[A-Z]|$)',
             text, re.IGNORECASE | re.DOTALL
         )
         if bible_m:
@@ -182,9 +182,11 @@ class GKINOLEScraper:
                 break
 
         # --- Collecte o.v.v. text (everything after 'o.v.v.' or 'O.v.v.') ---
-        ovv_m = re.search(r'[Oo]\.?v\.?v\.?\s+(.+?)(?=\.|$)', text)
+        ovv_m = re.search(r'[Oo]\.?[Vv]\.?[Vv]\.?\s+(.+?)(?=\.(?:\s|$)|$)', text)
         if ovv_m:
-            result['collecte_ovv'] = re.sub(r'\s+', ' ', ovv_m.group(1)).strip()
+            raw_ovv = re.sub(r'\s+', ' ', ovv_m.group(1)).strip()
+            # Limit to reasonable length (avoid capturing rest of page)
+            result['collecte_ovv'] = raw_ovv[:80] if len(raw_ovv) > 80 else raw_ovv
 
         # --- QR image (download and encode as base64 data URI) ---
         for img in article.find_all('img', src=True):
