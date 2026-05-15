@@ -57,14 +57,37 @@ class GKINOLEScraper:
             return None
 
     def _parse_date_from_text(self, text: str) -> Optional[datetime]:
-        """Parse Dutch date like '14 mei 2026' or 'donderdag 14 mei 2026'."""
-        m = re.search(
+        """Parse service date from article text.
+
+        Prefers the date in 'Op DD maand YYYY zal ...' (service announcement)
+        over any earlier dates like 'Ook beschikbaar: DD maand YYYY' (publish date).
+        Falls back to the first Dutch date if no service-specific pattern found.
+        """
+        DATE_PATTERN = (
             r'(\d{1,2})\s+(januari|februari|maart|april|mei|juni|juli|augustus|'
-            r'september|oktober|november|december)\s+(\d{4})',
-            text, re.IGNORECASE
+            r'september|oktober|november|december)\s+(\d{4})'
         )
+
+        # Priority 1: "Op <date> zal ..." — the actual service date
+        m = re.search(r'\bOp\s+' + DATE_PATTERN, text, re.IGNORECASE)
+        # Priority 2: "zondag/Sunday <date>" — also reliable
+        if not m:
+            m = re.search(r'\b(?:zondag|sunday)\s+' + DATE_PATTERN, text, re.IGNORECASE)
+        # Priority 3: first date that is NOT preceded by "beschikbaar" or "gepubliceerd"
+        if not m:
+            for candidate in re.finditer(DATE_PATTERN, text, re.IGNORECASE):
+                preceding = text[max(0, candidate.start() - 30):candidate.start()].lower()
+                if 'beschikbaar' not in preceding and 'gepubliceerd' not in preceding:
+                    m = candidate
+                    break
+        # Fallback: absolute first date
+        if not m:
+            m = re.search(DATE_PATTERN, text, re.IGNORECASE)
+
         if m:
-            day, month_nl, year = int(m.group(1)), m.group(2).lower(), int(m.group(3))
+            # group indices depend on whether a prefix group was captured
+            groups = m.groups()
+            day, month_nl, year = int(groups[-3]), groups[-2].lower(), int(groups[-1])
             month = NL_MONTHS.get(month_nl)
             if month:
                 return datetime(year, month, day)
@@ -108,8 +131,10 @@ class GKINOLEScraper:
         result['date'] = self._parse_date_from_text(text)
 
         # --- Predikant ---
+        # Pattern: "ds./zr./br. <Name>" where name may include initials like "S. Tjahjadi"
+        # Stop before action verbs that follow the name
         pred_m = re.search(
-            r'\b(ds\.|zr\.|br\.)\s+([A-Z][^\.,]+?)(?=\s+voorgaan|\s+zal\s|\s+in\s+de\s+OLE)',
+            r'\b(ds\.|zr\.|br\.)\s+([A-Z][A-Za-z.\-\s]+?)(?=\s+(?:voorgaan|zal\s|preekt\b|leidt\b))',
             text, re.IGNORECASE
         )
         if pred_m:
