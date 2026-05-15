@@ -156,10 +156,16 @@ class GKINOLEScraper:
         if bible_m:
             result['bible_verse'] = re.sub(r'\s+', ' ', bible_m.group(1)).strip()
 
-        # --- YouTube link --- must have a non-empty path segment after the domain/path
-        yt_m = re.search(r'https?://(?:www\.)?(?:youtube\.com/(?:live|watch)/[A-Za-z0-9_\-]{5,}|youtu\.be/[A-Za-z0-9_\-]{5,})[^\s<>"\']*', text)
-        if yt_m:
-            result['youtube_link'] = yt_m.group(0).rstrip('.,)')
+        # --- YouTube link --- check anchor hrefs first (most reliable), then plain text
+        for a in article.find_all('a', href=True):
+            href = a['href']
+            if re.search(r'(?:youtube\.com/(?:live|watch)|youtu\.be)/[A-Za-z0-9_\-]{5,}', href):
+                result['youtube_link'] = href.rstrip('.,)')
+                break
+        if not result['youtube_link']:
+            yt_m = re.search(r'https?://(?:www\.)?(?:youtube\.com/(?:live|watch)/[A-Za-z0-9_\-]{5,}|youtu\.be/[A-Za-z0-9_\-]{5,})[^\s<>"\']*', text)
+            if yt_m:
+                result['youtube_link'] = yt_m.group(0).rstrip('.,)')
 
         # --- Liturgie URL (direct link on gkin.org) ---
         for a in article.find_all('a', href=True):

@@ -334,7 +334,7 @@
                 if (data.success && data.lists && data.lists.length > 0) {
                     loading.classList.add('hidden');
                     container.innerHTML = data.lists.map(l => {
-                        const count = l.subscribers_count ?? l.activeSubscribersCount ?? l.total ?? l.count ?? l.subscribersCount ?? '?';
+                        const count = l.active_subscribers ?? l.subscribers_count ?? l.activeSubscribersCount ?? l.recipient_count ?? l.total ?? l.count ?? '?';
                         const name = l.title || l.name || l.id;
                         return `<label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer hover:bg-white rounded px-1 py-0.5">
                             <input type="checkbox" class="list-checkbox rounded border-gray-300 text-gkin-green" value="${l.id}">
