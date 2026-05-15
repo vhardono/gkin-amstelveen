@@ -19,6 +19,8 @@ from docx.opc.constants import RELATIONSHIP_TYPE as RT
 from config import Config
 
 TEMPLATE_PATH = os.path.join(Config.TEMPLATE_DIR, 'mededelingen_template.docx')
+if not os.path.exists(TEMPLATE_PATH):
+    TEMPLATE_PATH = os.path.join('./doc_templates', 'mededelingen_template.docx')
 
 
 class BulletinGenerator:
