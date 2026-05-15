@@ -2575,29 +2575,37 @@ def upload_to_sender():
 @app.route('/campaign/upload-liturgie', methods=['POST'])
 @_password_required
 def campaign_upload_liturgie():
-    """Upload a liturgie file directly to Sender and return the URL."""
-    from sender_campaign import SenderCampaignGenerator
+    """Upload a liturgie file to Dropbox and return a public shared link URL."""
     if 'file' not in request.files:
         return jsonify({'success': False, 'error': 'No file provided'}), 400
     f = request.files['file']
     if not f.filename:
         return jsonify({'success': False, 'error': 'Empty filename'}), 400
-    import tempfile, werkzeug.utils
+    import werkzeug.utils
     safe_name = werkzeug.utils.secure_filename(f.filename)
-    with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(safe_name)[1]) as tmp:
-        f.save(tmp.name)
-        tmp_path = tmp.name
+    file_bytes = f.read()
     try:
-        generator = SenderCampaignGenerator()
-        result = generator.upload_file(tmp_path)
-        os.unlink(tmp_path)
-        if result.get('success'):
-            return jsonify({'success': True, 'url': result['url'], 'file_id': result.get('file_id')})
-        else:
-            return jsonify({'success': False, 'error': result.get('error', 'Upload failed')}), 500
+        import dropbox as _dropbox
+        from dropbox.exceptions import ApiError as _DbxApiError
+        dbx = _dropbox.Dropbox(
+            oauth2_refresh_token=DROPBOX_REFRESH_L,
+            app_key=DROPBOX_APP_KEY_L,
+            app_secret=DROPBOX_APP_SECRET_L,
+        )
+        dropbox_path = f"/#Kerkbode GKIN Amstelveen/OLE-Liturgie/{safe_name}"
+        dbx.files_upload(file_bytes, dropbox_path, mode=_dropbox.files.WriteMode.overwrite)
+        # Get or create shared link
+        try:
+            link_meta = dbx.sharing_create_shared_link_with_settings(dropbox_path)
+        except _DbxApiError:
+            links = dbx.sharing_list_shared_links(path=dropbox_path, direct_only=True)
+            link_meta = links.links[0] if links.links else None
+        if not link_meta:
+            return jsonify({'success': False, 'error': 'Could not create Dropbox shared link'}), 500
+        raw = link_meta.url
+        url = raw.replace('www.dropbox.com', 'dl.dropboxusercontent.com').replace('?dl=0', '').replace('?dl=1', '') + '?dl=1'
+        return jsonify({'success': True, 'url': url})
     except Exception as e:
-        try: os.unlink(tmp_path)
-        except: pass
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
