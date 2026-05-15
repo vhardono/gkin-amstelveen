@@ -9,6 +9,7 @@ const GKIN_I18N = {
     'common.save':            'Opslaan',
     'common.cancel':          'Annuleren',
     'common.date':            'Datum',
+    'common.time':            'Tijd',
     'common.name':            'Naam',
     'common.location':        'Locatie',
 
@@ -64,6 +65,7 @@ const GKIN_I18N = {
     'camp.schedule_time':     'Verzendtijd',
     'camp.preview':           'Voorbeeld bekijken',
     'camp.create':            'Campagne aanmaken',
+    'camp.campaign_name':     'Campagnenaam',
 
     /* --- PM Campaign --- */
     'pm.info':                'Te verzenden na de dienst. Bevat links naar de preek opname, mededelingen en YouTube webvideo.',
@@ -81,6 +83,12 @@ const GKIN_I18N = {
     'pm.no_selection':        'Geen selectie = eerste groep wordt automatisch gebruikt',
     'pm.fetching':            'Rooster ophalen...',
     'pm.ole_not_found':       'OLE niet gevonden in rooster – vul handmatig in',
+    'pm.preek_ole_url_label': 'Preek OLE URL (PDF)',
+    'pm.voorbeeld_heading':   'Voorbeeld',
+    'pm.created':             'Campaign aangemaakt',
+    'pm.scheduled':           'Ingepland voor',
+    'pm.schedule_error':      'Inplannen mislukt',
+    'pm.error':               'Fout',
 
     /* --- Mededelingen --- */
     'med.subtitle':           'Mededelingen Generator',
@@ -215,6 +223,7 @@ const GKIN_I18N = {
     'common.save':            'Simpan',
     'common.cancel':          'Batal',
     'common.date':            'Tanggal',
+    'common.time':            'Waktu',
     'common.name':            'Nama',
     'common.location':        'Lokasi',
 
@@ -270,6 +279,7 @@ const GKIN_I18N = {
     'camp.schedule_time':     'Waktu kirim',
     'camp.preview':           'Lihat pratinjau',
     'camp.create':            'Buat kampanye',
+    'camp.campaign_name':     'Nama kampanye',
 
     /* --- PM Campaign --- */
     'pm.info':                'Dikirim setelah ibadah. Berisi link rekaman khotbah, mededelingen dan video YouTube.',
@@ -287,6 +297,12 @@ const GKIN_I18N = {
     'pm.no_selection':        'Tidak ada pilihan = grup pertama digunakan otomatis',
     'pm.fetching':            'Mengambil jadwal...',
     'pm.ole_not_found':       'OLE tidak ditemukan di jadwal – isi manual',
+    'pm.preek_ole_url_label': 'URL Khotbah OLE (PDF)',
+    'pm.voorbeeld_heading':   'Pratinjau',
+    'pm.created':             'Kampanye dibuat',
+    'pm.scheduled':           'Dijadwalkan pada',
+    'pm.schedule_error':      'Penjadwalan gagal',
+    'pm.error':               'Kesalahan',
 
     /* --- Mededelingen --- */
     'med.subtitle':           'Generator Pengumuman',
@@ -421,6 +437,7 @@ const GKIN_I18N = {
     'common.save':            'Save',
     'common.cancel':          'Cancel',
     'common.date':            'Date',
+    'common.time':            'Time',
     'common.name':            'Name',
     'common.location':        'Location',
 
@@ -476,6 +493,7 @@ const GKIN_I18N = {
     'camp.schedule_time':     'Send time',
     'camp.preview':           'Preview',
     'camp.create':            'Create campaign',
+    'camp.campaign_name':     'Campaign name',
 
     /* --- PM Campaign --- */
     'pm.info':                'To be sent after the service. Contains links to the sermon recording, announcements and YouTube webvideo.',
@@ -493,6 +511,12 @@ const GKIN_I18N = {
     'pm.no_selection':        'No selection = first group used automatically',
     'pm.fetching':            'Fetching roster...',
     'pm.ole_not_found':       'OLE not found in roster – fill in manually',
+    'pm.preek_ole_url_label': 'Sermon OLE URL (PDF)',
+    'pm.voorbeeld_heading':   'Preview',
+    'pm.created':             'Campaign created',
+    'pm.scheduled':           'Scheduled for',
+    'pm.schedule_error':      'Scheduling failed',
+    'pm.error':               'Error',
 
     /* --- Mededelingen --- */
     'med.subtitle':           'Announcements Generator',

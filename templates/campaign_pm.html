@@ -123,7 +123,7 @@
                 <!-- Non-AM OLE fields — only shown when location != AM -->
                 <div id="oleNonAmFields" class="hidden space-y-4 border-t border-gray-100 pt-4">
                     <div>
-                        <label id="preekOleLabel" class="block text-sm font-medium text-gray-700 mb-1">Preek OLE URL (PDF)</label>
+                        <label id="preekOleLabel" class="block text-sm font-medium text-gray-700 mb-1" data-i18n="pm.preek_ole_url_label">Preek OLE URL (PDF)</label>
                         <input type="url" id="preekOleUrl" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green" placeholder="https://...">
                     </div>
                 </div>
@@ -139,7 +139,7 @@
                     <input type="text" id="subject" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Campaign Name</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-1" data-i18n="camp.campaign_name">Campaign Name</label>
                     <input type="text" id="campaignName" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green">
                 </div>
                 <div>
@@ -160,7 +160,7 @@
                                 <input type="date" id="scheduleDate" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm h-10 focus:outline-none focus:ring-2 focus:ring-gkin-green">
                             </div>
                             <div class="w-28">
-                                <label class="block text-xs text-gray-500 mb-1">Tijd</label>
+                                <label class="block text-xs text-gray-500 mb-1" data-i18n="common.time">Tijd</label>
                                 <select id="scheduleTime" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm h-10 focus:outline-none focus:ring-2 focus:ring-gkin-green">
                                     <option value="07:00">07:00</option>
                                     <option value="08:00">08:00</option>
@@ -189,7 +189,7 @@
         </div>
 
         <div id="previewSection" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-5 hidden">
-            <h2 class="text-base font-semibold text-gkin-green mb-4">Voorbeeld</h2>
+            <h2 class="text-base font-semibold text-gkin-green mb-4" data-i18n="pm.voorbeeld_heading">Voorbeeld</h2>
             <div id="previewContent" class="text-sm text-gray-700 overflow-auto border border-gray-200 rounded-lg bg-gray-50"></div>
         </div>
 
@@ -406,11 +406,11 @@
                 const data = await resp.json();
                 if (data.success) {
                     const schedMsg = data.scheduled
-                        ? ` · Ingepland voor ${data.schedule_time} UTC`
-                        : (data.schedule_error ? ` · ⚠ Inplannen mislukt: ${data.schedule_error}` : '');
-                    resultSection.innerHTML = `<div class="bg-green-50 border border-green-200 rounded-lg p-4 text-green-800 text-sm">✓ Campaign aangemaakt: ${data.campaign_id}${schedMsg}</div>`;
+                        ? ` · ${t('pm.scheduled')} ${data.schedule_time} UTC`
+                        : (data.schedule_error ? ` · ⚠ ${t('pm.schedule_error')}: ${data.schedule_error}` : '');
+                    resultSection.innerHTML = `<div class="bg-green-50 border border-green-200 rounded-lg p-4 text-green-800 text-sm">✓ ${t('pm.created')}: ${data.campaign_id}${schedMsg}</div>`;
                 } else {
-                    resultSection.innerHTML = `<div class="bg-red-50 border border-red-200 rounded-lg p-4 text-red-800 text-sm">✗ Fout: ${data.error || 'Onbekende fout'}</div>`;
+                    resultSection.innerHTML = `<div class="bg-red-50 border border-red-200 rounded-lg p-4 text-red-800 text-sm">✗ ${t('pm.error')}: ${data.error || t('pm.error')}</div>`;
                 }
                 resultSection.classList.remove('hidden');
             } catch (err) {
