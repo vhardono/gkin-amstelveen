@@ -177,7 +177,7 @@ def generate(entry: dict, iso_date: str, output_path: str, songs: list = None):
         for ri, row in enumerate(song_table.rows):
             cells = row.cells
             if len(cells) > 2:
-                new_val = (songs[ri].strip() if songs and ri < len(songs) and songs[ri] else '')
+                new_val = (songs[ri].strip() if songs and ri < len(songs) and songs[ri] else '……………………………')
                 cell = cells[2]
                 # Clear all runs in all paragraphs
                 for para in cell.paragraphs:
