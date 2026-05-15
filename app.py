@@ -2623,7 +2623,7 @@ def campaign_upload_liturgie():
             app_key=DROPBOX_APP_KEY_L,
             app_secret=DROPBOX_APP_SECRET_L,
         )
-        dropbox_path = f"/#Kerkbode GKIN Amstelveen/OLE-Liturgie/{safe_name}"
+        dropbox_path = f"/# Kerkbode GKIN Amstelveen/OLE-Liturgie/{safe_name}"
         dbx.files_upload(file_bytes, dropbox_path, mode=_dropbox.files.WriteMode.overwrite)
         # Get or create shared link (legacy API, no sharing.write scope needed)
         try:
