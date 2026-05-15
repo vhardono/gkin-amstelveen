@@ -65,6 +65,23 @@ const GKIN_I18N = {
     'camp.preview':           'Voorbeeld bekijken',
     'camp.create':            'Campagne aanmaken',
 
+    /* --- PM Campaign --- */
+    'pm.info':                'Te verzenden na de dienst. Bevat links naar de preek opname, mededelingen en YouTube webvideo.',
+    'pm.section_content':     'Inhoud',
+    'pm.predikant_am':        'Predikant AM',
+    'pm.meded_url':           'Mededelingen URL (PDF)',
+    'pm.meded_url_hint':      'Link naar het gegenereerde Mededelingen PDF (bv. via Dropbox of Google Drive).',
+    'pm.preek_am_url':        'Preek AM URL (PDF)',
+    'pm.preek_am_url_hint':   'Link naar het Preek PDF voor de AM dienst.',
+    'pm.ole_location':        'OLE Locatie',
+    'pm.ole_predikant':       'OLE Predikant',
+    'pm.preek_ole_url':       'Preek {loc} URL (PDF)',
+    'pm.youtube':             'YouTube Link (OLE webvideo)',
+    'pm.recipients':          'Ontvangers groep(en)',
+    'pm.no_selection':        'Geen selectie = eerste groep wordt automatisch gebruikt',
+    'pm.fetching':            'Rooster ophalen...',
+    'pm.ole_not_found':       'OLE niet gevonden in rooster – vul handmatig in',
+
     /* --- Mededelingen --- */
     'med.subtitle':           'Mededelingen Generator',
     'med.info':               'Genereer het wekelijkse mededelingen bulletin. Vul de velden in en klik op Genereer.',
@@ -254,6 +271,23 @@ const GKIN_I18N = {
     'camp.preview':           'Lihat pratinjau',
     'camp.create':            'Buat kampanye',
 
+    /* --- PM Campaign --- */
+    'pm.info':                'Dikirim setelah ibadah. Berisi link rekaman khotbah, mededelingen dan video YouTube.',
+    'pm.section_content':     'Konten',
+    'pm.predikant_am':        'Pendeta AM',
+    'pm.meded_url':           'URL Mededelingen (PDF)',
+    'pm.meded_url_hint':      'Link ke PDF Mededelingen yang dibuat (mis. via Dropbox atau Google Drive).',
+    'pm.preek_am_url':        'URL Khotbah AM (PDF)',
+    'pm.preek_am_url_hint':   'Link ke PDF khotbah ibadah AM.',
+    'pm.ole_location':        'Lokasi OLE',
+    'pm.ole_predikant':       'Pendeta OLE',
+    'pm.preek_ole_url':       'URL Khotbah {loc} (PDF)',
+    'pm.youtube':             'Link YouTube (video OLE)',
+    'pm.recipients':          'Grup penerima',
+    'pm.no_selection':        'Tidak ada pilihan = grup pertama digunakan otomatis',
+    'pm.fetching':            'Mengambil jadwal...',
+    'pm.ole_not_found':       'OLE tidak ditemukan di jadwal – isi manual',
+
     /* --- Mededelingen --- */
     'med.subtitle':           'Generator Pengumuman',
     'med.info':               'Buat buletin pengumuman mingguan. Isi kolom dan klik Buat.',
@@ -442,6 +476,23 @@ const GKIN_I18N = {
     'camp.schedule_time':     'Send time',
     'camp.preview':           'Preview',
     'camp.create':            'Create campaign',
+
+    /* --- PM Campaign --- */
+    'pm.info':                'To be sent after the service. Contains links to the sermon recording, announcements and YouTube webvideo.',
+    'pm.section_content':     'Content',
+    'pm.predikant_am':        'Preacher AM',
+    'pm.meded_url':           'Announcements URL (PDF)',
+    'pm.meded_url_hint':      'Link to the generated Announcements PDF (e.g. via Dropbox or Google Drive).',
+    'pm.preek_am_url':        'Sermon AM URL (PDF)',
+    'pm.preek_am_url_hint':   'Link to the Sermon PDF for the AM service.',
+    'pm.ole_location':        'OLE Location',
+    'pm.ole_predikant':       'OLE Preacher',
+    'pm.preek_ole_url':       'Sermon {loc} URL (PDF)',
+    'pm.youtube':             'YouTube Link (OLE webvideo)',
+    'pm.recipients':          'Recipient group(s)',
+    'pm.no_selection':        'No selection = first group used automatically',
+    'pm.fetching':            'Fetching roster...',
+    'pm.ole_not_found':       'OLE not found in roster – fill in manually',
 
     /* --- Mededelingen --- */
     'med.subtitle':           'Announcements Generator',

@@ -313,7 +313,7 @@ class SenderCampaignGenerator:
     def generate_pm_html(self, service_date: datetime, am_predikant: str,
                          mededelingen_url: str = "", preek_am_url: str = "",
                          ole_location: str = "", ole_predikant: str = "",
-                         youtube_link: str = "") -> str:
+                         youtube_link: str = "", preek_ole_url: str = "") -> str:
         """Generate HTML email for post-service Preek & Mededelingen mailing.
 
         Layout rules:
@@ -380,6 +380,7 @@ class SenderCampaignGenerator:
             # 2×2 grid, 250px buttons
             btn_width = 250
             loc_tag = f"{loc_code}-OLE"
+            preek_ole_href = preek_ole_url or '#'
             buttons_html = f"""<table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 10px 0;">
     <tr>
         {btn(btn_width, 'Mededelingen (AM)', mededelingen_url or '#')}
@@ -389,7 +390,7 @@ class SenderCampaignGenerator:
 </table>
 <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 25px 0;">
     <tr>
-        {btn(btn_width, f'Preek ({loc_tag})<br>{ole_predikant or "kunt u hier later terugvinden"}', youtube_href)}
+        {btn(btn_width, f'Preek ({loc_tag})<br>{ole_predikant or "kunt u hier later terugvinden"}', preek_ole_href)}
         {spacer}
         {btn(btn_width, f'Webvideo<br>({loc_tag})', youtube_href)}
     </tr>

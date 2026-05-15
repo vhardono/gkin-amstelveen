@@ -2644,6 +2644,46 @@ def campaign_upload_liturgie():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@app.route('/fetch-pm-data', methods=['POST'])
+@_password_required
+def fetch_pm_data():
+    """Fetch AM predikant and OLE location/predikant for a given date."""
+    data = request.get_json() or {}
+    iso_date = data.get('date', '')
+    if not iso_date:
+        return jsonify({'error': 'no date provided'}), 400
+    try:
+        selected_date = datetime.strptime(iso_date, '%Y-%m-%d')
+    except ValueError:
+        return jsonify({'error': 'invalid date format'}), 400
+    try:
+        from data_sources.preekroster_scraper import PreekrosterScraper
+        scraper = PreekrosterScraper()
+        # AM predikant — from takenrooster
+        taken = _get_takenrooster()
+        am_predikant = ''
+        for entry in taken['entries']:
+            e_date = entry['date'].date() if hasattr(entry['date'], 'date') else entry['date']
+            if e_date == selected_date.date():
+                am_predikant = entry.get('predikant', '')
+                break
+        # OLE location + predikant — from preekroster
+        ole_data = scraper.get_ole_service_for_date(selected_date)
+        location_code = ole_data.get('location', '')
+        # Normalise: strip trailing whitespace/dash artefacts
+        location_code = location_code.strip().upper() if location_code else ''
+        return jsonify({
+            'success': True,
+            'am_predikant': am_predikant,
+            'ole_location': location_code,
+            'ole_predikant': ole_data.get('predikant', ''),
+            'ole_time': ole_data.get('time', ''),
+        })
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/campaign/pm')
 @_password_required
 def campaign_pm():
@@ -2703,6 +2743,7 @@ def campaign_pm_preview():
             ole_location=data.get('ole_location', ''),
             ole_predikant=data.get('ole_predikant', ''),
             youtube_link=data.get('youtube_link', ''),
+            preek_ole_url=data.get('preek_ole_url', ''),
         )
         return jsonify({'success': True, 'html_preview': html_content})
     except Exception as e:
@@ -2740,6 +2781,7 @@ def campaign_pm_create():
             ole_location=data.get('ole_location', ''),
             ole_predikant=data.get('ole_predikant', ''),
             youtube_link=data.get('youtube_link', ''),
+            preek_ole_url=data.get('preek_ole_url', ''),
         )
         result = generator.create_campaign(
             name=name or f"PM {selected_date.strftime('%d-%m-%Y')}",
