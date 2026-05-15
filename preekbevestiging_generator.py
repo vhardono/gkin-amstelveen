@@ -170,21 +170,25 @@ def generate(entry: dict, iso_date: str, output_path: str, songs: list = None):
             _set_cell_text(rows[5].cells[2], eo1)
 
     # ------------------------------------------------------------------ #
-    # Song table (Table 2) — col 2
+    # Song table (Table 2) — col 2: always clear first, then write value
     # ------------------------------------------------------------------ #
-    if songs and len(doc.tables) > 2:
+    if len(doc.tables) > 2:
         song_table = doc.tables[2]
         for ri, row in enumerate(song_table.rows):
-            if ri < len(songs) and songs[ri]:
-                cells = row.cells
-                if len(cells) > 2:
-                    for para in cells[2].paragraphs:
-                        for run in para.runs:
-                            run.text = ''
-                        if para.runs:
-                            para.runs[0].text = songs[ri]
-                        else:
-                            para.add_run(songs[ri])
+            cells = row.cells
+            if len(cells) > 2:
+                new_val = (songs[ri].strip() if songs and ri < len(songs) and songs[ri] else '')
+                cell = cells[2]
+                # Clear all runs in all paragraphs
+                for para in cell.paragraphs:
+                    for run in para.runs:
+                        run.text = ''
+                # Write new value into first paragraph's first run (or add run)
+                first_para = cell.paragraphs[0] if cell.paragraphs else cell.add_paragraph()
+                if first_para.runs:
+                    first_para.runs[0].text = new_val
+                else:
+                    first_para.add_run(new_val)
 
     doc.save(output_path)
 
