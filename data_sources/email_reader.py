@@ -447,37 +447,66 @@ class OutlookCollecteReader:
         ole_msgs = [m for m in msgs2 if 'pmcvb.gkin@gmail.com' in
                     m.get('from', {}).get('emailAddress', {}).get('address', '').lower()]
 
+        def _parse_amount(raw: str) -> str:
+            """Normalise a raw amount string to Dutch decimal format."""
+            v = raw.rstrip(',-').replace('.', ',')
+            if ',' not in v:
+                v += ',00'
+            return v
+
+        def _date_key(date_str: str) -> str:
+            """Return a normalised 'D maand' key for fuzzy matching (strips year & day-name)."""
+            ds = date_str.lower().strip()
+            # strip leading day-names
+            for dn in ['maandag','dinsdag','woensdag','donderdag','vrijdag','zaterdag','zondag']:
+                if ds.startswith(dn):
+                    ds = ds[len(dn):].strip()
+            # keep only "D maand" or "D maand YYYY"
+            m = re.match(r'(\d{1,2})\s+([a-z]+)', ds)
+            if m:
+                return f"{int(m.group(1))} {m.group(2)}"
+            return ds
+
         for msg in ole_msgs:
             result['emails_found'] += 1
             result['source_subjects'].append(msg.get('subject', ''))
             body = _clean(msg.get('body', {}).get('content', ''))
-            service_date = _extract_service_date(msg.get('subject', ''))
 
-            ole_amount = ''
-            om = re.search(r'bedraagt\s*[€]?\s*([\d.,]+)', body, re.IGNORECASE)
-            if om:
-                raw = om.group(1).rstrip(',-').replace('.', ',')
-                if ',' not in raw:
-                    raw += ',00'
-                ole_amount = raw
+            # Extract all (date_str, amount) pairs from body.
+            # Handles: "OLE-collecte op 10 mei 2026 bedraagt €120,-  en OLE-collecte op 14 mei 2026 bedraagt €123,-"
+            pairs = re.findall(
+                r'OLE[^\n]*?(?:op|van)\s+([\w\s]+?\d{4})\s+bedraagt\s*[€]?\s*([\d.,]+)',
+                body, re.IGNORECASE
+            )
+            if not pairs:
+                # Fallback: single "bedraagt" anywhere in body, date from subject
+                om = re.search(r'bedraagt\s*[€]?\s*([\d.,]+)', body, re.IGNORECASE)
+                service_date = _extract_service_date(msg.get('subject', ''))
+                pairs = [(service_date, om.group(1))] if om else [(service_date, '')]
 
-            # Try to merge OLE amount into an existing reguliere entry for same date
-            merged = False
-            for entry in result['entries']:
-                if entry['type'] == 'regulier' and entry['service_date'] == service_date:
-                    entry['collecte_ole'] = ole_amount
-                    merged = True
-                    break
-            if not merged:
-                result['entries'].append({
-                    'type': 'ole',
-                    'service_date': service_date,
-                    'subject': msg.get('subject', ''),
-                    'collecte_contant': '', 'collecte_bonnen': '',
-                    'collecte_bank': '', 'collecte_tikkie': '',
-                    'collecte_ole': ole_amount,
-                    'bezoekers_volwassenen': '', 'bezoekers_kinderen': '',
-                })
+            for raw_date, raw_amount in pairs:
+                service_date = raw_date.strip()
+                ole_amount = _parse_amount(raw_amount) if raw_amount else ''
+                key = _date_key(service_date)
+
+                # Try to merge into an existing reguliere entry whose date key matches
+                merged = False
+                for entry in result['entries']:
+                    if _date_key(entry['service_date']) == key:
+                        entry['collecte_ole'] = ole_amount
+                        merged = True
+                        break
+                if not merged:
+                    result['entries'].append({
+                        'type': 'ole',
+                        'service_date': service_date,
+                        'subject': msg.get('subject', ''),
+                        'collecte_contant': '', 'collecte_bonnen': '',
+                        'collecte_bank': '', 'collecte_tikkie': '',
+                        'collecte_ole': ole_amount,
+                        'bezoekers_volwassenen': '', 'bezoekers_kinderen': '',
+                        'extra_items': [],
+                    })
 
         if not ole_msgs:
             result['not_found'].append('OLE collecte opbrengst e-mail niet gevonden in de afgelopen 7 dagen')
