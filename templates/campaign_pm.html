@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GKIN Amstelveen – Preek &amp; Mededelingen Campaign</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: { extend: { colors: { gkin: { green: '#3A7C22', dark: '#2d6119' } } } }
+        }
+    </script>
+    <script src="/static/i18n.js"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <header class="bg-gkin-green shadow-md">
+        <div class="max-w-2xl mx-auto px-6 py-5 flex items-center gap-4">
+            <a href="/"><img src="/static/logo2.png" alt="GKIN Logo" class="h-12 w-12 object-contain shrink-0"></a>
+            <div class="flex-1">
+                <h1 class="text-white text-2xl font-bold tracking-tight">GKIN Amstelveen</h1>
+                <p class="text-green-100 text-sm mt-0.5" data-i18n="cs.pm.title">Preek &amp; Mededelingen Campaign</p>
+            </div>
+            <div class="flex items-center gap-1 bg-gkin-dark rounded-lg p-1">
+                <button class="lang-btn text-xs px-2 py-1 rounded" data-lang="nl">NL</button>
+                <button class="lang-btn text-xs px-2 py-1 rounded" data-lang="id">ID</button>
+                <button class="lang-btn text-xs px-2 py-1 rounded" data-lang="en">EN</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-2xl mx-auto px-6 py-8">
+        <a href="/campaign" class="inline-flex items-center gap-1 text-sm text-gkin-green hover:text-gkin-dark mb-5">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+            <span data-i18n="nav.back_select">Terug naar template keuze</span>
+        </a>
+
+        <div class="bg-green-50 border border-green-200 rounded-xl p-4 mb-6 text-sm text-green-800">
+            Te verzenden <strong>na</strong> de dienst. Bevat links naar de preek opname, mededelingen en YouTube webvideo.
+        </div>
+
+        <!-- Date selection -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-5">
+            <h2 class="text-base font-semibold text-gkin-green mb-4" data-i18n="camp.date_section">Datum Selectie</h2>
+            <select id="dateSelect" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green">
+                <option value="" data-i18n="camp.date_placeholder">-- Kies een datum --</option>
+                {% for d in dates %}
+                <option value="{{ d.value }}"
+                    data-day-idx="{{ d.day_idx }}"
+                    data-month-idx="{{ d.month_idx }}"
+                    data-day-num="{{ d.day_num }}"
+                    data-year="{{ d.year }}"
+                    data-suffix="{{ d.suffix }}"
+                    data-predikant="{{ d.predikant }}">
+                    {{ d.label }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- PM fields -->
+        <div id="pmSection" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-5 hidden">
+            <h2 class="text-base font-semibold text-gkin-green mb-4">Inhoud</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Predikant AM</label>
+                    <input type="text" id="amPredikant" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green" placeholder="Wordt automatisch ingevuld">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Mededelingen URL (PDF)</label>
+                    <input type="url" id="mededUrl" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green" placeholder="https://storage.googleapis.com/...">
+                    <p class="text-xs text-gray-400 mt-1">Link naar het gegenereerde Mededelingen PDF (bv. via Dropbox of Google Drive).</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Preek AM URL (PDF)</label>
+                    <input type="url" id="preekAmUrl" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green" placeholder="https://storage.googleapis.com/...">
+                    <p class="text-xs text-gray-400 mt-1">Link naar het Preek PDF voor de AM dienst.</p>
+                </div>
+
+                <!-- OLE section — shown/hidden by checkbox -->
+                <div class="border-t border-gray-100 pt-4">
+                    <div class="flex items-center gap-2 mb-3">
+                        <input type="checkbox" id="hasOle" class="rounded border-gray-300 text-gkin-green focus:ring-gkin-green" onchange="toggleOLE()">
+                        <label for="hasOle" class="text-sm font-medium text-gray-700">Ook een OLE dienst op deze datum</label>
+                    </div>
+                    <div id="oleFields" class="hidden space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">OLE Locatie</label>
+                            <select id="oleLocation" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green">
+                                <option value="AM">AM – Amstelveen</option>
+                                <option value="DH">DH – Den Haag</option>
+                                <option value="TB">TB – Tilburg</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">OLE Predikant</label>
+                            <input type="text" id="olePredikant" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green" placeholder="ds. / Ds. naam">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">YouTube Link (OLE webvideo)</label>
+                            <input type="url" id="youtubeLink" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green" placeholder="https://youtube.com/live/...">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Campaign details -->
+        <div id="campaignDetails" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-5 hidden">
+            <h2 class="text-base font-semibold text-gkin-green mb-4" data-i18n="camp.section_details">Campaign Details</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1" data-i18n="camp.subject">Subject</label>
+                    <input type="text" id="subject" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Campaign Name</label>
+                    <input type="text" id="campaignName" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Ontvangers groep(en)</label>
+                    <div id="listsLoading" class="text-xs text-gray-400">Laden...</div>
+                    <div id="listsContainer" class="hidden space-y-1 max-h-40 overflow-y-auto border border-gray-200 rounded-lg p-2 bg-gray-50"></div>
+                    <p class="text-xs text-gray-400 mt-1">Geen selectie = eerste groep wordt automatisch gebruikt</p>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2 mb-2">
+                        <input type="checkbox" id="scheduleCheck" class="rounded border-gray-300 text-gkin-green focus:ring-gkin-green" onchange="toggleSchedule()">
+                        <label for="scheduleCheck" class="text-sm text-gray-700" data-i18n="camp.schedule">Inplannen voor verzending</label>
+                    </div>
+                    <div id="scheduleFields" class="hidden">
+                        <div class="flex gap-2 items-end">
+                            <div class="flex-1">
+                                <label class="block text-xs text-gray-500 mb-1">Datum</label>
+                                <input type="date" id="scheduleDate" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm h-10 focus:outline-none focus:ring-2 focus:ring-gkin-green">
+                            </div>
+                            <div class="w-28">
+                                <label class="block text-xs text-gray-500 mb-1">Tijd</label>
+                                <select id="scheduleTime" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm h-10 focus:outline-none focus:ring-2 focus:ring-gkin-green">
+                                    <option value="07:00">07:00</option>
+                                    <option value="08:00">08:00</option>
+                                    <option value="09:00" selected>09:00</option>
+                                    <option value="10:00">10:00</option>
+                                    <option value="11:00">11:00</option>
+                                    <option value="12:00">12:00</option>
+                                    <option value="18:00">18:00</option>
+                                    <option value="19:00">19:00</option>
+                                    <option value="20:00">20:00</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex gap-3 mb-5">
+            <button id="previewBtn" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2.5 px-4 rounded-lg text-sm transition hidden">
+                <span data-i18n="camp.preview">Voorbeeld vernieuwen</span>
+            </button>
+            <button id="createBtn" class="flex-1 bg-gkin-green hover:bg-gkin-dark text-white font-medium py-2.5 px-4 rounded-lg text-sm transition hidden">
+                <span data-i18n="camp.create">Campaign Aanmaken</span>
+            </button>
+        </div>
+
+        <div id="previewSection" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-5 hidden">
+            <h2 class="text-base font-semibold text-gkin-green mb-4">Voorbeeld</h2>
+            <div id="previewContent" class="text-sm text-gray-700 overflow-auto border border-gray-200 rounded-lg bg-gray-50"></div>
+        </div>
+
+        <div id="resultSection" class="hidden"></div>
+    </main>
+
+    <script>
+        const dateSelect      = document.getElementById('dateSelect');
+        const pmSection       = document.getElementById('pmSection');
+        const campaignDetails = document.getElementById('campaignDetails');
+        const previewBtn      = document.getElementById('previewBtn');
+        const createBtn       = document.getElementById('createBtn');
+        const previewSection  = document.getElementById('previewSection');
+        const previewContent  = document.getElementById('previewContent');
+        const resultSection   = document.getElementById('resultSection');
+
+        const months = ['januari','februari','maart','april','mei','juni','juli','augustus','september','oktober','november','december'];
+        const days   = ['zondag','maandag','dinsdag','woensdag','donderdag','vrijdag','zaterdag'];
+
+        function toggleOLE() {
+            document.getElementById('oleFields').classList.toggle('hidden', !document.getElementById('hasOle').checked);
+        }
+
+        function toggleSchedule() {
+            document.getElementById('scheduleFields').classList.toggle('hidden', !document.getElementById('scheduleCheck').checked);
+        }
+
+        dateSelect.addEventListener('change', () => {
+            const opt = dateSelect.options[dateSelect.selectedIndex];
+            if (!dateSelect.value) {
+                pmSection.classList.add('hidden');
+                campaignDetails.classList.add('hidden');
+                previewBtn.classList.add('hidden');
+                createBtn.classList.add('hidden');
+                previewSection.classList.add('hidden');
+                return;
+            }
+
+            // Auto-populate predikant from rooster
+            const predikant = opt.dataset.predikant || '';
+            document.getElementById('amPredikant').value = predikant;
+
+            // Clear other fields
+            document.getElementById('mededUrl').value = '';
+            document.getElementById('preekAmUrl').value = '';
+            document.getElementById('olePredikant').value = '';
+            document.getElementById('youtubeLink').value = '';
+            if (resultSection) resultSection.innerHTML = '';
+            previewSection.classList.add('hidden');
+
+            // Auto-populate subject & campaign name
+            const date = dateSelect.value;
+            const dateObj = new Date(date);
+            const dayName = days[dateObj.getDay()];
+            const dateStr = `${dateObj.getDate()} ${months[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
+            document.getElementById('subject').value = `GKIN Amstelveen ${dateStr}: Preek & mededelingen`;
+            const [yr, mo, dy] = date.split('-');
+            document.getElementById('campaignName').value = `PM ${dy}-${mo}-${yr}`;
+
+            // Auto-suggest Sunday itself as schedule date (same day, morning)
+            document.getElementById('scheduleDate').value = date;
+
+            pmSection.classList.remove('hidden');
+            campaignDetails.classList.remove('hidden');
+            previewBtn.classList.remove('hidden');
+            createBtn.classList.remove('hidden');
+            loadSenderLists();
+        });
+
+        async function loadSenderLists() {
+            const loading   = document.getElementById('listsLoading');
+            const container = document.getElementById('listsContainer');
+            loading.classList.remove('hidden');
+            container.classList.add('hidden');
+            try {
+                const resp = await fetch('/campaign/lists');
+                const data = await resp.json();
+                if (data.success && data.lists && data.lists.length > 0) {
+                    loading.classList.add('hidden');
+                    container.innerHTML = data.lists.map(l => {
+                        const count = l.active_subscribers ?? l.subscribers_count ?? l.activeSubscribersCount ?? l.recipient_count ?? l.total ?? l.count ?? '?';
+                        const name  = l.title || l.name || l.id;
+                        return `<label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer hover:bg-white rounded px-1 py-0.5">
+                            <input type="checkbox" class="list-checkbox rounded border-gray-300 text-gkin-green" value="${l.id}">
+                            ${name}${count !== '?' ? ` <span class="text-xs text-gray-400">(${count} leden)</span>` : ''}
+                        </label>`;
+                    }).join('');
+                    container.classList.remove('hidden');
+                } else {
+                    loading.textContent = 'Geen lijsten gevonden of API niet beschikbaar';
+                }
+            } catch (e) {
+                loading.textContent = 'Fout bij laden van lijsten';
+            }
+        }
+
+        function buildPayload() {
+            const hasOle = document.getElementById('hasOle').checked;
+            return {
+                date:             dateSelect.value,
+                am_predikant:     document.getElementById('amPredikant').value,
+                mededelingen_url: document.getElementById('mededUrl').value,
+                preek_am_url:     document.getElementById('preekAmUrl').value,
+                ole_location:     hasOle ? document.getElementById('oleLocation').value : '',
+                ole_predikant:    hasOle ? document.getElementById('olePredikant').value : '',
+                youtube_link:     hasOle ? document.getElementById('youtubeLink').value : '',
+            };
+        }
+
+        previewBtn.addEventListener('click', async () => {
+            previewBtn.disabled = true;
+            previewBtn.textContent = 'Laden...';
+            try {
+                const resp = await fetch('/campaign/pm/preview', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(buildPayload()),
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    previewSection.classList.remove('hidden');
+                    previewContent.innerHTML = '';
+                    setTimeout(() => {
+                        const scale = Math.min(1, previewContent.offsetWidth / 650);
+                        const scaledHeight = Math.round(900 * scale);
+                        previewContent.innerHTML = `
+                            <div style="width:100%;overflow:hidden;background:#f9fafb;border-radius:4px;height:${scaledHeight}px;">
+                                <div style="width:650px;transform-origin:top left;transform:scale(${scale});">
+                                    ${data.html_preview}
+                                </div>
+                            </div>`;
+                    }, 50);
+                } else {
+                    alert('Preview fout: ' + (data.error || 'Onbekend'));
+                }
+            } catch (err) {
+                console.error('Preview error:', err);
+            } finally {
+                previewBtn.disabled = false;
+                previewBtn.textContent = 'Voorbeeld vernieuwen';
+            }
+        });
+
+        createBtn.addEventListener('click', async () => {
+            createBtn.disabled = true;
+            createBtn.textContent = 'Aanmaken...';
+            try {
+                const payload = {
+                    ...buildPayload(),
+                    subject:      document.getElementById('subject').value,
+                    name:         document.getElementById('campaignName').value,
+                    scheduled_at: (document.getElementById('scheduleCheck').checked && document.getElementById('scheduleDate').value)
+                        ? document.getElementById('scheduleDate').value + 'T' + document.getElementById('scheduleTime').value + ':00+02:00'
+                        : null,
+                    list_ids: Array.from(document.querySelectorAll('.list-checkbox:checked')).map(el => el.value),
+                };
+                const resp = await fetch('/campaign/pm/create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    const schedMsg = data.scheduled
+                        ? ` · Ingepland voor ${data.schedule_time} UTC`
+                        : (data.schedule_error ? ` · ⚠ Inplannen mislukt: ${data.schedule_error}` : '');
+                    resultSection.innerHTML = `<div class="bg-green-50 border border-green-200 rounded-lg p-4 text-green-800 text-sm">✓ Campaign aangemaakt: ${data.campaign_id}${schedMsg}</div>`;
+                } else {
+                    resultSection.innerHTML = `<div class="bg-red-50 border border-red-200 rounded-lg p-4 text-red-800 text-sm">✗ Fout: ${data.error || 'Onbekende fout'}</div>`;
+                }
+                resultSection.classList.remove('hidden');
+            } catch (err) {
+                console.error('Create error:', err);
+            } finally {
+                createBtn.disabled = false;
+                createBtn.textContent = 'Campaign Aanmaken';
+            }
+        });
+    </script>
+</body>
+</html>

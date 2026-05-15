@@ -2644,6 +2644,130 @@ def campaign_upload_liturgie():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@app.route('/campaign/pm')
+@_password_required
+def campaign_pm():
+    """Render the Preek & Mededelingen Sender campaign generator page."""
+    taken = _get_takenrooster()
+    dutch_months = ['januari', 'februari', 'maart', 'april', 'mei', 'juni',
+                    'juli', 'augustus', 'september', 'oktober', 'november', 'december']
+    dutch_days = ['maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag', 'zondag']
+    today = datetime.now().date()
+    cutoff = today - timedelta(days=14)
+    dates = []
+    for entry in taken['entries']:
+        d = entry['date']
+        d_date = d.date() if hasattr(d, 'date') else d
+        if d_date < cutoff:
+            continue
+        camp_suffix = ''
+        if d_date < today:
+            camp_suffix = ' (afgelopen)'
+        label = f"{dutch_days[d.weekday()]} {d.day} {dutch_months[d.month - 1]} {d.year}{camp_suffix}"
+        dates.append({
+            'value': d.strftime('%Y-%m-%d'),
+            'label': label,
+            'day_idx':   d.weekday(),
+            'month_idx': d.month - 1,
+            'day_num':   d.day,
+            'year':      d.year,
+            'suffix':    camp_suffix,
+            'predikant': entry.get('predikant', ''),
+            'ovd': entry.get('ovd', ''),
+            'beamer': entry.get('beamer', ''),
+            'voorzangers': entry.get('voorzangers', ''),
+        })
+    return render_template('campaign_pm.html', dates=dates)
+
+
+@app.route('/campaign/pm/preview', methods=['POST'])
+@_password_required
+def campaign_pm_preview():
+    """Generate Preek & Mededelingen campaign preview."""
+    from sender_campaign import SenderCampaignGenerator
+    data = request.get_json() or {}
+    iso_date = data.get('date', '')
+    if not iso_date:
+        return jsonify({'error': 'no date'}), 400
+    try:
+        selected_date = datetime.strptime(iso_date, '%Y-%m-%d')
+    except ValueError:
+        return jsonify({'error': 'invalid date format'}), 400
+    try:
+        generator = SenderCampaignGenerator()
+        html_content = generator.generate_pm_html(
+            service_date=selected_date,
+            am_predikant=data.get('am_predikant', ''),
+            mededelingen_url=data.get('mededelingen_url', ''),
+            preek_am_url=data.get('preek_am_url', ''),
+            ole_location=data.get('ole_location', ''),
+            ole_predikant=data.get('ole_predikant', ''),
+            youtube_link=data.get('youtube_link', ''),
+        )
+        return jsonify({'success': True, 'html_preview': html_content})
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/campaign/pm/create', methods=['POST'])
+@_password_required
+def campaign_pm_create():
+    """Create the Preek & Mededelingen Sender campaign."""
+    from sender_campaign import SenderCampaignGenerator
+    data = request.get_json() or {}
+    iso_date = data.get('date', '')
+    subject = data.get('subject', '')
+    name = data.get('name', '')
+    scheduled_at = data.get('scheduled_at', None)
+    list_ids = data.get('list_ids', None)
+    if not iso_date:
+        return jsonify({'error': 'no date'}), 400
+    try:
+        selected_date = datetime.strptime(iso_date, '%Y-%m-%d')
+    except ValueError:
+        return jsonify({'error': 'invalid date format'}), 400
+    try:
+        nl_months = ['januari', 'februari', 'maart', 'april', 'mei', 'juni',
+                     'juli', 'augustus', 'september', 'oktober', 'november', 'december']
+        date_str = f"{selected_date.day} {nl_months[selected_date.month - 1]} {selected_date.year}"
+        generator = SenderCampaignGenerator()
+        html_content = generator.generate_pm_html(
+            service_date=selected_date,
+            am_predikant=data.get('am_predikant', ''),
+            mededelingen_url=data.get('mededelingen_url', ''),
+            preek_am_url=data.get('preek_am_url', ''),
+            ole_location=data.get('ole_location', ''),
+            ole_predikant=data.get('ole_predikant', ''),
+            youtube_link=data.get('youtube_link', ''),
+        )
+        result = generator.create_campaign(
+            name=name or f"PM {selected_date.strftime('%d-%m-%Y')}",
+            subject=subject or f"GKIN Amstelveen {date_str}: Preek & mededelingen",
+            html_content=html_content,
+            scheduled_at=scheduled_at,
+            list_ids=list_ids if list_ids else None,
+        )
+        if 'error' in result:
+            error_msg = result['error']
+            if result.get('details'):
+                import json as _json
+                error_msg += f" - Details: {_json.dumps(result['details'])}"
+            return jsonify({'success': False, 'error': error_msg}), 500
+        return jsonify({
+            'success': True,
+            'campaign_id': result.get('data', {}).get('id', 'unknown'),
+            'name': name,
+            'subject': subject,
+            'scheduled': result.get('scheduled', False),
+            'schedule_time': result.get('schedule_time', ''),
+            'schedule_error': result.get('schedule_error', ''),
+        })
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
 # =============================================================================
 # Health Check
 # =============================================================================

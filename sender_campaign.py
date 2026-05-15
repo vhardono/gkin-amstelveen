@@ -192,7 +192,7 @@ class SenderCampaignGenerator:
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GKIN OLE{location_display}: {date_str}, {time_clean}u</title>
+<title>GKIN Amstelveen {date_str} (OLE): Online Landelijke Eredienst</title>
 <style>
 @media only screen and (max-width:640px) {{
   .outer-table {{ width:100% !important; }}
@@ -301,6 +301,185 @@ class SenderCampaignGenerator:
             <td class="footer-col" align="left" width="250" valign="top">
                 <p style="margin:0 0 6px 0;">Wilt u deze e-mails niet meer ontvangen?</p>
                 <a href="{{{{unsubscribe_link}}}}">uitschrijven</a>
+            </td>
+        </tr>
+    </table>
+</td></tr>
+</table>
+</td></tr></table>
+</body>
+</html>"""
+
+    def generate_pm_html(self, service_date: datetime, am_predikant: str,
+                         mededelingen_url: str = "", preek_am_url: str = "",
+                         ole_location: str = "", ole_predikant: str = "",
+                         youtube_link: str = "") -> str:
+        """Generate HTML email for post-service Preek & Mededelingen mailing.
+
+        Layout rules:
+        - If ole_location == 'AM' (or empty): 3-button row (160px each):
+            Mededelingen (AM) | Preek (AM) + am_predikant | Webvideo (AM-OLE)
+        - If ole_location is DH/TB (non-AM OLE): 2×2 grid (250px each):
+            Row 1: Mededelingen (AM) | Preek (AM) + am_predikant
+            Row 2: Preek ({loc}-OLE) "kunt u hier later terugvinden" | Webvideo ({loc}-OLE)
+        """
+        months = ['januari', 'februari', 'maart', 'april', 'mei', 'juni',
+                  'juli', 'augustus', 'september', 'oktober', 'november', 'december']
+        date_str = f"{service_date.day} {months[service_date.month - 1]} {service_date.year}"
+        nl_days = ['maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag', 'zondag']
+        day_name = nl_days[service_date.weekday()]
+
+        LOCATION_MAP = {
+            'AM': 'Kerkgebouw in Amstelveen',
+            'DH': 'Kerkgebouw in Den Haag',
+            'TB': 'Pauluskerk te Tilburg',
+        }
+        REVERSE_MAP = {v: k for k, v in LOCATION_MAP.items()}
+        loc_code = REVERSE_MAP.get(ole_location, ole_location).upper() if ole_location else 'AM'
+        if loc_code not in LOCATION_MAP:
+            loc_code = 'AM'
+
+        youtube_href = ('https://www.' + re.sub(r'^https?://(?:www\.)?', '', youtube_link)) if youtube_link else '#'
+
+        # ------------------------------------------------------------------ #
+        # Button helpers
+        # ------------------------------------------------------------------ #
+        def btn(width: int, label_html: str, href: str) -> str:
+            return f"""<td class="btn-td" width="{width}" valign="top">
+            <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;">
+                <tr>
+                    <th align="center" style="background-color:#000000;border-radius:6px;padding:10px 25px;">
+                        <a href="{href}" target="_blank" style="display:block;font-family:'Inter',Arial,sans-serif;font-size:14px;color:#ffffff;text-decoration:none;line-height:16px;font-weight:normal;">
+                            {label_html}
+                        </a>
+                    </th>
+                </tr>
+            </table>
+        </td>"""
+
+        spacer = '<td class="btn-spacer" width="30" style="line-height:20px;"></td>'
+
+        # ------------------------------------------------------------------ #
+        # Decide layout
+        # ------------------------------------------------------------------ #
+        am_only = (loc_code == 'AM')
+
+        if am_only:
+            # 3 buttons in a row, 160px each
+            btn_width = 160
+            buttons_html = f"""<table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 25px 0;">
+    <tr>
+        {btn(btn_width, 'Mededelingen (AM)', mededelingen_url or '#')}
+        {spacer}
+        {btn(btn_width, f'Preek (AM)<br>{am_predikant}', preek_am_url or '#')}
+        {spacer}
+        {btn(btn_width, f'Webvideo<br>(AM-OLE)', youtube_href)}
+    </tr>
+</table>"""
+        else:
+            # 2×2 grid, 250px buttons
+            btn_width = 250
+            loc_tag = f"{loc_code}-OLE"
+            buttons_html = f"""<table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 10px 0;">
+    <tr>
+        {btn(btn_width, 'Mededelingen (AM)', mededelingen_url or '#')}
+        {spacer}
+        {btn(btn_width, f'Preek (AM)<br>{am_predikant}', preek_am_url or '#')}
+    </tr>
+</table>
+<table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 25px 0;">
+    <tr>
+        {btn(btn_width, f'Preek ({loc_tag})<br>{ole_predikant or "kunt u hier later terugvinden"}', youtube_href)}
+        {spacer}
+        {btn(btn_width, f'Webvideo<br>({loc_tag})', youtube_href)}
+    </tr>
+</table>"""
+
+        return f"""<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GKIN Amstelveen {date_str}: Preek &amp; mededelingen</title>
+<style>
+@media only screen and (max-width:640px) {{
+  .outer-table {{ width:100% !important; }}
+  .content-cell {{ padding:0 20px !important; }}
+  .footer-cell {{ padding:0 20px 20px 20px !important; }}
+  .btn-td {{ display:block !important; width:100% !important; padding-bottom:10px; }}
+  .btn-spacer {{ display:none !important; }}
+  .footer-col {{ display:block !important; width:100% !important; padding-bottom:16px; }}
+  .footer-spacer {{ display:none !important; }}
+}}
+</style>
+</head>
+<body style="margin:0;padding:0;background:#ffffff;">
+<table width="100%" cellpadding="0" cellspacing="0" bgcolor="#ffffff"><tr><td align="center">
+<table class="outer-table" width="640" cellpadding="0" cellspacing="0" style="background:#ffffff;max-width:640px;">
+<!-- Header -->
+<tr>
+    <td style="background:#ffffff;padding:20px 50px;">
+        <table width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+                <td align="left" width="60">
+                    <img src="https://gkin.org/main/images/banners/logo.png" alt="GKIN Logo" style="height:60px;width:auto;">
+                </td>
+                <td align="right" style="font-family:'Inter',Arial,sans-serif;">
+                    <h1 style="color:#000000;margin:0;font-size:18px;font-weight:bold;">GKIN Amstelveen</h1>
+                </td>
+            </tr>
+        </table>
+    </td>
+</tr>
+<!-- Separator -->
+<tr><td class="content-cell" style="padding:0 50px;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #EAECED;">
+        <tr><td height="20" style="line-height:20px;"></td></tr>
+    </table>
+</td></tr>
+<!-- Main Content -->
+<tr><td class="content-cell" style="padding:0 50px;font-family:'Inter',Arial,sans-serif;color:#515856;font-size:16px;line-height:137%;">
+<p style="margin:0 0 10px 0;">Beste gemeenteleden en belangstellenden,</p>
+<p style="margin:0 0 10px 0;"><br></p>
+<h3 style="font-family:'Inter',Arial,sans-serif;color:#000000;font-size:18px;line-height:125%;font-weight:bold;margin-bottom:8px;">Mededelingen en preek van deze week</h3>
+<p style="margin:0 0 25px 0;">Bijgaand de volgende stukken van {day_name} {date_str}<br>(door op de link te klikken kunt u het bestand bekijken en&nbsp;downloaden):</p>
+<!-- Buttons -->
+{buttons_html}
+</td></tr>
+<!-- Separator -->
+<tr><td class="content-cell" style="padding:0 50px;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #EAECED;">
+        <tr><td height="20" style="line-height:20px;"></td></tr>
+    </table>
+</td></tr>
+<!-- Website GKIN section -->
+<tr><td class="content-cell" style="padding:0 50px;font-family:'Inter',Arial,sans-serif;color:#515856;font-size:16px;line-height:137%;">
+<h3 style="font-family:'Inter',Arial,sans-serif;color:#000000;font-size:18px;line-height:125%;font-weight:bold;margin-bottom:8px;">Website GKIN</h3>
+<p style="margin:0 0 10px 0;">Voor actuele informatie over de bijeenkomsten en online diensten verwijzen wij u naar de website van GKIN:&nbsp;<a href="https://www.gkin.org" style="color:#2CB191;text-decoration:underline;">www.gkin.org</a></p>
+<p style="margin:0 0 10px 0;"><br></p>
+<p style="margin:0 0 10px 0;">Wij wensen u allen een fijne week.<br><br></p>
+<p style="margin:0 0 10px 0;">Met broederlijke groet in Christus,<br>Namens de landelijke kerkenraad GKIN,</p>
+<p style="margin:0 0 10px 0;"><br></p>
+<p style="margin:0 0 20px 0;">Vega Hardono, Regiosecretaris (AM)<br></p>
+</td></tr>
+<!-- Footer separator -->
+<tr><td class="content-cell" style="padding:0 50px;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #EAECED;">
+        <tr><td height="20" style="line-height:20px;"></td></tr>
+    </table>
+</td></tr>
+<!-- Footer -->
+<tr><td class="footer-cell" style="padding:0 50px 20px 50px;font-family:'Inter',Arial,sans-serif;color:#515856;font-size:14px;line-height:150%;">
+    <table width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+            <td class="footer-col" align="left" width="250" valign="top">
+                <p style="margin:0 0 6px 0;"><strong>GKIN Amstelveen</strong></p>
+                <p style="margin:0;">Bouwerij 52<br>1185XX Amstelveen</p>
+            </td>
+            <td class="footer-spacer" width="40"></td>
+            <td class="footer-col" align="left" width="250" valign="top">
+                <p style="margin:0 0 6px 0;">Wilt u deze e-mails niet meer ontvangen? U kunt zich hier:</p>
+                <a href="{{{{unsubscribe_link}}}}" style="color:#515856;text-decoration:underline;">uitschrijven</a>
             </td>
         </tr>
     </table>
