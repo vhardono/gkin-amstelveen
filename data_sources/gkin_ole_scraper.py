@@ -209,39 +209,26 @@ class GKINOLEScraper:
 
         return result
 
-    def fetch_for_date(self, target_date: datetime, look_ahead_days: int = 7) -> Dict[str, Any]:
+    def fetch_for_date(self, target_date: datetime) -> Dict[str, Any]:
         """
-        Find the OLE article closest to target_date (within look_ahead_days).
-        Returns parsed article dict or empty result with 'not_found' key.
+        Find the OLE article whose date exactly matches target_date.
+        Returns parsed article dict or {'not_found': True} if none found.
         """
         print(f"[GKINScraper] Looking for OLE article for {target_date.strftime('%d-%m-%Y')}")
         links = self._get_article_links(pages=2)
         print(f"[GKINScraper] Found {len(links)} article links on index")
 
-        # Score each link: prefer those whose title contains the target date month/day
-        target_day = target_date.day
-        target_month_nl = [k for k, v in NL_MONTHS.items() if v == target_date.month]
-        target_month_str = target_month_nl[0] if target_month_nl else ''
-
-        # First pass: find by scraping article date
-        best: Optional[Dict[str, Any]] = None
-        best_delta = timedelta(days=999)
+        target_date_only = target_date.date() if hasattr(target_date, 'date') else target_date
 
         for link in links[:10]:  # check first 10 (most recent)
             article = self._parse_article(link['url'])
             art_date = article.get('date')
             if art_date:
-                delta = abs(art_date - target_date)
-                if delta <= timedelta(days=look_ahead_days) and delta < best_delta:
-                    best = article
-                    best_delta = delta
-                    print(f"[GKINScraper] Candidate: {link['title']!r} date={art_date.strftime('%d-%m-%Y')} delta={delta.days}d")
-                    if delta.days == 0:
-                        break  # exact match
+                art_date_only = art_date.date() if hasattr(art_date, 'date') else art_date
+                if art_date_only == target_date_only:
+                    print(f"[GKINScraper] Exact match: {link['title']!r} → {link['url']}")
+                    return article
+                print(f"[GKINScraper] Skip: {link['title']!r} date={art_date.strftime('%d-%m-%Y')} ≠ target {target_date.strftime('%d-%m-%Y')}")
 
-        if best:
-            print(f"[GKINScraper] Best match: {best['url']} (delta {best_delta.days}d)")
-            return best
-
-        print(f"[GKINScraper] No article found within {look_ahead_days} days of {target_date.strftime('%d-%m-%Y')}")
+        print(f"[GKINScraper] No article found for {target_date.strftime('%d-%m-%Y')}")
         return {'not_found': True}
