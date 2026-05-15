@@ -2315,7 +2315,14 @@ def fetch_ole_data():
 @app.route('/campaign')
 @_password_required
 def campaign_index():
-    """Render the Sender campaign generator page."""
+    """Render the campaign template selection page."""
+    return render_template('campaign_select.html')
+
+
+@app.route('/campaign/ole')
+@_password_required
+def campaign_ole():
+    """Render the OLE Sender campaign generator page."""
     taken = _get_takenrooster()
     dutch_months = ['januari', 'februari', 'maart', 'april', 'mei', 'juni',
                     'juli', 'augustus', 'september', 'oktober', 'november', 'december']
