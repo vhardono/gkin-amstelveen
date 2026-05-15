@@ -110,15 +110,22 @@ const GKIN_I18N = {
     'med.generate':           'Genereer bulletin',
     'med.generate_voorlees':  'Genereer voorleesblad',
 
-    /* --- Common back button --- */
+    /* --- Day / month names --- */
+    'days':    ['maandag','dinsdag','woensdag','donderdag','vrijdag','zaterdag','zondag'],
+    'months':  ['januari','februari','maart','april','mei','juni','juli','augustus','september','oktober','november','december'],
+    'day.past': '(afgelopen)',
+
+    /* --- Common --- */
     'common.back':            'Terug',
     'common.reset':           'Opnieuw beginnen',
     'common.footer_data':     'Data bronnen: Dropbox Takenrooster',
+    'common.optional':        '(optioneel)',
 
-    /* --- Mededelingen extra --- */
+    /* --- Outlook --- */
     'med.outlook_label':      'Outlook e-mail',
     'med.outlook_connected':  'Verbonden',
     'med.outlook_not_conn':   'Niet verbonden',
+    'med.outlook_login':      'Inloggen bij Outlook',
     'med.ovd_content_label':  'Inhoud overdenking',
     'med.ovd_content_hint':   "(alinea's scheiden met een lege regel)",
     'med.docs_section':       'Te genereren documenten',
@@ -151,6 +158,20 @@ const GKIN_I18N = {
     'lit.subtitle':           'Liturgie Generator',
     'lit.info':               'Upload het wekelijkse Excel-bestand en optioneel de Preek.docx. Selecteer welke bestanden u wilt genereren.',
     'lit.sec_main':           'Main Liturgy file.xlsx',
+    'lit.auto_update':        'Automatisch bijwerken met laatste gegevens',
+    'lit.auto_detail_1':      'Takenrooster (Voorganger, OvD, etc.)',
+    'lit.auto_detail_2':      'Tikkie QR link',
+    'lit.auto_detail_3':      'Dankoffer vers',
+    'lit.preview_btn':        'Wijzigingen bekijken & bijwerken',
+    'lit.modal_title':        'Wijzigingen bekijken',
+    'lit.modal_date':         'Datum:',
+    'lit.modal_not_found':    'Niet gevonden:',
+    'lit.modal_col_field':    'Veld',
+    'lit.modal_col_current':  'Huidig',
+    'lit.modal_col_new':      'Nieuw',
+    'lit.modal_warnings':     'Waarschuwingen:',
+    'lit.modal_cancel':       'Annuleren',
+    'lit.modal_apply':        'Toepassen',
     'lit.use_current':        'Gebruik huidige week bestand',
     'lit.use_current_hint':   'Main Liturgy file.xlsx uit werkomap (Dropbox)',
     'lit.upload_own':         'Upload eigen bestand',
@@ -278,15 +299,22 @@ const GKIN_I18N = {
     'med.generate':           'Buat buletin',
     'med.generate_voorlees':  'Buat lembar baca',
 
-    /* --- Common back button --- */
+    /* --- Day / month names --- */
+    'days':    ['Senin','Selasa','Rabu','Kamis','Jumat','Sabtu','Minggu'],
+    'months':  ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'],
+    'day.past': '(lalu)',
+
+    /* --- Common --- */
     'common.back':            'Kembali',
     'common.reset':           'Mulai ulang',
     'common.footer_data':     'Sumber data: Dropbox Takenrooster',
+    'common.optional':        '(opsional)',
 
-    /* --- Mededelingen extra --- */
+    /* --- Outlook --- */
     'med.outlook_label':      'E-mail Outlook',
     'med.outlook_connected':  'Terhubung',
     'med.outlook_not_conn':   'Tidak terhubung',
+    'med.outlook_login':      'Masuk Outlook',
     'med.ovd_content_label':  'Isi renungan',
     'med.ovd_content_hint':   '(pisahkan alinea dengan baris kosong)',
     'med.docs_section':       'Dokumen yang akan dibuat',
@@ -318,7 +346,21 @@ const GKIN_I18N = {
     /* --- Liturgie --- */
     'lit.subtitle':           'Generator Liturgi',
     'lit.info':               'Unggah file Excel mingguan dan opsional Preek.docx. Pilih file yang ingin dibuat.',
-    'lit.sec_main':           'File Liturgi Utama.xlsx',
+    'lit.sec_main':           'Main Liturgy file.xlsx',
+    'lit.auto_update':        'Perbarui otomatis dengan data terbaru',
+    'lit.auto_detail_1':      'Takenrooster (Voorganger, OvD, dll.)',
+    'lit.auto_detail_2':      'Link QR Tikkie',
+    'lit.auto_detail_3':      'Ayat Dankoffer',
+    'lit.preview_btn':        'Lihat & terapkan perubahan',
+    'lit.modal_title':        'Lihat perubahan',
+    'lit.modal_date':         'Tanggal:',
+    'lit.modal_not_found':    'Tidak ditemukan:',
+    'lit.modal_col_field':    'Kolom',
+    'lit.modal_col_current':  'Saat ini',
+    'lit.modal_col_new':      'Baru',
+    'lit.modal_warnings':     'Peringatan:',
+    'lit.modal_cancel':       'Batal',
+    'lit.modal_apply':        'Terapkan',
     'lit.use_current':        'Gunakan file minggu ini',
     'lit.use_current_hint':   'Main Liturgy file.xlsx dari folder kerja (Dropbox)',
     'lit.upload_own':         'Unggah file sendiri',
@@ -446,15 +488,22 @@ const GKIN_I18N = {
     'med.generate':           'Generate bulletin',
     'med.generate_voorlees':  'Generate reading sheet',
 
-    /* --- Common back button --- */
+    /* --- Day / month names --- */
+    'days':    ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'],
+    'months':  ['January','February','March','April','May','June','July','August','September','October','November','December'],
+    'day.past': '(past)',
+
+    /* --- Common --- */
     'common.back':            'Back',
     'common.reset':           'Start over',
     'common.footer_data':     'Data sources: Dropbox Takenrooster',
+    'common.optional':        '(optional)',
 
-    /* --- Mededelingen extra --- */
+    /* --- Outlook --- */
     'med.outlook_label':      'Outlook email',
     'med.outlook_connected':  'Connected',
     'med.outlook_not_conn':   'Not connected',
+    'med.outlook_login':      'Log in to Outlook',
     'med.ovd_content_label':  'Sermon content',
     'med.ovd_content_hint':   '(separate paragraphs with a blank line)',
     'med.docs_section':       'Documents to generate',
@@ -487,6 +536,20 @@ const GKIN_I18N = {
     'lit.subtitle':           'Liturgy Generator',
     'lit.info':               'Upload the weekly Excel file and optionally Preek.docx. Select which files to generate.',
     'lit.sec_main':           'Main Liturgy file.xlsx',
+    'lit.auto_update':        'Auto-update with latest data',
+    'lit.auto_detail_1':      'Takenrooster (Minister, OvD, etc.)',
+    'lit.auto_detail_2':      'Tikkie QR link',
+    'lit.auto_detail_3':      'Dankoffer verse',
+    'lit.preview_btn':        'Preview & apply changes',
+    'lit.modal_title':        'Preview changes',
+    'lit.modal_date':         'Date:',
+    'lit.modal_not_found':    'Not found:',
+    'lit.modal_col_field':    'Field',
+    'lit.modal_col_current':  'Current',
+    'lit.modal_col_new':      'New',
+    'lit.modal_warnings':     'Warnings:',
+    'lit.modal_cancel':       'Cancel',
+    'lit.modal_apply':        'Apply',
     'lit.use_current':        'Use current week file',
     'lit.use_current_hint':   'Main Liturgy file.xlsx from working folder (Dropbox)',
     'lit.upload_own':         'Upload own file',
@@ -504,6 +567,8 @@ const GKIN_I18N = {
   },
 };
 
+window.GKIN_I18N = GKIN_I18N;
+
 (function () {
   const STORAGE_KEY = 'gkin_lang';
   const DEFAULT_LANG = 'nl';
@@ -519,13 +584,41 @@ const GKIN_I18N = {
       if (dict[key] !== undefined) {
         if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
           el.placeholder = dict[key];
-        } else if (el.tagName === 'OPTION') {
-          el.textContent = dict[key];
         } else {
           el.textContent = dict[key];
         }
       }
     });
+
+    // Rebuild date <option> labels using day/month arrays stored in the option's dataset
+    const days   = dict['days']   || GKIN_I18N.nl['days'];
+    const months = dict['months'] || GKIN_I18N.nl['months'];
+    const pastLbl = dict['day.past'] || '';
+    document.querySelectorAll('select[id="date"] option[data-day-idx], select[id="dateSelect"] option[data-day-idx]').forEach(opt => {
+      const di = parseInt(opt.dataset.dayIdx, 10);
+      const mi = parseInt(opt.dataset.monthIdx, 10);
+      const dn = parseInt(opt.dataset.dayNum, 10);
+      const yr = opt.dataset.year;
+      const suffix = opt.dataset.suffix || '';
+      // For campaign page the suffix may contain "(afgelopen)" — replace with translated version
+      let translatedSuffix = suffix.replace('(afgelopen)', pastLbl).replace('(lalu)', pastLbl).replace('(past)', pastLbl);
+      opt.textContent = `${days[di]} ${dn} ${months[mi]} ${yr}${translatedSuffix}`;
+    });
+
+    // Re-apply outlook login button text based on connected state
+    const loginLbl = document.getElementById('emailLoginText');
+    if (loginLbl) {
+      const isConnected = loginLbl.dataset.connected === '1';
+      loginLbl.textContent = isConnected
+        ? '✓ ' + (dict['med.outlook_connected'] || 'Verbonden')
+        : (dict['med.outlook_login'] || 'Inloggen bij Outlook');
+    }
+    // Re-apply outlook status pill
+    const pill = document.getElementById('outlookStatus');
+    if (pill && pill.dataset.connected === '1') {
+      pill.textContent = dict['med.outlook_connected'] || 'Verbonden';
+    }
+
     // Update switcher button highlights
     document.querySelectorAll('.lang-btn').forEach(btn => {
       btn.classList.toggle('bg-white', btn.dataset.lang === lang);
@@ -534,6 +627,7 @@ const GKIN_I18N = {
       btn.classList.toggle('text-green-100', btn.dataset.lang !== lang);
     });
     localStorage.setItem(STORAGE_KEY, lang);
+    window.GKIN_APPLY_LANG = applyLang;
   }
 
   function initSwitcher() {

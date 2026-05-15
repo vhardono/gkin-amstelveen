@@ -56,7 +56,7 @@
                     class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-gkin-green">
                 <option value="" disabled selected data-i18n="date.placeholder">— Kies een datum —</option>
                 {% for d in dates %}
-                <option value="{{ d.value }}">{{ d.label }}</option>
+                <option value="{{ d.value }}" data-day-idx="{{ d.day_idx }}" data-month-idx="{{ d.month_idx }}" data-day-num="{{ d.day_num }}" data-year="{{ d.year }}" data-suffix="{{ d.suffix }}">{{ d.label }}</option>
                 {% endfor %}
             </select>
             <div id="infoCard" class="hidden mt-4 bg-green-50 border border-green-200 rounded-lg p-4">
@@ -78,7 +78,7 @@
             <button type="button" id="emailLoginBtn"
                     class="text-xs bg-orange-50 hover:bg-orange-100 text-orange-700 border border-orange-200 rounded-lg px-3 py-1.5 flex items-center gap-1 transition-colors disabled:opacity-50">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
-                <span id="emailLoginText">Inloggen bij Outlook</span>
+                <span id="emailLoginText" data-i18n="med.outlook_login">Inloggen bij Outlook</span>
             </button>
         </div>
         <!-- Device-code login dialog -->
@@ -708,16 +708,22 @@
             const loginBtn = document.getElementById('emailLoginBtn');
             const loginLbl = document.getElementById('emailLoginText');
             if (connected) {
-                pill.textContent = 'Verbonden';
+                pill.dataset.connected = '1';
+                loginLbl.dataset.connected = '1';
                 pill.className = 'text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700';
-                loginLbl.textContent = '✓ Verbonden';
                 loginBtn.className = loginBtn.className
                     .replace('bg-orange-50','bg-green-50').replace('hover:bg-orange-100','hover:bg-green-100')
                     .replace('text-orange-700','text-green-700').replace('border-orange-200','border-green-200');
             } else {
-                pill.textContent = 'Niet verbonden';
+                pill.dataset.connected = '0';
+                loginLbl.dataset.connected = '0';
                 pill.className = 'text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500';
-                loginLbl.textContent = 'Inloggen bij Outlook';
+            }
+            // Re-run translations so text reflects current language
+            if (typeof applyLang === 'function') {
+                applyLang(localStorage.getItem('gkin_lang') || 'nl');
+            } else if (window.GKIN_APPLY_LANG) {
+                window.GKIN_APPLY_LANG(localStorage.getItem('gkin_lang') || 'nl');
             }
             updateFetchButtons();
         }

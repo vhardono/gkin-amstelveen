@@ -105,22 +105,22 @@
                 <div class="mt-4 pt-4 border-t border-gray-200">
                     <div class="flex items-center gap-2">
                         <input type="checkbox" id="autoUpdateValues" class="rounded border-gray-300">
-                        <label for="autoUpdateValues" class="text-sm text-gray-700">Automatisch bijwerken met laatste gegevens</label>
+                        <label for="autoUpdateValues" class="text-sm text-gray-700" data-i18n="lit.auto_update">Automatisch bijwerken met laatste gegevens</label>
                     </div>
 
                     <!-- Expanded detail: only visible when checkbox is checked -->
                     <div id="autoUpdateDetail" class="hidden mt-3">
                         <div class="ml-6 text-xs text-gray-500 space-y-1 mb-4">
-                            <div>• Takenrooster (Voorganger, OvD, etc.)</div>
-                            <div>• Tikkie QR link</div>
-                            <div>• Dankoffer vers</div>
+                            <div>• <span data-i18n="lit.auto_detail_1">Takenrooster (Voorganger, OvD, etc.)</span></div>
+                            <div>• <span data-i18n="lit.auto_detail_2">Tikkie QR link</span></div>
+                            <div>• <span data-i18n="lit.auto_detail_3">Dankoffer vers</span></div>
                         </div>
                         <button type="button" id="previewChangesBtn"
                                 class="w-full bg-gkin-green hover:bg-green-700 text-white font-medium py-2 px-3 rounded-lg text-sm transition flex items-center justify-center gap-2">
                             <svg id="updateSpinner" class="w-4 h-4 spinner hidden shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <circle cx="12" cy="12" r="10" stroke-width="3" stroke-dasharray="60" stroke-dashoffset="15"/>
                             </svg>
-                            <span id="updateBtnText">Wijzigingen bekijken &amp; bijwerken</span>
+                            <span id="updateBtnText" data-i18n="lit.preview_btn">Wijzigingen bekijken &amp; bijwerken</span>
                         </button>
                     </div>
                 </div>
@@ -132,7 +132,7 @@
                     <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                     </svg>
-                    <span data-i18n="lit.sec_preek">Preek.docx</span> <span class="text-gray-400 font-normal text-sm">(optioneel)</span>
+                    <span data-i18n="lit.sec_preek">Preek.docx</span> <span class="text-gray-400 font-normal text-sm" data-i18n="common.optional">(optioneel)</span>
                 </h2>
 
                 <!-- Source Selection -->
@@ -231,11 +231,11 @@
                 <div id="previewModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
                     <div class="bg-white rounded-xl shadow-lg w-full mx-4 max-h-[80vh] overflow-y-auto" style="max-width:480px">
                         <div class="p-6">
-                            <h3 class="text-lg font-semibold text-gray-800 mb-4">Wijzigingen bekijken</h3>
+                            <h3 class="text-lg font-semibold text-gray-800 mb-4" data-i18n="lit.modal_title">Wijzigingen bekijken</h3>
                             <p class="text-sm text-gray-600 mb-4">Datum: <span id="previewDate" class="font-medium"></span></p>
                             
                             <div id="previewNotFound" class="hidden mb-4 bg-red-50 border border-red-200 rounded-lg p-3">
-                                <h4 class="text-sm font-semibold text-red-800 mb-1">Niet gevonden:</h4>
+                                <h4 class="text-sm font-semibold text-red-800 mb-1" data-i18n="lit.modal_not_found">Niet gevonden:</h4>
                                 <ul id="previewNotFoundList" class="text-xs text-red-700 space-y-0.5"></ul>
                             </div>
                             
@@ -252,9 +252,9 @@
                                             <th class="text-left py-1 px-1 font-semibold text-gray-700">
                                                 <input type="checkbox" id="selectAllChanges" checked class="rounded border-gray-300">
                                             </th>
-                                            <th class="text-left py-1 px-1 font-semibold text-gray-700">Veld</th>
-                                            <th class="text-left py-1 px-1 font-semibold text-gray-700">Huidig</th>
-                                            <th class="text-left py-1 px-1 font-semibold text-gray-700">Nieuw</th>
+                                            <th class="text-left py-1 px-1 font-semibold text-gray-700" data-i18n="lit.modal_col_field">Veld</th>
+                                            <th class="text-left py-1 px-1 font-semibold text-gray-700" data-i18n="lit.modal_col_current">Huidig</th>
+                                            <th class="text-left py-1 px-1 font-semibold text-gray-700" data-i18n="lit.modal_col_new">Nieuw</th>
                                         </tr>
                                     </thead>
                                     <tbody id="previewChangesTable">
@@ -264,16 +264,16 @@
                             </div>
                             
                             <div id="previewWarnings" class="hidden mb-4 bg-amber-50 border border-amber-200 rounded-lg p-3">
-                                <h4 class="text-sm font-semibold text-amber-800 mb-1">Waarschuwingen:</h4>
+                                <h4 class="text-sm font-semibold text-amber-800 mb-1" data-i18n="lit.modal_warnings">Waarschuwingen:</h4>
                                 <ul id="previewWarningsList" class="text-xs text-amber-700 space-y-0.5"></ul>
                             </div>
                             
                             <div class="flex gap-3 mt-6">
                                 <button type="button" id="cancelPreviewBtn" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-lg transition">
-                                    Annuleren
+                                    <span data-i18n="lit.modal_cancel">Annuleren</span>
                                 </button>
                                 <button type="button" id="applyChangesBtn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition flex items-center justify-center gap-2">
-                                    <span>Toepassen</span>
+                                    <span data-i18n="lit.modal_apply">Toepassen</span>
                                 </button>
                             </div>
                         </div>
@@ -618,7 +618,11 @@
             const btnText = document.getElementById('updateBtnText');
             if (previewBtn) previewBtn.disabled = on;
             if (spinner) spinner.classList.toggle('hidden', !on);
-            if (btnText) btnText.textContent = on ? 'Bezig...' : 'Wijzigingen bekijken & bijwerken';
+            if (btnText) {
+                const lang = localStorage.getItem('gkin_lang') || 'nl';
+                const d = (window.GKIN_I18N && window.GKIN_I18N[lang]) || {};
+                btnText.textContent = on ? (d['common.loading'] || 'Bezig...') : (d['lit.preview_btn'] || 'Wijzigingen bekijken & bijwerken');
+            }
         }
 
         function hideAutoFillAlerts() {

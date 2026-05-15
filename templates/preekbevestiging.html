@@ -58,6 +58,7 @@
                 <option value="" disabled selected data-i18n="date.placeholder">— Kies een datum —</option>
                 {% for d in dates %}
                 <option value="{{ d.value }}"
+                        data-day-idx="{{ d.day_idx }}" data-month-idx="{{ d.month_idx }}" data-day-num="{{ d.day_num }}" data-year="{{ d.year }}" data-suffix="{{ d.suffix }}"
                         data-predikant="{{ d.predikant }}"
                         data-ovd="{{ d.ovd }}"
                         data-1eo="{{ d['1eo'] }}"

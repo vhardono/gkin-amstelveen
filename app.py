@@ -144,17 +144,24 @@ def _get_takenrooster_and_render_page():
             d_date = d
         if d_date < today:
             continue
-        label = (f"{dutch_days[d.weekday()].capitalize()} {d.day} {dutch_months[d.month - 1]} {d.year}"
-                 f"  —  {entry['predikant']}")
-        if entry.get('opmerking'):
-            opm = entry['opmerking'].split('OLE')[0].strip().rstrip(',').strip()
-            if opm:
-                label += f" ({opm})"
-            elif 'OLE' in entry.get('opmerking', ''):
-                label += " (OLE)"
+        opm_med = entry.get('opmerking', '')
+        opm_clean_med = ''
+        if opm_med:
+            opm_clean_med = opm_med.split('OLE')[0].strip().rstrip(',').strip()
+            if not opm_clean_med and 'OLE' in opm_med:
+                opm_clean_med = 'OLE'
+        suffix = f"  —  {entry['predikant']}"
+        if opm_clean_med:
+            suffix += f" ({opm_clean_med})"
+        label = f"{dutch_days[d.weekday()]} {d.day} {dutch_months[d.month - 1]} {d.year}{suffix}"
         dates.append({
             'value': d.strftime('%Y-%m-%d'),
             'label': label,
+            'day_idx':   d.weekday(),
+            'month_idx': d.month - 1,
+            'day_num':   d.day,
+            'year':      d.year,
+            'suffix':    suffix,
             'predikant': entry['predikant'],
             'ovd': entry.get('ovd', ''),
             'predikant_email': entry.get('predikant_email', ''),
@@ -195,18 +202,24 @@ def preekbevestiging_index():
         d_date = d.date() if hasattr(d, 'date') else d
         if d_date < today:
             continue
-        label = (f"{dutch_days[d.weekday()].capitalize()} {d.day} {dutch_months[d.month - 1]} {d.year}"
-                 f"  —  {entry['predikant']}")
         opm = entry.get('opmerking', '')
+        opm_clean = ''
         if opm:
             opm_clean = opm.split('OLE')[0].strip().rstrip(',').strip()
-            if opm_clean:
-                label += f" ({opm_clean})"
-            elif 'OLE' in opm:
-                label += " (OLE)"
+            if not opm_clean and 'OLE' in opm:
+                opm_clean = 'OLE'
+        pb_suffix = f"  —  {entry['predikant']}"
+        if opm_clean:
+            pb_suffix += f" ({opm_clean})"
+        label = f"{dutch_days[d.weekday()]} {d.day} {dutch_months[d.month - 1]} {d.year}{pb_suffix}"
         dates.append({
             'value':        d.strftime('%Y-%m-%d'),
             'label':        label,
+            'day_idx':      d.weekday(),
+            'month_idx':    d.month - 1,
+            'day_num':      d.day,
+            'year':         d.year,
+            'suffix':       pb_suffix,
             'predikant':    entry['predikant'],
             'ovd':          entry.get('ovd', ''),
             'ovd_email':    entry.get('ovd_email', ''),
@@ -2335,12 +2348,18 @@ def campaign_ole():
         d_date = d.date() if hasattr(d, 'date') else d
         if d_date < cutoff:
             continue
-        label = f"{dutch_days[d.weekday()].capitalize()} {d.day} {dutch_months[d.month - 1]} {d.year}"
+        camp_suffix = ''
         if d_date < today:
-            label += " (afgelopen)"
+            camp_suffix = ' (afgelopen)'
+        label = f"{dutch_days[d.weekday()]} {d.day} {dutch_months[d.month - 1]} {d.year}{camp_suffix}"
         dates.append({
             'value': d.strftime('%Y-%m-%d'),
             'label': label,
+            'day_idx':   d.weekday(),
+            'month_idx': d.month - 1,
+            'day_num':   d.day,
+            'year':      d.year,
+            'suffix':    camp_suffix,
             'predikant': '',
             'ovd': entry.get('ovd', ''),
             'beamer': entry.get('beamer', ''),
