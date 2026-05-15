@@ -232,10 +232,12 @@ class GKINOLEScraper:
                 result['liturgie_url'] = href if href.startswith('http') else f"https://gkin.org{href}"
                 break
 
-        # --- Collecte URL (ING / OLE payment link) ---
+        # --- Collecte URL (ING / Tikkie / betaal / doneer / qr payment link) ---
+        _collecte_keywords = ('ing.nl/payreq', 'tikkie.me', 'ing.nl', 'betaal', 'doneer', 'collecte', 'payment', 'payreq')
         for a in article.find_all('a', href=True):
             href = a['href']
-            if 'ing.nl/payreq' in href or 'tikkie.me' in href or 'ing.nl' in href:
+            href_lower = href.lower()
+            if any(kw in href_lower for kw in _collecte_keywords):
                 result['collecte_url'] = href
                 break
 
@@ -246,10 +248,11 @@ class GKINOLEScraper:
             result['collecte_ovv'] = raw_ovv[:80] if len(raw_ovv) > 80 else raw_ovv
 
         # --- QR image (download and encode as base64 data URI) ---
+        _qr_keywords = ('qr', 'collecte', 'betaal', 'doneer', 'payment', 'tikkie', 'ing')
         for img in article.find_all('img', src=True):
             src = img['src']
             src_lower = src.lower()
-            if 'qr' in src_lower or 'collecte' in src_lower or 'betaal' in src_lower:
+            if any(kw in src_lower for kw in _qr_keywords):
                 full_src = src if src.startswith('http') else f'https://gkin.org{src}'
                 try:
                     r = self.session.get(full_src, timeout=10)
