@@ -392,7 +392,9 @@ class OutlookCollecteReader:
             raw_html = msg.get('body', {}).get('content', '')
             body = _clean(raw_html)  # single-line, used for _extract and bezoekers
             # Preserve line breaks for extra-item parsing
-            body_lines = re.sub(r'<[^>]+>', ' ', raw_html)
+            # Convert block/line tags to newlines first, then strip remaining tags
+            body_lines = re.sub(r'<br\s*/?>|</p>|</tr>|</div>|</li>', '\n', raw_html, flags=re.IGNORECASE)
+            body_lines = re.sub(r'<[^>]+>', ' ', body_lines)
             body_lines = body_lines.replace('&nbsp;', ' ').replace('&amp;', '&')
             body_lines = re.sub(r'[ \t]+', ' ', body_lines)  # collapse spaces but keep newlines
             service_date = _extract_service_date(msg.get('subject', ''))

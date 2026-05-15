@@ -542,7 +542,7 @@ class BulletinGenerator:
 
         # Remove any previously inserted extra rows (marked with custom attr)
         for r in list(tbl_el.findall(qn('w:tr'))):
-            if r.get('w:customExtra') == '1':
+            if r.get('customextra') == '1':
                 tbl_el.remove(r)
 
         # Find OLE row by cell text content (more robust than hardcoded index)
@@ -592,7 +592,7 @@ class BulletinGenerator:
 
         for item in extra_items:
             new_row = copy.deepcopy(ole_row_el)
-            new_row.set('w:customExtra', '1')
+            new_row.set('customextra', '1')
             cells_in_row = new_row.findall(qn('w:tc'))
             if len(cells_in_row) >= 2:
                 _set_tc_text(cells_in_row[0], item.get('desc', ''))
