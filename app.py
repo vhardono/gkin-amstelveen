@@ -2249,50 +2249,36 @@ def fetch_ole_data():
         }
         location_full = location_names.get(location_code, location_code)
 
-        # Fetch thema, bijbeltekst, youtube and liturgie attachment from OLE mededeling email
+        # Fetch thema, bijbeltekst, youtube, liturgie and collecte from GKIN website
         thema = ''
         bible_verse = ''
         youtube_link = ''
         liturgie_url = ''
         try:
-            from data_sources.email_reader import EmailReader
-            reader2 = EmailReader()
-            meded = reader2.fetch_ole_mededeling(target_date=selected_date)
-            print(f"[OLE Fetch] Mededeling data (excl. bytes): { {k:v for k,v in meded.items() if k != 'liturgie_attachment_bytes'} }")
-            thema = meded.get('thema', '')
-            bible_verse = meded.get('bible_verse', '')
-            youtube_link = meded.get('youtube_link', '')
-            # Upload liturgie attachment to Dropbox and get public shared link
-            att_bytes = meded.get('liturgie_attachment_bytes')
-            att_name = meded.get('liturgie_attachment_name', 'liturgie.pdf')
-            if att_bytes:
-                try:
-                    import dropbox as _dropbox
-                    from dropbox.exceptions import ApiError as _DbxApiError
-                    dbx = _dropbox.Dropbox(
-                        oauth2_refresh_token=DROPBOX_REFRESH_L,
-                        app_key=DROPBOX_APP_KEY_L,
-                        app_secret=DROPBOX_APP_SECRET_L,
-                    )
-                    dropbox_path = f"/#Kerkbode GKIN Amstelveen/OLE-Liturgie/{att_name}"
-                    dbx.files_upload(att_bytes, dropbox_path,
-                                     mode=_dropbox.files.WriteMode.overwrite)
-                    # Get or create shared link
-                    try:
-                        link_meta = dbx.sharing_create_shared_link_with_settings(dropbox_path)
-                    except _DbxApiError as e:
-                        # Link already exists — retrieve it
-                        links = dbx.sharing_list_shared_links(path=dropbox_path, direct_only=True)
-                        link_meta = links.links[0] if links.links else None
-                    if link_meta:
-                        # Convert to direct download link (dl=1)
-                        raw = link_meta.url
-                        liturgie_url = raw.replace('www.dropbox.com', 'dl.dropboxusercontent.com').replace('?dl=0', '').replace('?dl=1', '') + '?dl=1'
-                        print(f"[OLE Fetch] Liturgie on Dropbox: {liturgie_url}")
-                except Exception as e:
-                    print(f"[OLE Fetch] Dropbox liturgie upload error: {e}")
+            from data_sources.gkin_ole_scraper import GKINOLEScraper
+            scraper = GKINOLEScraper()
+            web_data = scraper.fetch_for_date(selected_date)
+            if not web_data.get('not_found'):
+                thema = web_data.get('thema', '')
+                bible_verse = web_data.get('bible_verse', '')
+                youtube_link = web_data.get('youtube_link', '')
+                liturgie_url = web_data.get('liturgie_url', '')
+                # Override predikant/location/time from website if better
+                if web_data.get('predikant') and not ole_data.get('predikant'):
+                    ole_data['predikant'] = web_data['predikant']
+                if web_data.get('location_code'):
+                    location_code = web_data['location_code']
+                    location_full = web_data.get('location', location_full)
+                if web_data.get('time'):
+                    ole_data['time'] = web_data['time']
+                # Use collecte URL from website if not already found via email
+                if web_data.get('collecte_url') and not ole_url:
+                    ole_url = web_data['collecte_url']
+                print(f"[OLE Fetch] Website data: thema={thema!r}, bible={bible_verse!r}, yt={youtube_link!r}, liturgie={liturgie_url!r}")
+            else:
+                print(f"[OLE Fetch] No OLE article found on GKIN website for {selected_date.strftime('%d-%m-%Y')}")
         except Exception as e:
-            print(f"[OLE Fetch] Mededeling fetch error: {e}")
+            print(f"[OLE Fetch] Website scrape error: {e}")
             import traceback; traceback.print_exc()
 
         result = {
@@ -2594,9 +2580,9 @@ def campaign_upload_liturgie():
         )
         dropbox_path = f"/#Kerkbode GKIN Amstelveen/OLE-Liturgie/{safe_name}"
         dbx.files_upload(file_bytes, dropbox_path, mode=_dropbox.files.WriteMode.overwrite)
-        # Get or create shared link
+        # Get or create shared link (legacy API, no sharing.write scope needed)
         try:
-            link_meta = dbx.sharing_create_shared_link_with_settings(dropbox_path)
+            link_meta = dbx.sharing_create_shared_link(dropbox_path)
         except _DbxApiError:
             links = dbx.sharing_list_shared_links(path=dropbox_path, direct_only=True)
             link_meta = links.links[0] if links.links else None
