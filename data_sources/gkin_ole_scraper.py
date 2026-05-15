@@ -93,6 +93,7 @@ class GKINOLEScraper:
             'url': url, 'date': None, 'predikant': '', 'location': '',
             'location_code': '', 'time': '', 'thema': '', 'bible_verse': '',
             'youtube_link': '', 'liturgie_url': '', 'collecte_url': '',
+            'collecte_ovv': '',
         }
         soup = self._get(url)
         if not soup:
@@ -103,30 +104,19 @@ class GKINOLEScraper:
         text = article.get_text(' ', strip=True)
         text = re.sub(r'\s+', ' ', text)
 
-        # Also grab meta description / og:description as a richer fallback text source
-        meta_desc = ''
-        for sel in [('meta', {'name': 'description'}), ('meta', {'property': 'og:description'})]:
-            tag = soup.find(sel[0], sel[1])
-            if tag and tag.get('content'):
-                meta_desc = tag['content'].strip()
-                break
-        # Prepend meta_desc so regexes can match it even if article body is sparse
-        if meta_desc:
-            text = meta_desc + ' ' + text
-
         # --- Date ---
         result['date'] = self._parse_date_from_text(text)
 
         # --- Predikant ---
         pred_m = re.search(
-            r'\b(ds\.|zr\.|br\.)\s+([A-Za-z][^\.,]{2,40}?)(?=\s+(?:voorgaan|voor\b|zal\s|in\s+de\s+OLE|ging))',
+            r'\b(ds\.|zr\.|br\.)\s+([A-Z][^\.,]+?)(?=\s+voorgaan|\s+zal\s|\s+in\s+de\s+OLE)',
             text, re.IGNORECASE
         )
         if pred_m:
             result['predikant'] = pred_m.group(0).strip().rstrip(',')
 
         # --- Location ---
-        loc_m = re.search(r'vanuit\s+(?:de\s+)?([^\.,]+?)(?:\s+te\s+([A-Za-z][A-Za-z\s]{2,20}?))?(?:,|\.|\s+aanvang|$)', text, re.IGNORECASE)
+        loc_m = re.search(r'vanuit\s+(?:de\s+)?([^\.,]+?)(?:\s+te\s+([A-Za-z\s]+?))?(?:,|\.|aanvang)', text, re.IGNORECASE)
         if loc_m:
             loc_raw = (loc_m.group(2) or loc_m.group(1)).strip().lower()
             for key, (code, full) in LOCATION_MAP.items():
@@ -138,36 +128,35 @@ class GKINOLEScraper:
                 result['location'] = (loc_m.group(2) or loc_m.group(1)).strip()
 
         # --- Time ---
-        time_m = re.search(r'aanvang\s+(\d{1,2}[:.\s]\d{2})\s*(?:uur|u\b)', text, re.IGNORECASE)
+        time_m = re.search(r'aanvang\s+(\d{1,2}[:.]\d{2})\s*uur', text, re.IGNORECASE)
         if time_m:
-            result['time'] = time_m.group(1).strip().replace('.', ':') + 'u'
+            result['time'] = time_m.group(1).replace('.', ':') + 'u'
 
         # --- Thema ---
         thema_m = re.search(
-            r'thema van de dienst is\s*[:\-]?\s*["\u201c\u201e\u2018]?(.+?)(?=["\u201d\u201f\u2019]?\s*genomen uit)',
+            r'thema van de dienst is\s*[:\-]?\s*["\u201c]?(.+?)(?=["\u201d]?\s*genomen uit)',
             text, re.IGNORECASE | re.DOTALL
         )
         if thema_m:
-            result['thema'] = re.sub(r'\s+', ' ', thema_m.group(1)).strip().strip('\u201c\u201d\u201e\u201f\u2018\u2019"\'')
+            result['thema'] = re.sub(r'\s+', ' ', thema_m.group(1)).strip().strip('\u201c\u201d"\'')
         else:
             # fallback: title of the article often contains the thema
             h_tag = soup.find(['h1', 'h2'])
             if h_tag:
                 title_text = h_tag.get_text(strip=True)
-                # strip predikant part after ' - '
                 parts = title_text.split(' - ')
                 if len(parts) > 1:
                     result['thema'] = parts[0].strip()
 
         # --- Bible verse ---
         bible_m = re.search(
-            r'genomen uit\s+(.+?)(?=\s+De dienst|\s+De liturgie|\s+In deze|\s+U kunt|\s+De collecte|\s{2,}|\.\s+[A-Z])',
+            r'genomen uit\s+(.+?)(?=\s+De dienst|\s+De liturgie|\s+In deze|\s{3,}|$)',
             text, re.IGNORECASE | re.DOTALL
         )
         if bible_m:
             result['bible_verse'] = re.sub(r'\s+', ' ', bible_m.group(1)).strip()
 
-        # --- YouTube link --- check anchor hrefs first (most reliable), then plain text
+        # --- YouTube link --- check anchor hrefs first, then plain text
         for a in article.find_all('a', href=True):
             href = a['href']
             if re.search(r'(?:youtube\.com/(?:live|watch)|youtu\.be)/[A-Za-z0-9_\-]{5,}', href):
@@ -181,14 +170,9 @@ class GKINOLEScraper:
         # --- Liturgie URL (direct link on gkin.org) ---
         for a in article.find_all('a', href=True):
             href = a['href']
-            href_l = href.lower()
-            if 'liturgie' in href_l or 'preken' in href_l or href_l.endswith('.pdf'):
-                full_href = href if href.startswith('http') else f"https://gkin.org{href}"
-                # Prefer liturgie over preek PDF
-                if 'liturgie' in href_l or not result['liturgie_url']:
-                    result['liturgie_url'] = full_href
-                if 'liturgie' in href_l:
-                    break
+            if 'liturgie' in href.lower() or href.lower().endswith('.pdf'):
+                result['liturgie_url'] = href if href.startswith('http') else f"https://gkin.org{href}"
+                break
 
         # --- Collecte URL (ING / OLE payment link) ---
         for a in article.find_all('a', href=True):
@@ -197,36 +181,31 @@ class GKINOLEScraper:
                 result['collecte_url'] = href
                 break
 
-        # --- Collecte o.v.v. text (everything after 'o.v.v.' or 'O.v.v.') ---
+        # --- Collecte o.v.v. text ---
         ovv_m = re.search(r'[Oo]\.?[Vv]\.?[Vv]\.?\s+(.+?)(?=\.(?:\s|$)|$)', text)
         if ovv_m:
             raw_ovv = re.sub(r'\s+', ' ', ovv_m.group(1)).strip()
-            # Limit to reasonable length (avoid capturing rest of page)
             result['collecte_ovv'] = raw_ovv[:80] if len(raw_ovv) > 80 else raw_ovv
 
         # --- QR image (download and encode as base64 data URI) ---
-        # Only search within the article body div, not the whole page
-        article_body = soup.find('div', class_='item-page') or soup.find('article')
-        img_scope = article_body if article_body else article
-        for img in img_scope.find_all('img', src=True):
+        for img in article.find_all('img', src=True):
             src = img['src']
             src_lower = src.lower()
-            if not any(x in src_lower for x in ['qr', 'collecte', 'betaal', 'payment', 'codes', 'qrcode']):
-                continue
-            full_src = src if src.startswith('http') else f'https://gkin.org{src}'
-            try:
-                r = self.session.get(full_src, timeout=10)
-                r.raise_for_status()
-                import base64 as _b64
-                ext = full_src.rsplit('.', 1)[-1].lower().split('?')[0]
-                mime = {'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'gif': 'image/gif'}.get(ext, 'image/png')
-                b64 = _b64.b64encode(r.content).decode('utf-8')
-                result['qr_image_b64'] = f'data:{mime};base64,{b64}'
-                result['qr_image_url'] = full_src
-                print(f'[GKINScraper] QR image fetched: {full_src} ({len(r.content)} bytes)')
+            if 'qr' in src_lower or 'collecte' in src_lower or 'betaal' in src_lower:
+                full_src = src if src.startswith('http') else f'https://gkin.org{src}'
+                try:
+                    r = self.session.get(full_src, timeout=10)
+                    r.raise_for_status()
+                    import base64 as _b64
+                    ext = full_src.rsplit('.', 1)[-1].lower().split('?')[0]
+                    mime = {'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'gif': 'image/gif'}.get(ext, 'image/png')
+                    b64 = _b64.b64encode(r.content).decode('utf-8')
+                    result['qr_image_b64'] = f'data:{mime};base64,{b64}'
+                    result['qr_image_url'] = full_src
+                    print(f'[GKINScraper] QR image fetched: {full_src} ({len(r.content)} bytes)')
+                except Exception as e:
+                    print(f'[GKINScraper] QR image fetch error: {e}')
                 break
-            except Exception as e:
-                print(f'[GKINScraper] QR image fetch error: {e}')
 
         return result
 
