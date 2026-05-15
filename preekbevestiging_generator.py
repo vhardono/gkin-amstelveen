@@ -1,23 +1,22 @@
 """
 Preekbevestiging Document Generator
-Copies the template docx and fills in dynamic values.
+Copies the template docx and fills in dynamic values using regex-based
+substitution — works regardless of which prior values are in the template.
 """
 
-import copy
 import os
 import re
 from datetime import datetime, timedelta
 
 from docx import Document
-from docx.oxml.ns import qn
 
 DUTCH_MONTHS = ['januari','februari','maart','april','mei','juni',
                 'juli','augustus','september','oktober','november','december']
 DUTCH_DAYS   = ['maandag','dinsdag','woensdag','donderdag',
                 'vrijdag','zaterdag','zondag']
 
-TEMPLATE_PATH = os.path.join(os.path.dirname(__file__),
-                             '20260329_Preekbevestiging zr B T Sari.docx')
+_DIR = os.path.dirname(os.path.abspath(__file__))
+TEMPLATE_PATH = os.path.join(_DIR, 'doc_templates', 'preekbevestiging_template.docx')
 
 
 def _fmt_date_long(iso_str: str) -> str:
@@ -36,24 +35,58 @@ def _deadline_tue(iso_str: str) -> str:
     return f"dinsdag {tue.day} {DUTCH_MONTHS[tue.month-1]} {tue.year}"
 
 
-def _replace_in_para(para, old: str, new: str):
-    """Replace text in a paragraph preserving run formatting of the first run."""
+# ---------------------------------------------------------------------------
+# Regex-based replacers — match any existing value, replace with new one
+# ---------------------------------------------------------------------------
+
+# Dutch date pattern: "Zondag 10 mei 2026"
+_RE_DATE_LONG = re.compile(
+    r'Zondag\s+\d{1,2}\s+(?:januari|februari|maart|april|mei|juni|'
+    r'juli|augustus|september|oktober|november|december)\s+\d{4}'
+)
+# "Amstelveen, 9 mei 2026"
+_RE_DATE_TODAY = re.compile(
+    r'Amstelveen,\s+\d{1,2}\s+(?:januari|februari|maart|april|mei|juni|'
+    r'juli|augustus|september|oktober|november|december)\s+\d{4}'
+)
+# deadline: "dinsdag 5 mei 2026"
+_RE_DEADLINE = re.compile(
+    r'dinsdag\s+\d{1,2}\s+(?:januari|februari|maart|april|mei|juni|'
+    r'juli|augustus|september|oktober|november|december)\s+\d{4}'
+)
+# service date + time in body: "Zondag 10 mei 2026 om 10:30 uur"
+_RE_DATE_TIME = re.compile(
+    r'Zondag\s+\d{1,2}\s+\S+\s+\d{4}\s+om\s+\d{1,2}[:.]\d{2}\s+uur'
+)
+# time cell: "10:30 uur"
+_RE_TIME_CELL = re.compile(r'^\d{1,2}[:.]\d{2}\s+uur$')
+
+
+def _sub_para(para, pattern, replacement: str):
+    """Apply regex substitution to a paragraph, preserving first-run formatting."""
     full = para.text
-    if old not in full:
+    if not pattern.search(full):
         return False
-    # Rebuild runs: clear all, put replacement in first run
-    new_text = full.replace(old, new)
+    new_text = pattern.sub(replacement, full)
     for i, run in enumerate(para.runs):
-        if i == 0:
-            run.text = new_text
-        else:
-            run.text = ''
+        run.text = new_text if i == 0 else ''
     return True
 
 
-def _replace_in_cell(cell, old: str, new: str):
+def _sub_cell(cell, pattern, replacement: str):
     for para in cell.paragraphs:
-        _replace_in_para(para, old, new)
+        _sub_para(para, pattern, replacement)
+
+
+def _set_cell_text(cell, new_text: str):
+    """Replace all text in a cell's first paragraph, preserving run formatting."""
+    for para in cell.paragraphs:
+        if para.text.strip():
+            for i, run in enumerate(para.runs):
+                run.text = new_text if i == 0 else ''
+            if not para.runs:
+                para.add_run(new_text)
+            return
 
 
 def generate(entry: dict, iso_date: str, output_path: str, songs: list = None):
@@ -61,71 +94,88 @@ def generate(entry: dict, iso_date: str, output_path: str, songs: list = None):
 
     predikant  = entry.get('predikant', '')
     ovd        = entry.get('ovd', '')
-    eo1        = entry.get('1eo', '')
-    tijd       = entry.get('tijd', '10:30') or '10:30'
+    eo1        = entry.get('1eo', '') or entry.get('eo1', '')
+    tijd       = (entry.get('tijd', '') or '10:30').replace('.', ':')
+    if ':' not in tijd:
+        tijd = '10:30'
 
-    # Build greeting name: "zr. B. T. Sari" style — use full predikant name
-    # Extract title + rest: e.g. "ds. C. de Jonge" -> greeting "ds. De Jonge"
     parts = predikant.strip().split()
     title = parts[0] if parts else ''
     last  = parts[-1] if len(parts) > 1 else predikant
     last_cap = last[0].upper() + last[1:] if last else last
     greeting_name = f"{title} {last_cap}".strip()
 
-    date_long   = _fmt_date_long(iso_date)     # "Zondag 29 maart 2026"
-    date_today  = _fmt_date_today()            # "Amstelveen, 15 maart 2026"
-    deadline    = _deadline_tue(iso_date)      # "dinsdag 24 maart 2026"
+    date_long  = _fmt_date_long(iso_date)   # "Zondag 17 mei 2026"
+    date_today = _fmt_date_today()           # "Amstelveen, 15 mei 2026"
+    deadline   = _deadline_tue(iso_date)     # "dinsdag 12 mei 2026"
+    date_time  = f"{date_long} om {tijd} uur"
 
-    # --- Substitution map ---
-    subs = {
-        # Header date
-        'Amstelveen, 15 maart 2026': date_today,
-        # Addressee
-        'Zr. B. T. Sari':           predikant,
-        # Salutation
-        'Geachte zr. B. T. Sari,':  f'Geachte {greeting_name},',
-        # Service date in body
-        'Zondag 29 maart 2026 om 10.30 uur': f'{date_long} om {tijd} uur',
-        # Deadline in body
-        'uiterlijk dinsdag 24 maart 2026 het invulformulier': f'uiterlijk {deadline} het invulformulier',
-        # Footer deadline
-        'uiterlijk dinsdag 24 maart 2026)': f'uiterlijk {deadline})',
-    }
-
-    # Apply to all paragraphs
+    # ------------------------------------------------------------------ #
+    # Paragraphs
+    # ------------------------------------------------------------------ #
     for para in doc.paragraphs:
-        for old, new in subs.items():
-            _replace_in_para(para, old, new)
+        txt = para.text
+        # "Amstelveen, <date>"
+        _sub_para(para, _RE_DATE_TODAY, date_today)
+        # "Zondag X Y Z om HH:MM uur" (body service line)
+        _sub_para(para, _RE_DATE_TIME, date_time)
+        # standalone "Zondag X Y Z" not already handled above
+        _sub_para(para, _RE_DATE_LONG, date_long)
+        # deadline lines
+        if 'uiterlijk' in txt and 'invulformulier' in txt:
+            _sub_para(para, _RE_DEADLINE, deadline)
+        elif 'uiterlijk' in txt and txt.rstrip().endswith(')'):
+            _sub_para(para, _RE_DEADLINE, deadline)
+        # Addressee line (bare predikant name)
+        if re.match(r'^(?:ds\.|zr\.|br\.)\s+\S', txt.strip()):
+            for i, run in enumerate(para.runs):
+                run.text = predikant if i == 0 else ''
+        # Salutation
+        if txt.strip().startswith('Geachte'):
+            for i, run in enumerate(para.runs):
+                run.text = f'Geachte {greeting_name},' if i == 0 else ''
 
-    # Apply to all table cells
+    # ------------------------------------------------------------------ #
+    # Table cells
+    # ------------------------------------------------------------------ #
     for table in doc.tables:
         for row in table.rows:
             for cell in row.cells:
-                for old, new in subs.items():
-                    _replace_in_cell(cell, old, new)
-                # Table 1 specific dynamic fields
                 txt = cell.text.strip()
-                if txt == 'Zondag 29 maart 2026':
-                    _replace_in_cell(cell, txt, date_long)
-                elif txt == '10:30 uur':
-                    _replace_in_cell(cell, txt, f'{tijd} uur')
-                elif txt == 'zr. B. T. Sari':
-                    _replace_in_cell(cell, txt, predikant)
-                elif txt == 'br. Hamra Simatupang':
-                    _replace_in_cell(cell, txt, ovd)
-                elif txt == 'zr. Joyce Uning':
-                    _replace_in_cell(cell, txt, eo1)
+                # Date+time body line
+                _sub_cell(cell, _RE_DATE_TIME, date_time)
+                # Standalone date
+                _sub_cell(cell, _RE_DATE_LONG, date_long)
+                # Today's date header
+                _sub_cell(cell, _RE_DATE_TODAY, date_today)
+                # Time cell (e.g. "10:30 uur")
+                if _RE_TIME_CELL.match(txt):
+                    _set_cell_text(cell, f'{tijd} uur')
+                # Predikant cell — matches "ds./zr./br. ..."
+                elif re.match(r'^(?:ds\.|zr\.|br\.)\s+\S', txt):
+                    _set_cell_text(cell, predikant)
+                # OvD cell — any non-predikant name row following "Ouderling van Dienst"
+                elif ovd and txt and txt == cell.text.strip() and _looks_like_name(txt) and txt != predikant:
+                    pass  # handled by row position below
 
-    # Fill song table (Table 2) with provided songs
+    # OvD and 1e Ontvangst — positional: Table 1, rows 4 and 5, col 2
+    if len(doc.tables) > 1:
+        t1 = doc.tables[1]
+        rows = t1.rows
+        # Row 4 (0-indexed) = Ouderling van Dienst value
+        if len(rows) > 4 and len(rows[4].cells) > 2 and ovd:
+            _set_cell_text(rows[4].cells[2], ovd)
+        # Row 5 = Eerste Ontvangst value
+        if len(rows) > 5 and len(rows[5].cells) > 2 and eo1:
+            _set_cell_text(rows[5].cells[2], eo1)
+
+    # ------------------------------------------------------------------ #
+    # Song table (Table 2) — col 2
+    # ------------------------------------------------------------------ #
     if songs and len(doc.tables) > 2:
-        song_table = doc.tables[2]  # 0-indexed: Table 2 is the songs table
-        song_labels = [
-            '1e lied (Intochtslied)', '2e lied', '3e lied', '4e lied',
-            '5e lied', '6e lied (Dankoffer)', '7e lied (Slotlied)'
-        ]
+        song_table = doc.tables[2]
         for ri, row in enumerate(song_table.rows):
             if ri < len(songs) and songs[ri]:
-                # Value goes in col index 2
                 cells = row.cells
                 if len(cells) > 2:
                     for para in cells[2].paragraphs:
@@ -137,3 +187,11 @@ def generate(entry: dict, iso_date: str, output_path: str, songs: list = None):
                             para.add_run(songs[ri])
 
     doc.save(output_path)
+
+
+def _looks_like_name(txt: str) -> bool:
+    """Heuristic: at least two capitalised words, no digits."""
+    if re.search(r'\d', txt):
+        return False
+    words = txt.split()
+    return len(words) >= 2 and sum(1 for w in words if w[0].isupper()) >= 1
