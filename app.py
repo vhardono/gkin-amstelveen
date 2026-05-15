@@ -2313,13 +2313,16 @@ def campaign_index():
                     'juli', 'augustus', 'september', 'oktober', 'november', 'december']
     dutch_days = ['maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag', 'zondag']
     today = datetime.now().date()
+    cutoff = today - timedelta(days=14)
     dates = []
     for entry in taken['entries']:
         d = entry['date']
         d_date = d.date() if hasattr(d, 'date') else d
-        if d_date < today:
+        if d_date < cutoff:
             continue
         label = f"{dutch_days[d.weekday()].capitalize()} {d.day} {dutch_months[d.month - 1]} {d.year}"
+        if d_date < today:
+            label += " (afgelopen)"
         dates.append({
             'value': d.strftime('%Y-%m-%d'),
             'label': label,
