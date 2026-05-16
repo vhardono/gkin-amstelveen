@@ -936,39 +936,114 @@ class OutlookCollecteReader:
         doc = _Document(BytesIO(base64.b64decode(cb)))
         paras = [p.text.strip() for p in doc.paragraphs if p.text.strip()]
 
-        # Extract predikant — last non-empty paragraph, usually "ds. Firstname Lastname"
+        print(f"[Overdenking] Total paragraphs: {len(paras)}")
+        for i, p in enumerate(paras[:10]):
+            print(f"  [{i}] {p[:100]!r}")
+
+        # The docx may contain multiple dated entries (Indonesian + Dutch pairs).
+        # Strategy: find the Dutch section for the selected date.
+        # - Indonesian sections start with "Renungan untuk <date>"
+        # - Dutch sections follow immediately after the Indonesian section
+        # We find the Dutch section by locating where Indonesian ends and Dutch begins.
+        # Heuristic: a new Dutch section starts with a Dutch title (not starting with
+        # "Renungan") that follows an Indonesian body. We look for a paragraph that is
+        # a short title-like line followed by a bible book reference paragraph.
+
+        # First try: find a date-specific section using target_date
+        # e.g. "Renungan untuk 17 Mei" → find the Dutch block after it
+        working_paras = paras  # default: use all paragraphs
+
+        if target_date:
+            d, m = target_date.day, target_date.month
+            date_labels = [
+                f"{d} {NL_MONTHS[m]}",           # "17 mei" (Dutch)
+                f"{d} {NL_MONTHS[m].capitalize()}", # "17 Mei"
+            ]
+            # Indonesian month names for matching "Renungan untuk 17 Mei"
+            ID_MONTHS = ['','januari','februari','maret','april','mei','juni',
+                         'juli','agustus','september','oktober','november','desember']
+            date_labels += [
+                f"{d} {ID_MONTHS[m]}",
+                f"{d} {ID_MONTHS[m].capitalize()}",
+            ]
+
+            # Find the "Renungan untuk <date>" line → marks start of Indonesian section
+            renungan_idx = None
+            for i, p in enumerate(paras):
+                p_lower = p.lower()
+                if p_lower.startswith('renungan') and any(dl.lower() in p_lower for dl in date_labels):
+                    renungan_idx = i
+                    print(f"[Overdenking] Found Indonesian section at [{i}]: {p!r}")
+                    break
+
+            if renungan_idx is not None:
+                # The Dutch section follows the Indonesian one.
+                # Find the next "Renungan" section (marks end of current date) or end of doc.
+                next_renungan_idx = None
+                for i in range(renungan_idx + 1, len(paras)):
+                    if paras[i].lower().startswith('renungan'):
+                        next_renungan_idx = i
+                        break
+
+                section_paras = paras[renungan_idx + 1 : next_renungan_idx]
+
+                # Within section_paras: Indonesian body is first, Dutch body is second.
+                # The Dutch part starts at a short title paragraph that is NOT a bible
+                # reference and doesn't look like Indonesian prose (long sentence).
+                # Simple rule: find the midpoint where a short para follows prose paras.
+                dutch_start = None
+                for i, p in enumerate(section_paras):
+                    # Short paragraph (<= 80 chars), not a bible ref, not starting with Indonesian prose
+                    if (len(p) <= 80 and
+                            not re.search(r'\d+:\d+', p) and
+                            i > 0 and len(section_paras[i-1]) > 80):
+                        dutch_start = i
+                        print(f"[Overdenking] Dutch section starts at offset {i}: {p!r}")
+                        break
+
+                if dutch_start is not None:
+                    working_paras = section_paras[dutch_start:]
+                else:
+                    # Fallback: use whole section
+                    working_paras = section_paras
+            else:
+                print(f"[Overdenking] No date-specific section found, using all paragraphs")
+
+        print(f"[Overdenking] Working paragraphs ({len(working_paras)}):")
+        for i, p in enumerate(working_paras[:6]):
+            print(f"  [{i}] {p[:100]!r}")
+
+        # Extract predikant — last non-empty paragraph with ds./prop. title
         predikant = ''
-        for p in reversed(paras):
+        for p in reversed(working_paras):
             if re.search(r'\bds\.?\b|\bprop\.?\b|\bdrs\.?\b', p, re.IGNORECASE) or \
                re.search(r'^(ds|prop|drs)[\s.]', p, re.IGNORECASE):
                 predikant = p
                 break
-        if not predikant and paras:
-            predikant = paras[-1]
+        if not predikant and working_paras:
+            predikant = working_paras[-1]
 
-        # Extract thema + schriftlezing from paragraph [1]
-        # Format: '"Thema title"\nSchriftlezing ref'  or two separate paragraphs
+        # [0] = thema title, [1] = schriftlezing (bible ref)
         thema = ''
         schriftlezing = ''
-        if len(paras) > 1:
-            second = paras[1]
-            if '\n' in second:
-                parts = [x.strip() for x in second.split('\n', 1)]
+        if working_paras:
+            thema = working_paras[0].strip('""\u201c\u201d')
+        if len(working_paras) > 1 and re.search(r'\d+:\d+', working_paras[1]):
+            schriftlezing = working_paras[1]
+        elif len(working_paras) > 1:
+            # thema might contain a newline with schriftlezing
+            if '\n' in working_paras[0]:
+                parts = working_paras[0].split('\n', 1)
                 thema = parts[0].strip('""\u201c\u201d')
-                schriftlezing = parts[1]
-            else:
-                thema = second.strip('""\u201c\u201d')
-                # Look for schriftlezing in next paragraph (bible ref pattern)
-                if len(paras) > 2 and re.search(r'\d+:\d+', paras[2]):
-                    schriftlezing = paras[2]
+                schriftlezing = parts[1].strip()
 
-        # Body: all paragraphs between [2] and the predikant line
+        # Body: paragraphs after thema/schriftlezing, before predikant
+        body_start = 2 if schriftlezing and len(working_paras) > 1 and re.search(r'\d+:\d+', working_paras[1] if len(working_paras) > 1 else '') else 1
         body_paras = []
-        for p in paras[2:]:
+        for p in working_paras[body_start:]:
             if p == predikant:
                 break
-            if not re.search(r'\d+:\d+', p) or len(p) > 30:  # skip lone bible refs already captured
-                body_paras.append(p)
+            body_paras.append(p)
         content = '\n\n'.join(body_paras)
 
         result['predikant']    = predikant
