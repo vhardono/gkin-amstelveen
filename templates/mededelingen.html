@@ -1179,6 +1179,8 @@
             const copyBtn  = document.getElementById('waOleCopy');
             const closeBtn = document.getElementById('waOleClose');
 
+            let _cachedLiturgieUrl = '';  // hoisted: shared between open-handler and download-handler
+
             document.getElementById('waOleBtn').addEventListener('click', async () => {
                 const sel = dateSelect._currentSel;
                 if (!sel) { alert(t('wa.no_date')); return; }
@@ -1186,6 +1188,7 @@
                 modal.classList.remove('hidden');
                 loading.classList.remove('hidden');
                 txtArea.value = '';
+                _cachedLiturgieUrl = '';  // reset on each open
 
                 // Format date: "17 mei 2026"
                 const iso = sel.value;
@@ -1198,7 +1201,6 @@
                 let youtubeUrl = '';
                 let oleCollecteUrl = '';
                 let dankofferUrl   = '';
-                let _cachedLiturgieUrl = '';
 
                 try {
                     // 1. Fetch all OLE data (location/time/YouTube/liturgie) from fetch-ole-data
