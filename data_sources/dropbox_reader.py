@@ -85,8 +85,17 @@ class DropboxExcelReader:
 
         path = MEDEDELINGEN_PATH_TEMPLATE.format(year=year)
         try:
-            print(f"Reading Mededelingen Overzicht: {path}")
+            print(f"Reading Mededelingen Overzicht: {path}, date: {mededelingen_date}")
             _, response = self.dbx.files_download(path)
+            
+            # List available sheets to debug
+            import openpyxl
+            wb = openpyxl.load_workbook(BytesIO(response.content), read_only=True)
+            sheet_names = wb.sheetnames
+            print(f"Available sheets in Mededelingen Overzicht: {sheet_names}")
+            wb.close()
+            
+            # Try to read with sheet_name='Output' first (default behavior)
             df = pd.read_excel(BytesIO(response.content), sheet_name='Output', header=None)
 
             regionale_nl = str(df.iloc[1, 1]).strip() if pd.notna(df.iloc[1, 1]) else ''
