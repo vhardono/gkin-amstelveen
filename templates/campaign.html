@@ -112,6 +112,10 @@
                     <input type="text" id="subject" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green">
                 </div>
                 <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1" data-i18n="camp.preview_text">Email preview text</label>
+                    <input type="text" id="previewText" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green">
+                </div>
+                <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1" data-i18n="camp.campaign_name">Campaign Name</label>
                     <input type="text" id="campaignName" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green">
                 </div>
@@ -231,6 +235,7 @@
             document.getElementById('collecteOvv').value = '';
             document.getElementById('qrPreview').classList.add('hidden');
             document.getElementById('subject').value = '';
+            document.getElementById('previewText').value = '';
             document.getElementById('campaignName').value = '';
             document.getElementById('oleTime').value = '';
             document.getElementById('oleLocation').value = '';
@@ -238,15 +243,16 @@
             if (resultSection) resultSection.innerHTML = '';
             previewSection.classList.add('hidden');
 
-            // Auto-populate subject & campaign name immediately (date is known)
+            // Auto-populate subject, preview text & campaign name immediately (date is known)
             const _date = dateSelect.value;
             const _dateObj = new Date(_date);
             const _months = ['januari','februari','maart','april','mei','juni','juli','augustus','september','oktober','november','december'];
             const _days = ['zondag','maandag','dinsdag','woensdag','donderdag','vrijdag','zaterdag'];
             const _dateStr = `${_dateObj.getDate()} ${_months[_dateObj.getMonth()]} ${_dateObj.getFullYear()}`;
-            document.getElementById('subject').value = `GKIN (OLE): Online Landelijke Eredienst ${_days[_dateObj.getDay()]} ${_dateStr}, 10:00u`;
+            document.getElementById('subject').value = `GKIN (OLE): Online Landelijke Eredienst`;
             const [_yr, _mo, _dy] = _date.split('-');
             document.getElementById('campaignName').value = `OLE ${_dy}-${_mo}-${_yr}`;
+            // Preview text will be populated after OLE data arrives (needs location, time)
             // Auto-suggest Saturday before the service date
             const _d = new Date(_date);
             const _dow = _d.getDay();
@@ -321,11 +327,11 @@
                     document.getElementById('qrUrl').value = localPath;
                 }
 
-                // Update subject with actual service time once data arrives
+                // Update preview text with actual location, day, date, time once data arrives
+                const location = data.ole_location || data.ole_location_code || '';
                 const timeClean = (data.ole_time || '').replace('u', '').replace('U', '').trim();
-                if (timeClean) {
-                    const _curSubj = document.getElementById('subject').value;
-                    document.getElementById('subject').value = _curSubj.replace(/,\s*[\d:]+u$/, `, ${timeClean}u`);
+                if (location && timeClean) {
+                    document.getElementById('previewText').value = `van ${location} op ${_days[_dateObj.getDay()]} ${_dateStr}, ${timeClean}u`;
                 }
 
                 // Show consolidated status message
