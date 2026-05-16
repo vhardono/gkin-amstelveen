@@ -847,7 +847,7 @@ class OutlookCollecteReader:
     _NL_MONTHS = ['','januari','februari','maart','april','mei','juni',
                   'juli','augustus','september','oktober','november','december']
 
-    def fetch_overdenking(self, target_date: datetime = None, since_days: int = 14) -> Dict[str, Any]:
+    def fetch_overdenking(self, target_date: datetime = None, since_days: int = 60) -> Dict[str, Any]:
         """Fetch overdenking from scribagkin@gmail.com, subject contains 'Overdenking'.
         Attachment is a .docx with structure:
           [0] "Overdenking, 10 mei 2026"
@@ -873,69 +873,53 @@ class OutlookCollecteReader:
             'not_found': [],
         }
 
-        # Date variants for subject/attachment matching
-        date_variants = []
+        # Compute the Mon–Sat window before the selected Sunday
+        # e.g. for Sunday 17 May: window = Mon 11 May 00:00 → Sat 16 May 23:59
+        window_start = None
+        window_end = None
         if target_date:
-            d, m, y = target_date.day, target_date.month, target_date.year
-            date_variants = [
-                f"{d}-{m}-{y}",           # 10-5-2026
-                f"{d:02d}-{m:02d}-{y}",   # 10-05-2026
-                f"{d} {NL_MONTHS[m]}",     # 10 mei
-                f"{d} {NL_MONTHS[m]} {y}", # 10 mei 2026
-                f"{d}/{m}/{y}",            # 10/5/2026
-            ]
+            # target_date is the Sunday; go back to the Monday before it
+            days_since_monday = target_date.weekday()  # Monday=0, Sunday=6
+            monday = target_date - timedelta(days=days_since_monday)
+            saturday = target_date - timedelta(days=1)
+            window_start = monday.strftime('%Y-%m-%dT00:00:00Z')
+            window_end = saturday.strftime('%Y-%m-%dT23:59:59Z')
+            print(f"[Overdenking] Looking for emails between {window_start} and {window_end}")
 
-        def _date_matches(text: str) -> bool:
-            if not date_variants:
-                return True
-            tl = text.lower()
-            return any(v.lower() in tl for v in date_variants)
-
-        # Search emails
+        # Search emails — filter by window if available, else use since_days
+        date_filter = f"receivedDateTime ge {window_start} and receivedDateTime le {window_end}" \
+            if window_start else f"receivedDateTime ge {since}"
         msgs = self._graph_get('/me/messages', params={
-            '$filter': f"receivedDateTime ge {since} and contains(subject,'Overdenking')",
+            '$filter': f"{date_filter} and contains(subject,'Overdenking')",
             '$top': 10,
             '$select': 'id,subject,from,hasAttachments,receivedDateTime',
             '$orderby': 'receivedDateTime desc',
         }).get('value', [])
 
+        print(f"[Overdenking] Total 'Overdenking' msgs fetched: {len(msgs)}")
+        for m in msgs:
+            print(f"  subj={m.get('subject','')!r}  from={m.get('from',{}).get('emailAddress',{}).get('address','')}  received={m.get('receivedDateTime','')}")
+
         scriba_msgs = [m for m in msgs if 'scribagkin@gmail.com' in
                        m.get('from', {}).get('emailAddress', {}).get('address', '').lower()]
+        print(f"[Overdenking] From scribagkin: {len(scriba_msgs)} msgs")
 
-        # Find best match: subject contains date, or attachment name contains date
+        # Find most recent scriba overdenking in the window with a .docx attachment
         match_msg = None
         match_att = None
 
         for msg in scriba_msgs:
-            subject = msg.get('subject', '')
-            # Check subject first
-            if _date_matches(subject):
-                # Get attachments
-                atts = self._graph_get(
-                    f"/me/messages/{msg['id']}/attachments",
-                    params={'$select': 'id,name,contentType,size'}
-                ).get('value', [])
-                docx_atts = [a for a in atts if 'wordprocessingml' in a.get('contentType', '')
-                             or a.get('name','').lower().endswith('.docx')]
-                if docx_atts:
-                    match_msg = msg
-                    match_att = docx_atts[0]
-                    break
-            # Also check attachment names if subject has no date
-            if not match_msg and msg.get('hasAttachments'):
-                atts = self._graph_get(
-                    f"/me/messages/{msg['id']}/attachments",
-                    params={'$select': 'id,name,contentType,size'}
-                ).get('value', [])
-                for a in atts:
-                    if ('wordprocessingml' in a.get('contentType', '')
-                            or a.get('name','').lower().endswith('.docx')):
-                        if _date_matches(a.get('name', '')):
-                            match_msg = msg
-                            match_att = a
-                            break
-                if match_msg:
-                    break
+            atts = self._graph_get(
+                f"/me/messages/{msg['id']}/attachments",
+                params={'$select': 'id,name,contentType,size'}
+            ).get('value', [])
+            docx_atts = [a for a in atts if 'wordprocessingml' in a.get('contentType', '')
+                         or a.get('name', '').lower().endswith('.docx')]
+            if docx_atts:
+                match_msg = msg
+                match_att = docx_atts[0]
+                print(f"[Overdenking] Matched: {msg.get('subject','')!r} attachment={match_att.get('name','')}")
+                break
 
         if not match_msg or not match_att:
             result['not_found'].append('Overdenking e-mail niet gevonden voor deze datum')
