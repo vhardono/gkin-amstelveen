@@ -95,13 +95,49 @@ class DropboxExcelReader:
             print(f"Available sheets in Mededelingen Overzicht: {sheet_names}")
             wb.close()
             
-            # Try to read with sheet_name='Output' first (default behavior)
-            df = pd.read_excel(BytesIO(response.content), sheet_name='Output', header=None)
-
-            regionale_nl = str(df.iloc[1, 1]).strip() if pd.notna(df.iloc[1, 1]) else ''
-            landelijke_nl = str(df.iloc[2, 1]).strip() if pd.notna(df.iloc[2, 1]) else ''
-            regionale_id = str(df.iloc[1, 2]).strip() if pd.notna(df.iloc[1, 2]) else ''
-            landelijke_id = str(df.iloc[2, 2]).strip() if pd.notna(df.iloc[2, 2]) else ''
+            # Try to read from the year-specific sheet (e.g., '2026') if it exists
+            year_sheet_name = str(year)
+            if year_sheet_name in sheet_names:
+                print(f"Reading from year-specific sheet: {year_sheet_name}")
+                df = pd.read_excel(BytesIO(response.content), sheet_name=year_sheet_name, header=None)
+                
+                # Find the row corresponding to the selected date
+                # Assuming the sheet has dates in the first column and mededelingen in subsequent columns
+                date_str = mededelingen_date.strftime('%d-%m-%Y')
+                date_alt_str = mededelingen_date.strftime('%Y-%m-%d')
+                
+                # Search for the date in the first column
+                found_row = None
+                for idx, row in df.iterrows():
+                    cell_val = str(row.iloc[0]).strip() if pd.notna(row.iloc[0]) else ''
+                    if date_str in cell_val or date_alt_str in cell_val:
+                        found_row = idx
+                        print(f"Found date {date_str} at row {idx}")
+                        break
+                
+                if found_row is not None:
+                    # Read mededelingen from the found row
+                    # Assuming structure: date in col 0, regionale_nl in col 1, landelijke_nl in col 2, regionale_id in col 3, landelijke_id in col 4
+                    regionale_nl = str(df.iloc[found_row, 1]).strip() if pd.notna(df.iloc[found_row, 1]) else ''
+                    landelijke_nl = str(df.iloc[found_row, 2]).strip() if pd.notna(df.iloc[found_row, 2]) else ''
+                    regionale_id = str(df.iloc[found_row, 3]).strip() if pd.notna(df.iloc[found_row, 3]) else ''
+                    landelijke_id = str(df.iloc[found_row, 4]).strip() if pd.notna(df.iloc[found_row, 4]) else ''
+                else:
+                    print(f"Date {date_str} not found in sheet {year_sheet_name}, falling back to Output sheet")
+                    # Fall back to Output sheet
+                    df = pd.read_excel(BytesIO(response.content), sheet_name='Output', header=None)
+                    regionale_nl = str(df.iloc[1, 1]).strip() if pd.notna(df.iloc[1, 1]) else ''
+                    landelijke_nl = str(df.iloc[2, 1]).strip() if pd.notna(df.iloc[2, 1]) else ''
+                    regionale_id = str(df.iloc[1, 2]).strip() if pd.notna(df.iloc[1, 2]) else ''
+                    landelijke_id = str(df.iloc[2, 2]).strip() if pd.notna(df.iloc[2, 2]) else ''
+            else:
+                # Fall back to Output sheet if year-specific sheet doesn't exist
+                print(f"Year-specific sheet {year_sheet_name} not found, reading from Output sheet")
+                df = pd.read_excel(BytesIO(response.content), sheet_name='Output', header=None)
+                regionale_nl = str(df.iloc[1, 1]).strip() if pd.notna(df.iloc[1, 1]) else ''
+                landelijke_nl = str(df.iloc[2, 1]).strip() if pd.notna(df.iloc[2, 1]) else ''
+                regionale_id = str(df.iloc[1, 2]).strip() if pd.notna(df.iloc[1, 2]) else ''
+                landelijke_id = str(df.iloc[2, 2]).strip() if pd.notna(df.iloc[2, 2]) else ''
 
             print(f"Mededelingen loaded: regionale={len(regionale_nl)} chars, landelijke={len(landelijke_nl)} chars")
             return {
