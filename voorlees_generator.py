@@ -361,8 +361,9 @@ class VoorleesGenerator:
                 
                 # Build Indonesian text: "ibadah [online] [dienst_type]" to match first paragraph pattern
                 online_text = 'Online ' if is_online else ''
-                # Use ordinal dienst type if set (e.g. "minggu ke-5"), otherwise use named type (e.g. "Pentakosta ")
-                effective_dienst_type_id = ordinal_dienst_type_id if ordinal_dienst_type_id else dienst_type_id
+                # If ordinal (e.g., "5de zondag"), the day_word already says "Minggu ke-5"
+                # so don't repeat the ordinal inside the ibadah phrase
+                effective_dienst_type_id = '' if ordinal_dienst_type_id else dienst_type_id
                 line_segs = (
                     [seg(f'Pada {day_word} yang akan datang, {date_part}, ibadah {online_text}{effective_dienst_type_id}di Amstelveen akan dipimpin oleh ')] +
                     [seg(pred_part, True)] +
