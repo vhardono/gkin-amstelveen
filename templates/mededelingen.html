@@ -327,21 +327,60 @@
 
         </form>
 
-        <!-- WA-OLE informatie -->
+        <!-- WhatsApp berichten subsection -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-5">
-            <div class="flex items-center justify-between mb-4">
-                <h2 class="text-base font-semibold text-gkin-green flex items-center gap-2">
-                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
-                    <span data-i18n="wa.section_title">WA-OLE informatie</span>
-                </h2>
-                    <button type="button" id="waOleBtn"
-                            class="text-xs bg-green-50 hover:bg-green-100 text-green-700 border border-green-200 rounded-lg px-3 py-1.5 flex items-center gap-1 transition-colors disabled:opacity-50">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-                        <span data-i18n="wa.make_message">Maak WA bericht</span>
-                    </button>
+            <h2 class="text-base font-semibold text-gkin-green flex items-center gap-2 mb-4">
+                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                <span data-i18n="wa.section_heading">WhatsApp berichten</span>
+            </h2>
+
+            <!-- WA-OLE row -->
+            <div class="flex items-center justify-between py-3 border-b border-gray-100">
+                <div>
+                    <p class="text-sm font-medium text-gray-700" data-i18n="wa.ole_title">WA-OLE informatie</p>
+                    <p class="text-xs text-gray-400" data-i18n="wa.ole_hint">Weblinks OLE &middot; stuur uiterlijk zaterdag naar <em>Kerkenraad GKIN AM</em></p>
+                </div>
+                <button type="button" id="waOleBtn"
+                        class="text-xs bg-green-50 hover:bg-green-100 text-green-700 border border-green-200 rounded-lg px-3 py-1.5 flex items-center gap-1 transition-colors disabled:opacity-50">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                    <span data-i18n="wa.make_message">Maak WA bericht</span>
+                </button>
             </div>
-            <p class="text-xs text-gray-400" data-i18n="wa.hint">WhatsApp bericht voor OLE weblinks. OLE locatie &amp; tijd worden opgehaald uit het preekroster. Liturgie wordt opgehaald van gkin.org.</p>
-            <p class="text-xs text-amber-600 mt-1" data-i18n-html="wa.reminder">⏰ Stuur dit bericht uiterlijk zaterdag naar de <strong>Kerkenraad GKIN AM</strong> WhatsApp groep.</p>
+
+            <!-- WA-AM row -->
+            <div class="flex items-center justify-between py-3">
+                <div>
+                    <p class="text-sm font-medium text-gray-700" data-i18n="wa.am_title">WA-AM informatie</p>
+                    <p class="text-xs text-gray-400" data-i18n="wa.am_hint">Tikkie Dankoffer &middot; stuur uiterlijk zaterdag naar <em>Informatie GKIN Amstelveen</em></p>
+                </div>
+                <button type="button" id="waAmBtn"
+                        class="text-xs bg-green-50 hover:bg-green-100 text-green-700 border border-green-200 rounded-lg px-3 py-1.5 flex items-center gap-1 transition-colors disabled:opacity-50">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                    <span data-i18n="wa.make_message">Maak WA bericht</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- WA-AM modal -->
+        <div id="waAmModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg">
+                <div class="flex items-center justify-between p-5 border-b border-gray-100">
+                    <h3 class="text-base font-semibold text-gray-800" data-i18n="wa.am_modal_title">WA-AM informatie</h3>
+                    <button type="button" id="waAmClose" class="text-gray-400 hover:text-gray-600">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+                <div class="p-5">
+                    <p class="text-xs text-amber-600 mb-3" data-i18n-html="wa.am_reminder">⏰ Stuur dit bericht uiterlijk zaterdag naar de <strong>Informatie GKIN Amstelveen</strong> WhatsApp groep. Voeg Liturgie en Mededelingen toe als bijlage.</p>
+                    <textarea id="waAmText" rows="5" readonly
+                              class="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm font-mono bg-gray-50 focus:outline-none resize-none"></textarea>
+                    <button type="button" id="waAmCopy"
+                            class="mt-3 w-full bg-gkin-green hover:bg-gkin-dark text-white font-semibold py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                        <span data-i18n="wa.copy">Kopiëren</span>
+                    </button>
+                </div>
+            </div>
         </div>
 
         <!-- WA-OLE modal -->
@@ -1229,6 +1268,55 @@ Dankoffer Amstelveen: ${dankofferUrl || '(nog niet ingevuld)'}`;
                     btn.disabled = false;
                     btn.innerHTML = origHtml;
                 }
+            });
+
+            closeBtn.addEventListener('click', () => modal.classList.add('hidden'));
+            modal.addEventListener('click', e => { if (e.target === modal) modal.classList.add('hidden'); });
+
+            copyBtn.addEventListener('click', () => {
+                navigator.clipboard.writeText(txtArea.value).then(() => {
+                    copyBtn.textContent = t('wa.copied');
+                    setTimeout(() => {
+                        copyBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg> ' + t('wa.copy');
+                    }, 2000);
+                });
+            });
+        })();
+
+        // WA-AM informatie
+        (function() {
+            const modal   = document.getElementById('waAmModal');
+            const txtArea = document.getElementById('waAmText');
+            const copyBtn = document.getElementById('waAmCopy');
+            const closeBtn= document.getElementById('waAmClose');
+
+            document.getElementById('waAmBtn').addEventListener('click', () => {
+                const sel = dateSelect._currentSel;
+                if (!sel) { alert(t('wa.no_date')); return; }
+
+                const iso = sel.value;
+                const d = new Date(iso + 'T00:00:00');
+                const dateStr = `${d.getDate()} ${DUTCH_MONTHS_LONG[d.getMonth()]} ${d.getFullYear()}`;
+
+                // Derive dienst type from opmerking (strip OLE part)
+                const opmerking = sel.opmerking || '';
+                let dienstType = opmerking.split('OLE')[0].trim().replace(/,$/, '').trim();
+
+                // Build title line
+                const titleLine = dienstType
+                    ? `${dienstType} Dienst ${dateStr}`
+                    : `Eredienst ${dateStr}`;
+
+                // Tikkie URL from dankoffer_url field
+                const tikkieUrl = (document.getElementById('dankoffer_url') || {}).value || '(nog niet ingevuld)';
+
+                const msg =
+`${titleLine}
+
+Dankoffer Amstelveen: ${tikkieUrl}`;
+
+                txtArea.value = msg;
+                modal.classList.remove('hidden');
             });
 
             closeBtn.addEventListener('click', () => modal.classList.add('hidden'));
