@@ -635,41 +635,8 @@ def _extract_welkom_paragraphs(selected_date: datetime, entry: dict, meded: dict
                 print(f"DEBUG -> Keeping paragraph as-is: '{p}'")
                 result.append(p)
         
-        # Add upcoming services from takenrooster if available
-        if takenrooster_entries:
-            sel_date = selected_date.date() if isinstance(selected_date, datetime) else selected_date
-            upcoming = []
-            for e in takenrooster_entries:
-                d = e['date']
-                if isinstance(d, datetime):
-                    d_date = d.date()
-                else:
-                    d_date = d
-                if sel_date < d_date <= sel_date + timedelta(days=7):
-                    upcoming.append(e)
-            upcoming.sort(key=lambda e: e['date'])
-            
-            for e in upcoming:
-                d = e['date']
-                upcoming_day = dutch_days[d.weekday()]
-                upcoming_date_str = f"{d.day} {dutch_months[d.month-1]} {d.year}"
-                upcoming_predikant = e.get('predikant', '')
-                upcoming_opmerking = e.get('opmerking', '')
-                
-                # Extract dienst type from opmerking
-                dienst_type = ''
-                if upcoming_opmerking:
-                    text = upcoming_opmerking.split('OLE')[0].strip().rstrip(',').strip()
-                    if text:
-                        dienst_type = f"{text} "
-                
-                # Check if upcoming service is OLE
-                upcoming_is_ole = 'OLE' in upcoming_opmerking.upper()
-                online_prefix = 'Online ' if upcoming_is_ole else ''
-                
-                result.append(f"Aanstaande {upcoming_day} {upcoming_date_str}, hoopt in de {online_prefix}{dienst_type}Eredienst in Amstelveen voor te gaan, {upcoming_predikant}. Aanvang is om 10:30 uur.")
-        
-        return result
+        # Note: aanstaande paragraphs are NOT regenerated here - they are handled separately
+        # in the BulletinGenerator._update_aanstaande method for the main document
     except Exception:
         return []
 
