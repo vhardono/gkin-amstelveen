@@ -1249,7 +1249,13 @@ Dankoffer Amstelveen: ${dankofferUrl || '(nog niet ingevuld)'}`;
             // Download Liturgie — URL already cached when modal opened
             document.getElementById('waLiturgieBtn').addEventListener('click', () => {
                 if (_cachedLiturgieUrl) {
-                    window.open(_cachedLiturgieUrl, '_blank');
+                    const a = document.createElement('a');
+                    a.href = _cachedLiturgieUrl;
+                    a.download = _cachedLiturgieUrl.split('/').pop().split('?')[0] || 'Liturgie.pdf';
+                    a.target = '_blank';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
                 } else {
                     const btn = document.getElementById('waLiturgieBtn');
                     const noLitEl = document.createElement('p');
