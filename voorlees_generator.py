@@ -279,6 +279,9 @@ class VoorleesGenerator:
             elif 'aanstaande' in s.lower():
                 m_date = re.search(r'(\d{1,2}\s+\w+\s+\d{4})', s)
                 m_time = re.search(r'(\d{1,2}[:.\u00b7]\d{2})\s*uur', s)
+                # Extract dienst type (e.g., "Pinksteren", "Hemelvaart") before "Eredienst"
+                m_dienst = re.search(r'hoop in de (\w+\s+)?Eredienst', s, re.IGNORECASE)
+                dienst_type = m_dienst.group(1).strip() if m_dienst and m_dienst.group(1) else ''
                 # Match name after 'voor te gaan,' up to '. Aanvang' — allow dots inside (ds., pdt.)
                 m_pred = re.search(r'voor te gaan,?\s+(.+?)(?=\.\s*Aanvang|\. Aanvang|$)', s, re.IGNORECASE)
                 date_part = m_date.group(1) if m_date else ''
@@ -286,6 +289,20 @@ class VoorleesGenerator:
                     date_part = re.sub(rf'\b{nl_m}\b', id_m, date_part, flags=re.IGNORECASE)
                 time_part = m_time.group(1).replace('.', ':') if m_time else '10:30'
                 pred_part = m_pred.group(1).strip().rstrip('. ') if m_pred else ''
+                
+                # Translate dienst type to Indonesian
+                dienst_type_id = ''
+                if dienst_type:
+                    dienst_lower = dienst_type.lower()
+                    if 'pinksteren' in dienst_lower:
+                        dienst_type_id = 'Pentakosta '
+                    elif 'hemelvaart' in dienst_lower:
+                        dienst_type_id = 'Kenaikan Yesus Kristus '
+                    elif 'ole' in dienst_lower:
+                        dienst_type_id = 'OLE '
+                    else:
+                        dienst_type_id = dienst_type + ' '
+                
                 if 'donderdag' in s.lower() or 'hemelvaart' in s.lower():
                     dienst = 'ibadah Kebangkitan Yesus Kristus'
                     day_word = 'Kamis'
@@ -293,7 +310,7 @@ class VoorleesGenerator:
                     dienst = 'ibadah'
                     day_word = 'Minggu'
                 line_segs = (
-                    [seg(f'Pada {day_word} yang akan datang, {date_part}, {dienst} di Amstelveen akan dipimpin oleh ')] +
+                    [seg(f'Pada {day_word} yang akan datang, {date_part}, {dienst_type_id}{dienst} di Amstelveen akan dipimpin oleh ')] +
                     [seg(pred_part, True)] +
                     [seg(f'. Kebaktian akan dimulai pada pukul {time_part}.')]
                 )
