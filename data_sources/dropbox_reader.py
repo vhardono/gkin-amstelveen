@@ -105,14 +105,21 @@ class DropboxExcelReader:
                 # Assuming the sheet has dates in the first column and mededelingen in subsequent columns
                 date_str = mededelingen_date.strftime('%d-%m-%Y')
                 date_alt_str = mededelingen_date.strftime('%Y-%m-%d')
+                date_day_month = f"{mededelingen_date.day}-{mededelingen_date.month:02d}"
+                date_day_month_alt = f"{mededelingen_date.day}/{mededelingen_date.month:02d}"
+                
+                print(f"Searching for date: {date_str} (also trying: {date_alt_str}, {date_day_month}, {date_day_month_alt})")
                 
                 # Search for the date in the first column
                 found_row = None
                 for idx, row in df.iterrows():
                     cell_val = str(row.iloc[0]).strip() if pd.notna(row.iloc[0]) else ''
-                    if date_str in cell_val or date_alt_str in cell_val:
+                    # Print first few rows to debug
+                    if idx < 5:
+                        print(f"Row {idx}, col 0: '{cell_val}' (type: {type(row.iloc[0])})")
+                    if date_str in cell_val or date_alt_str in cell_val or date_day_month in cell_val or date_day_month_alt in cell_val:
                         found_row = idx
-                        print(f"Found date {date_str} at row {idx}")
+                        print(f"Found date {date_str} at row {idx} with value '{cell_val}'")
                         break
                 
                 if found_row is not None:
@@ -122,6 +129,7 @@ class DropboxExcelReader:
                     landelijke_nl = str(df.iloc[found_row, 2]).strip() if pd.notna(df.iloc[found_row, 2]) else ''
                     regionale_id = str(df.iloc[found_row, 3]).strip() if pd.notna(df.iloc[found_row, 3]) else ''
                     landelijke_id = str(df.iloc[found_row, 4]).strip() if pd.notna(df.iloc[found_row, 4]) else ''
+                    print(f"Reading mededelingen from row {found_row}: regionale={len(regionale_nl)} chars, landelijke={len(landelijke_nl)} chars")
                 else:
                     print(f"Date {date_str} not found in sheet {year_sheet_name}, falling back to Output sheet")
                     # Fall back to Output sheet
