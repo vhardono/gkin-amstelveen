@@ -955,19 +955,16 @@ class OutlookCollecteReader:
 
         if target_date:
             d, m = target_date.day, target_date.month
-            date_labels = [
-                f"{d} {NL_MONTHS[m]}",           # "17 mei" (Dutch)
-                f"{d} {NL_MONTHS[m].capitalize()}", # "17 Mei"
-            ]
-            # Indonesian month names for matching "Renungan untuk 17 Mei"
             ID_MONTHS = ['','januari','februari','maret','april','mei','juni',
                          'juli','agustus','september','oktober','november','desember']
-            date_labels += [
+            date_labels = [
+                f"{d} {NL_MONTHS[m]}",
+                f"{d} {NL_MONTHS[m].capitalize()}",
                 f"{d} {ID_MONTHS[m]}",
                 f"{d} {ID_MONTHS[m].capitalize()}",
             ]
 
-            # Find the "Renungan untuk <date>" line → marks start of Indonesian section
+            # Find the "Renungan untuk <date>" or "Renungan <date>" line
             renungan_idx = None
             for i, p in enumerate(paras):
                 p_lower = p.lower()
@@ -977,8 +974,7 @@ class OutlookCollecteReader:
                     break
 
             if renungan_idx is not None:
-                # The Dutch section follows the Indonesian one.
-                # Find the next "Renungan" section (marks end of current date) or end of doc.
+                # Find the next "Renungan" line (start of next entry) or end of doc
                 next_renungan_idx = None
                 for i in range(renungan_idx + 1, len(paras)):
                     if paras[i].lower().startswith('renungan'):
@@ -986,14 +982,12 @@ class OutlookCollecteReader:
                         break
 
                 section_paras = paras[renungan_idx + 1 : next_renungan_idx]
+                print(f"[Overdenking] Section has {len(section_paras)} paras")
 
-                # Within section_paras: Indonesian body is first, Dutch body is second.
-                # The Dutch part starts at a short title paragraph that is NOT a bible
-                # reference and doesn't look like Indonesian prose (long sentence).
-                # Simple rule: find the midpoint where a short para follows prose paras.
+                # Within section_paras: Indonesian body first, Dutch body second.
+                # Dutch part starts at a short title that follows a long prose paragraph.
                 dutch_start = None
                 for i, p in enumerate(section_paras):
-                    # Short paragraph (<= 80 chars), not a bible ref, not starting with Indonesian prose
                     if (len(p) <= 80 and
                             not re.search(r'\d+:\d+', p) and
                             i > 0 and len(section_paras[i-1]) > 80):
@@ -1004,22 +998,29 @@ class OutlookCollecteReader:
                 if dutch_start is not None:
                     working_paras = section_paras[dutch_start:]
                 else:
-                    # Fallback: use whole section
+                    # Single-language doc: use all section paras
                     working_paras = section_paras
             else:
-                print(f"[Overdenking] No date-specific section found, using all paragraphs")
+                # No "Renungan" header found at all → Dutch-only single-entry doc
+                print(f"[Overdenking] No Renungan header found, assuming Dutch-only doc")
 
         print(f"[Overdenking] Working paragraphs ({len(working_paras)}):")
         for i, p in enumerate(working_paras[:6]):
             print(f"  [{i}] {p[:100]!r}")
 
-        # Extract predikant — last non-empty paragraph with ds./prop. title
+        # Extract predikant — first try from email subject (e.g. "Overdenking tbv ... — Ds. Chandra Gunawan")
         predikant = ''
-        for p in reversed(working_paras):
-            if re.search(r'\bds\.?\b|\bprop\.?\b|\bdrs\.?\b', p, re.IGNORECASE) or \
-               re.search(r'^(ds|prop|drs)[\s.]', p, re.IGNORECASE):
-                predikant = p
-                break
+        subject_line = match_msg.get('subject', '')
+        m_pred_subj = re.search(r'[-\u2014\u2013]\s*((?:ds|prop|drs|pdt)\.?\s+\S.+?)$', subject_line, re.IGNORECASE)
+        if m_pred_subj:
+            predikant = m_pred_subj.group(1).strip()
+            print(f"[Overdenking] Predikant from subject: {predikant!r}")
+        # Fallback: last paragraph in working section with a title prefix
+        if not predikant:
+            for p in reversed(working_paras):
+                if re.search(r'\bds\.?\b|\bprop\.?\b|\bdrs\.?\b|\bpdt\.?\b', p, re.IGNORECASE):
+                    predikant = p
+                    break
         if not predikant and working_paras:
             predikant = working_paras[-1]
 
