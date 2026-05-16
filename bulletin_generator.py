@@ -798,6 +798,13 @@ class BulletinGenerator:
 
     def _update_activiteiten_table(self, doc: Document, activiteiten: List[Dict] = None):
         """Keep activiteiten table header, fill with user-supplied rows or 1 empty row."""
+        # Ensure the 'Activiteiten kalender' heading has Heading 2 style
+        for p in doc.paragraphs:
+            if p.text.strip().lower().startswith('activiteiten kalender'):
+                if not p.style.name.startswith('Heading'):
+                    p.style = doc.styles['Heading 2']
+                break
+
         table = self._find_table_after_heading(doc, 'Activiteiten kalender')
         if table is None:
             print("Warning: activiteiten table not found")
