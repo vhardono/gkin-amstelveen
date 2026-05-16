@@ -869,27 +869,6 @@ def fetch_email_overdenking():
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/fetch-email-ole-mededeling', methods=['POST'])
-def fetch_email_ole_mededeling():
-    """Fetch OLE mededeling (YouTube link, thema, bijbeltekst) from scriba email."""
-    try:
-        reader = OutlookCollecteReader()
-        if not reader.is_authenticated():
-            return jsonify({'error': 'login_required'}), 401
-        date_str = request.json.get('date', '') if request.is_json else ''
-        target_date = None
-        if date_str:
-            try:
-                target_date = datetime.strptime(date_str, '%Y-%m-%d')
-            except ValueError:
-                pass
-        data = reader.fetch_ole_mededeling(target_date=target_date, since_days=14)
-        return jsonify(data)
-    except Exception as e:
-        import traceback; traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
-
-
 @app.route('/fetch-email-opbrengst', methods=['POST'])
 def fetch_email_opbrengst():
     """Fetch collecte opbrengsten amounts and bezoekers from Outlook emails."""

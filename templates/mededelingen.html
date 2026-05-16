@@ -301,6 +301,32 @@
             </div>
         </div>
 
+        <!-- Action buttons -->
+        <div class="flex gap-3 mb-10">
+            <button type="button" id="resetBtn"
+                    class="flex-1 flex items-center justify-center gap-2 border-2 border-gray-300 hover:border-gray-400 text-gray-600 hover:text-gray-800 font-semibold py-3.5 px-6 rounded-xl transition-colors">
+                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+                <span data-i18n="common.reset">Opnieuw beginnen</span>
+            </button>
+            <button id="genBtn" type="submit"
+                    class="flex-[2] flex items-center justify-center gap-2 bg-gkin-green hover:bg-gkin-dark text-white font-semibold py-3.5 px-6 rounded-xl shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                <svg id="btnIcon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17v3a2 2 0 002 2h14a2 2 0 002-2v-3"/>
+                </svg>
+                <svg id="btnSpinner" class="hidden spinner h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
+                </svg>
+                <span id="btnText" data-i18n="med.generate">Genereer &amp; Download</span>
+            </button>
+        </div>
+
+        <div id="statusMsg" class="hidden mb-8 text-center text-sm rounded-lg p-3"></div>
+
+        </form>
+
         <!-- WA-OLE informatie -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-5">
             <div class="flex items-center justify-between mb-4">
@@ -341,32 +367,6 @@
                 </div>
             </div>
         </div>
-
-        <!-- Action buttons -->
-        <div class="flex gap-3 mb-10">
-            <button type="button" id="resetBtn"
-                    class="flex-1 flex items-center justify-center gap-2 border-2 border-gray-300 hover:border-gray-400 text-gray-600 hover:text-gray-800 font-semibold py-3.5 px-6 rounded-xl transition-colors">
-                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                </svg>
-                <span data-i18n="common.reset">Opnieuw beginnen</span>
-            </button>
-            <button id="genBtn" type="submit"
-                    class="flex-[2] flex items-center justify-center gap-2 bg-gkin-green hover:bg-gkin-dark text-white font-semibold py-3.5 px-6 rounded-xl shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                <svg id="btnIcon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17v3a2 2 0 002 2h14a2 2 0 002-2v-3"/>
-                </svg>
-                <svg id="btnSpinner" class="hidden spinner h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
-                </svg>
-                <span id="btnText" data-i18n="med.generate">Genereer &amp; Download</span>
-            </button>
-        </div>
-
-        <div id="statusMsg" class="hidden mb-8 text-center text-sm rounded-lg p-3"></div>
-
-        </form>
 
         <p class="text-center text-xs text-gray-400 mb-8">
             <span data-i18n="med.footer">Data bronnen: Dropbox Takenrooster &amp; Mededelingen &middot; Scipio Verjaardagen &middot; GKIN Preekrooster</span>
@@ -1117,6 +1117,15 @@
         });
 
         // WA-OLE informatie
+        const OLE_REGIO_LABELS = {
+            'AM': 'Amstelveen',
+            'DH': 'Den Haag',
+            'TB': 'Tilburg',
+            'BD': 'Bandung',
+            'JKT': 'Jakarta',
+            'SBY': 'Surabaya',
+        };
+
         (function() {
             const modal    = document.getElementById('waOleModal');
             const txtArea  = document.getElementById('waOleText');
@@ -1137,41 +1146,48 @@
                 const d = new Date(iso + 'T00:00:00');
                 const dateStr = `${d.getDate()} ${DUTCH_MONTHS_LONG[d.getMonth()]} ${d.getFullYear()}`;
 
-                // URLs from collecte form fields
-                const oleCollecteUrl = (document.getElementById('ole_url')       || {}).value || '';
-                const dankofferUrl   = (document.getElementById('dankoffer_url') || {}).value || '';
+                let oleLocatieCode = '';
+                let oleLocatieLabel = '';
+                let oleTijd    = '';
+                let youtubeUrl = '';
+                let oleCollecteUrl = '';
+                let dankofferUrl   = '';
 
-                // Fetch OLE preekroster for location + time, and OLE mededeling for YouTube
-                let oleLocatie  = '';
-                let oleTijd     = '';
-                let youtubeUrl  = '';
                 try {
-                    const [rosterResp, oleResp] = await Promise.all([
-                        fetch('/fetch-ole-preekroster', {
-                            method: 'POST',
-                            headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify({ date: iso })
-                        }),
-                        fetch('/fetch-email-ole-mededeling', {
-                            method: 'POST',
-                            headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify({ date: iso })
-                        })
-                    ]);
-                    const rosterData = await rosterResp.json();
-                    if (rosterData.found) {
-                        oleLocatie = rosterData.location || '';
-                        oleTijd    = (rosterData.time || '').replace(/u$/, '').replace('.', ':');
+                    // 1. Fetch OLE location/time + YouTube from pm-data (uses preekroster + gkin.org scraper)
+                    const pmResp = await fetch('/fetch-pm-data', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ date: iso })
+                    });
+                    const pmData = await pmResp.json();
+                    if (pmData.success) {
+                        oleLocatieCode  = (pmData.ole_location || '').toUpperCase();
+                        oleLocatieLabel = OLE_REGIO_LABELS[oleLocatieCode] || oleLocatieCode;
+                        const rawTime   = pmData.ole_time || '';
+                        // Normalise to "10.00uur"
+                        oleTijd = rawTime.replace(/[uU]+$/, '').replace(':', '.') + 'uur';
+                        youtubeUrl = pmData.youtube_link || '';
                     }
-                    const oleData = await oleResp.json();
-                    youtubeUrl = oleData.youtube_link || '';
-                } catch(e) {}
+                } catch(e) { console.warn('[WA-OLE] pm-data fetch failed', e); }
+
+                try {
+                    // 2. Fetch collecte URLs from email (same as "Collecte informatie – URLs & QR codes")
+                    const colResp = await fetch('/fetch-email-collecte', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ date: iso })
+                    });
+                    const colData = await colResp.json();
+                    oleCollecteUrl = colData.ole_url      || '';
+                    dankofferUrl   = colData.dankoffer_url || '';
+                } catch(e) { console.warn('[WA-OLE] collecte fetch failed', e); }
 
                 loading.classList.add('hidden');
 
                 const msg =
 `WEBLINKS OLE ${dateStr}
-Verzorgd door regio ${oleLocatie || '(onbekend)'}, aanvang om ${oleTijd || '(onbekend)'}
+Verzorgd door regio ${oleLocatieLabel || oleLocatieCode || '(onbekend)'}, aanvang om ${oleTijd || '(onbekend)'}
 
 Eredienst (Youtube):  ${youtubeUrl || '(nog niet ingevuld)'}
 Dankoffer OLE:  ${oleCollecteUrl || '(nog niet ingevuld)'}
