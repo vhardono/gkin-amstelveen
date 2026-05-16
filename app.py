@@ -550,7 +550,7 @@ def generate_voorlees():
         }
 
         # Extract welkomstwoord paragraphs from the mededelingen template
-        welkom_paras = _extract_welkom_paragraphs(selected_date, entry, meded)
+        welkom_paras = _extract_welkom_paragraphs(selected_date, entry, meded, taken['entries'])
 
         gen      = VoorleesGenerator()
         filepath = gen.generate(selected_date, entry, meded, user_data,
@@ -565,10 +565,11 @@ def generate_voorlees():
         return jsonify({'error': str(e)}), 500
 
 
-def _extract_welkom_paragraphs(selected_date: datetime, entry: dict, meded: dict) -> list:
+def _extract_welkom_paragraphs(selected_date: datetime, entry: dict, meded: dict, takenrooster_entries: list = None) -> list:
     """Read the Welkomstwoord paragraphs from the mededelingen Word template."""
     from bulletin_generator import BulletinGenerator, TEMPLATE_PATH
     from docx import Document as _Document
+    from datetime import timedelta
     try:
         doc = _Document(TEMPLATE_PATH)
         paras = []
@@ -591,11 +592,47 @@ def _extract_welkom_paragraphs(selected_date: datetime, entry: dict, meded: dict
         dutch_days = ['maandag','dinsdag','woensdag','donderdag','vrijdag','zaterdag','zondag']
         date_str = f"{selected_date.day} {dutch_months[selected_date.month-1]} {selected_date.year}"
         day_name = dutch_days[selected_date.weekday()]
+        
+        # Update "Vandaag," line with correct date
         result = []
         for p in paras:
             if 'Vandaag,' in p:
                 p = f"Vandaag, {day_name} {date_str}, gaat voor {predikant}. De ouderling van dienst is {ovd}. Als u vragen heeft, kunt u de ouderling van dienst aanspreken."
+            # Remove hardcoded "Aanstaande..." paragraphs and regenerate from takenrooster
+            elif p.strip().startswith('Aanstaande'):
+                continue  # Skip hardcoded aanstaande paragraphs
             result.append(p)
+        
+        # Add upcoming services from takenrooster if available
+        if takenrooster_entries:
+            sel_date = selected_date.date() if isinstance(selected_date, datetime) else selected_date
+            upcoming = []
+            for e in takenrooster_entries:
+                d = e['date']
+                if isinstance(d, datetime):
+                    d_date = d.date()
+                else:
+                    d_date = d
+                if sel_date < d_date <= sel_date + timedelta(days=7):
+                    upcoming.append(e)
+            upcoming.sort(key=lambda e: e['date'])
+            
+            for e in upcoming:
+                d = e['date']
+                upcoming_day = dutch_days[d.weekday()]
+                upcoming_date_str = f"{d.day} {dutch_months[d.month-1]} {d.year}"
+                upcoming_predikant = e.get('predikant', '')
+                opmerking = e.get('opmerking', '')
+                
+                # Extract dienst type from opmerking
+                dienst_type = ''
+                if opmerking:
+                    text = opmerking.split('OLE')[0].strip().rstrip(',').strip()
+                    if text:
+                        dienst_type = f"{text} "
+                
+                result.append(f"Aanstaande {upcoming_day} {upcoming_date_str}, hoopt in de {dienst_type}Eredienst in Amstelveen voor te gaan, {upcoming_predikant}. Aanvang is om 10:30 uur.")
+        
         return result
     except Exception:
         return []
