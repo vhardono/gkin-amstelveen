@@ -635,6 +635,10 @@ def _extract_welkom_paragraphs(selected_date: datetime, entry: dict, meded: dict
                 print(f"DEBUG -> Keeping paragraph as-is: '{p}'")
                 result.append(p)
         
+        print(f"DEBUG: Final result has {len(result)} paragraphs:")
+        for i, p in enumerate(result):
+            print(f"  {i}: '{p}'")
+        
         # Add upcoming services from takenrooster if available
         if takenrooster_entries:
             sel_date = selected_date.date() if isinstance(selected_date, datetime) else selected_date
