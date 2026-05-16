@@ -604,7 +604,11 @@ def _extract_welkom_paragraphs(selected_date: datetime, entry: dict, meded: dict
         result = []
         for p in paras:
             print(f"DEBUG processing paragraph: '{p}'")
-            if 'Vandaag,' in p:
+            # Skip hardcoded "Aanstaande..." paragraphs first (before other conditions)
+            if p.strip().startswith('Aanstaande'):
+                print(f"DEBUG -> Skipping aanstaande paragraph: '{p}'")
+                continue  # Skip hardcoded aanstaande paragraphs
+            elif 'Vandaag,' in p:
                 p = f"Vandaag, {day_name} {date_str}, gaat voor {predikant}. De ouderling van dienst is {ovd}. Als u vragen heeft, kunt u de ouderling van dienst aanspreken."
                 print(f"DEBUG -> Updated Vandaag line: '{p}'")
             # Update "Online Eredienst" to be dynamic based on is_ole and dienst type
@@ -627,10 +631,6 @@ def _extract_welkom_paragraphs(selected_date: datetime, entry: dict, meded: dict
                     p = p.replace('Eredienst', service_name)
                 print(f"DEBUG -> Updated service name to: '{service_name}', result: '{p}'")
                 result.append(p)
-            # Remove hardcoded "Aanstaande..." paragraphs and regenerate from takenrooster
-            elif p.strip().startswith('Aanstaande'):
-                print(f"DEBUG -> Skipping aanstaande paragraph: '{p}'")
-                continue  # Skip hardcoded aanstaande paragraphs
             else:
                 print(f"DEBUG -> Keeping paragraph as-is: '{p}'")
                 result.append(p)
