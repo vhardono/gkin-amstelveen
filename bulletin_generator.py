@@ -8,6 +8,8 @@ OLE info, Vakantieplanning, Bereikbaarheid) are kept as-is.
 
 import os
 import copy
+import base64
+import io
 from datetime import datetime, timedelta
 from typing import Dict, List, Any
 from docx import Document
@@ -710,9 +712,9 @@ class BulletinGenerator:
                 self._replace_hyperlinks(p, '')
 
         # Replace QR image paragraphs
-        dankoffer_qr_path = user_data.get('dankoffer_qr', '').strip()
-        ole_qr_path = user_data.get('ole_qr', '').strip()
-        qr_paths = iter([dankoffer_qr_path, ole_qr_path])
+        dankoffer_qr = user_data.get('dankoffer_qr', '').strip()
+        ole_qr = user_data.get('ole_qr', '').strip()
+        qr_paths = iter([dankoffer_qr, ole_qr])
 
         in_collecte = False
         for p in doc.paragraphs:
@@ -724,12 +726,37 @@ class BulletinGenerator:
             if in_collecte:
                 drawings = p._element.findall('.//' + qn('w:drawing'))
                 if drawings:
-                    qr_path = next(qr_paths, '')
+                    qr_data = next(qr_paths, '')
                     for run in list(p._element.findall(qn('w:r'))):
                         p._element.remove(run)
-                    if qr_path and os.path.isfile(qr_path):
+                    if qr_data:
                         from docx.shared import Cm
-                        p.add_run().add_picture(qr_path, width=Cm(3), height=Cm(3))
+                        # Handle base64 data URI (data:image/jpeg;base64,...)
+                        if qr_data.startswith('data:'):
+                            try:
+                                header, encoded = qr_data.split(',', 1)
+                                image_bytes = base64.b64decode(encoded)
+                                image_stream = io.BytesIO(image_bytes)
+                                p.add_run().add_picture(image_stream, width=Cm(3), height=Cm(3))
+                            except Exception as e:
+                                print(f"Failed to decode base64 QR: {e}")
+                                p.add_run('[Insert QR here]')
+                        # Handle local file path
+                        elif os.path.isfile(qr_data):
+                            p.add_run().add_picture(qr_data, width=Cm(3), height=Cm(3))
+                        # Handle URL (fetch and embed)
+                        elif qr_data.startswith('http'):
+                            try:
+                                import requests
+                                resp = requests.get(qr_data, timeout=10)
+                                resp.raise_for_status()
+                                image_stream = io.BytesIO(resp.content)
+                                p.add_run().add_picture(image_stream, width=Cm(3), height=Cm(3))
+                            except Exception as e:
+                                print(f"Failed to fetch QR from URL: {e}")
+                                p.add_run('[Insert QR here]')
+                        else:
+                            p.add_run('[Insert QR here]')
                     else:
                         p.add_run('[Insert QR here]')
 
