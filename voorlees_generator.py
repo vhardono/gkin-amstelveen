@@ -318,13 +318,16 @@ class VoorleesGenerator:
                 elif 'hemelvaart' in s_lower:
                     dienst_type = 'Hemelvaart'
                 
-                # Translate ordinal day expressions like "5de zondag" to "minggu ke-5"
-                # Match patterns like "1e zondag", "2e zondag", "3e zondag", etc.
+                # Check for ordinal day expressions like "5de zondag", "1e zondag"
+                # These appear in Dutch as part of the dienst type: "5de zondag Eredienst"
                 m_ordinal = re.search(r'(\d+)(?:e|de|ste)\s+zondag', s, re.IGNORECASE)
                 day_word = 'Minggu'
+                ordinal_dienst_type_id = ''
                 if m_ordinal:
                     day_num = m_ordinal.group(1)
                     day_word = f'Minggu ke-{day_num}'
+                    # The ordinal itself IS the dienst type (e.g., "5de zondag" → "minggu ke-5")
+                    ordinal_dienst_type_id = f'minggu ke-{day_num} '
                 elif 'donderdag' in s_lower or 'hemelvaart' in s_lower:
                     day_word = 'Kamis'
                 
@@ -350,17 +353,18 @@ class VoorleesGenerator:
                         dienst_type_id = dienst_type + ' '
                 print(f"DEBUG aanstaande: dienst_type_id='{dienst_type_id}'")
                 
-                if 'donderdag' in s.lower() or 'hemelvaart' in s.lower():
-                    dienst = 'ibadah Kebangkitan Yesus Kristus'
-                    day_word = 'Kamis'
-                else:
-                    dienst = 'ibadah'
-                    day_word = 'Minggu'
+                # Determine day word — use ordinal if already set, otherwise check day type
+                if not m_ordinal:
+                    if 'donderdag' in s_lower or 'hemelvaart' in s_lower:
+                        day_word = 'Kamis'
+                    # else day_word stays 'Minggu'
                 
                 # Build Indonesian text: "ibadah [online] [dienst_type]" to match first paragraph pattern
                 online_text = 'Online ' if is_online else ''
+                # Use ordinal dienst type if set (e.g. "minggu ke-5"), otherwise use named type (e.g. "Pentakosta ")
+                effective_dienst_type_id = ordinal_dienst_type_id if ordinal_dienst_type_id else dienst_type_id
                 line_segs = (
-                    [seg(f'Pada {day_word} yang akan datang, {date_part}, ibadah {online_text}{dienst_type_id}di Amstelveen akan dipimpin oleh ')] +
+                    [seg(f'Pada {day_word} yang akan datang, {date_part}, ibadah {online_text}{effective_dienst_type_id}di Amstelveen akan dipimpin oleh ')] +
                     [seg(pred_part, True)] +
                     [seg(f'. Kebaktian akan dimulai pada pukul {time_part}.')]
                 )
