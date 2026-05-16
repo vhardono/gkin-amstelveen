@@ -334,13 +334,21 @@
                     <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
                     WA-OLE informatie
                 </h2>
-                <button type="button" id="waOleBtn"
-                        class="text-xs bg-green-50 hover:bg-green-100 text-green-700 border border-green-200 rounded-lg px-3 py-1.5 flex items-center gap-1 transition-colors disabled:opacity-50">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-                    Maak WA bericht
-                </button>
+                <div class="flex items-center gap-2">
+                    <button type="button" id="waLiturgieBtn"
+                            class="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg px-3 py-1.5 flex items-center gap-1 transition-colors disabled:opacity-50">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17v3a2 2 0 002 2h14a2 2 0 002-2v-3"/></svg>
+                        Download Liturgie
+                    </button>
+                    <button type="button" id="waOleBtn"
+                            class="text-xs bg-green-50 hover:bg-green-100 text-green-700 border border-green-200 rounded-lg px-3 py-1.5 flex items-center gap-1 transition-colors disabled:opacity-50">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                        Maak WA bericht
+                    </button>
+                </div>
             </div>
-            <p class="text-xs text-gray-400">WhatsApp bericht voor OLE weblinks. OLE locatie &amp; tijd worden opgehaald uit het preekroster.</p>
+            <p class="text-xs text-gray-400">WhatsApp bericht voor OLE weblinks. OLE locatie &amp; tijd worden opgehaald uit het preekroster. Liturgie wordt opgehaald van gkin.org.</p>
+            <p class="text-xs text-amber-600 mt-1">⏰ Stuur dit bericht uiterlijk zaterdag naar de <strong>Kerkenraad GKIN AM</strong> WhatsApp groep.</p>
         </div>
 
         <!-- WA-OLE modal -->
@@ -1194,6 +1202,35 @@ Dankoffer OLE:  ${oleCollecteUrl || '(nog niet ingevuld)'}
 Dankoffer Amstelveen: ${dankofferUrl || '(nog niet ingevuld)'}`;
 
                 txtArea.value = msg;
+            });
+
+            // Download Liturgie button — fetches liturgie URL from gkin.org and opens it
+            document.getElementById('waLiturgieBtn').addEventListener('click', async () => {
+                const sel = dateSelect._currentSel;
+                if (!sel) { alert('Selecteer eerst een datum.'); return; }
+                const btn = document.getElementById('waLiturgieBtn');
+                const origHtml = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = '<svg class="spinner w-3.5 h-3.5" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg> Laden...';
+                try {
+                    const r = await fetch('/fetch-ole-data', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ date: sel.value })
+                    });
+                    const data = await r.json();
+                    const url = data.ole_liturgie_url || '';
+                    if (url) {
+                        window.open(url, '_blank');
+                    } else {
+                        alert('Geen liturgie URL gevonden voor deze datum op gkin.org.');
+                    }
+                } catch(e) {
+                    alert('Fout bij ophalen liturgie: ' + e.message);
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = origHtml;
+                }
             });
 
             closeBtn.addEventListener('click', () => modal.classList.add('hidden'));
