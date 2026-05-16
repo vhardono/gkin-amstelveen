@@ -310,7 +310,7 @@ class VoorleesGenerator:
                 m_time = re.search(r'(\d{1,2}[:.\u00b7]\d{2})\s*uur', s)
                 # Extract dienst type (e.g., "Pinksteren", "Hemelvaart") before "Eredienst"
                 # Also check for "Online" before dienst type
-                m_dienst = re.search(r'hoop in de (Online\s+)?(\w+\s+)?Eredienst', s, re.IGNORECASE)
+                m_dienst = re.search(r'hoop in de (Online\s+)?(\w+(?:\s+\w+)?)?\s+Eredienst', s, re.IGNORECASE)
                 print(f"DEBUG aanstaande: s='{s}', m_dienst={m_dienst}")
                 if m_dienst:
                     print(f"DEBUG aanstaande: group(1)='{m_dienst.group(1)}', group(2)='{m_dienst.group(2)}'")

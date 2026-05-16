@@ -611,6 +611,7 @@ def _extract_welkom_paragraphs(selected_date: datetime, entry: dict, meded: dict
             elif 'Vandaag,' in p:
                 p = f"Vandaag, {day_name} {date_str}, gaat voor {predikant}. De ouderling van dienst is {ovd}. Als u vragen heeft, kunt u de ouderling van dienst aanspreken."
                 print(f"DEBUG -> Updated Vandaag line: '{p}'")
+                result.append(p)
             # Update "Online Eredienst" to be dynamic based on is_ole and dienst type
             elif 'Online Eredienst' in p or 'van harte welkom bij deze' in p or 'Eredienst' in p:
                 # Extract dienst type from opmerking
