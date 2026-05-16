@@ -294,7 +294,7 @@ class VoorleesGenerator:
                     dienst_text += ' '
                 result.append([seg(
                     f'Atas nama Majelis regio Amstelveen, saya mengucapkan selamat datang '
-                    f'dalam {dienst_text}ibadah ini, khususnya bagi mereka yang baru pertama kali hadir.'
+                    f'dalam ibadah {dienst_text}ini, khususnya bagi mereka yang baru pertama kali hadir.'
                 )])
             elif s.startswith('Vandaag,'):
                 line_segs = (
@@ -318,7 +318,17 @@ class VoorleesGenerator:
                 elif 'hemelvaart' in s_lower:
                     dienst_type = 'Hemelvaart'
                 
-                print(f"DEBUG aanstaande: s='{s}', is_online={is_online}, dienst_type='{dienst_type}'")
+                # Translate ordinal day expressions like "5de zondag" to "minggu ke-5"
+                # Match patterns like "1e zondag", "2e zondag", "3e zondag", etc.
+                m_ordinal = re.search(r'(\d+)(?:e|de|ste)\s+zondag', s, re.IGNORECASE)
+                day_word = 'Minggu'
+                if m_ordinal:
+                    day_num = m_ordinal.group(1)
+                    day_word = f'Minggu ke-{day_num}'
+                elif 'donderdag' in s_lower or 'hemelvaart' in s_lower:
+                    day_word = 'Kamis'
+                
+                print(f"DEBUG aanstaande: s='{s}', is_online={is_online}, dienst_type='{dienst_type}', day_word='{day_word}'")
                 # Match name after 'voor te gaan,' up to '. Aanvang' — allow dots inside (ds., pdt.)
                 m_pred = re.search(r'voor te gaan,?\s+(.+?)(?=\.\s*Aanvang|\. Aanvang|$)', s, re.IGNORECASE)
                 date_part = m_date.group(1) if m_date else ''
