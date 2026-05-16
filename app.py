@@ -600,12 +600,24 @@ def _extract_welkom_paragraphs(selected_date: datetime, entry: dict, meded: dict
         for p in paras:
             if 'Vandaag,' in p:
                 p = f"Vandaag, {day_name} {date_str}, gaat voor {predikant}. De ouderling van dienst is {ovd}. Als u vragen heeft, kunt u de ouderling van dienst aanspreken."
-            # Update "Online Eredienst" to be dynamic based on is_ole
-            elif 'Online Eredienst' in p or 'van harte welkom bij deze' in p:
-                if is_ole:
-                    p = p.replace('Eredienst', 'Online Eredienst')
-                else:
-                    p = p.replace('Online Eredienst', 'Eredienst')
+            # Update "Online Eredienst" to be dynamic based on is_ole and dienst type
+            elif 'Online Eredienst' in p or 'van harte welkom bij deze' in p or 'Eredienst' in p:
+                # Extract dienst type from opmerking
+                dienst_type = ''
+                if opmerking:
+                    text = opmerking.split('OLE')[0].strip().rstrip(',').strip()
+                    if text:
+                        dienst_type = f"{text} "
+                
+                # Build the service name: "Online Pinksteren Eredienst" or "Pinksteren Eredienst" or "Online Eredienst" or "Eredienst"
+                online_prefix = 'Online ' if is_ole else ''
+                service_name = f"{online_prefix}{dienst_type}Eredienst"
+                
+                # Replace any existing Eredienst or Online Eredienst with the dynamic service name
+                if 'Online Eredienst' in p:
+                    p = p.replace('Online Eredienst', service_name)
+                elif 'Eredienst' in p:
+                    p = p.replace('Eredienst', service_name)
                 result.append(p)
             # Remove hardcoded "Aanstaande..." paragraphs and regenerate from takenrooster
             elif p.strip().startswith('Aanstaande'):

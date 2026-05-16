@@ -230,7 +230,7 @@ class VoorleesGenerator:
             bold = part in names
             _r(para, part, bold=bold, color=color)
 
-    def _build_id_welkom_segments(self, nl_lines: list, predikant: str, ovd: str, is_ole: bool,
+    def _build_id_welkom_segments(self, nl_lines: list, predikant: str, ovd: str, is_ole: bool, opmerking: str,
                                    day_id: str, date_str_id: str) -> list:
         """
         Returns a list of lines, each line is a list of (text, bold) segments.
@@ -256,6 +256,24 @@ class VoorleesGenerator:
                 parts_out.append(seg(remaining))
             return parts_out
 
+        # Extract dienst type from opmerking
+        dienst_type = ''
+        if opmerking:
+            text = opmerking.split('OLE')[0].strip().rstrip(',').strip()
+            if text:
+                dienst_type = text + ' '
+        
+        # Translate dienst type to Indonesian
+        dienst_type_id = ''
+        if dienst_type:
+            dienst_lower = dienst_type.lower()
+            if 'pinksteren' in dienst_lower:
+                dienst_type_id = 'Pentakosta '
+            elif 'hemelvaart' in dienst_lower:
+                dienst_type_id = 'Kenaikan Yesus Kristus '
+            else:
+                dienst_type_id = dienst_type  # Keep as-is for unknown types
+
         for s in nl_lines:
             s = s.strip()
             if not s:
@@ -263,11 +281,14 @@ class VoorleesGenerator:
             if s.startswith('Goedemorgen'):
                 result.append([seg('Selamat pagi saudara-saudari,')])
             elif 'van harte welkom' in s or s.startswith('Namens de kerkenraad'):
-                # Dynamic Online/Offline handling
-                dienst_text = 'ibadah online' if is_ole else 'ibadah'
+                # Dynamic Online/Offline and dienst type handling
+                online_text = 'online' if is_ole else ''
+                dienst_text = f'{dienst_type_id}{online_text}'.strip()
+                if dienst_text:
+                    dienst_text += ' '
                 result.append([seg(
                     f'Atas nama Majelis regio Amstelveen, saya mengucapkan selamat datang '
-                    f'dalam {dienst_text} ini, khususnya bagi mereka yang baru pertama kali hadir.'
+                    f'dalam {dienst_text}ibadah ini, khususnya bagi mereka yang baru pertama kali hadir.'
                 )])
             elif s.startswith('Vandaag,'):
                 line_segs = (
@@ -478,7 +499,7 @@ class VoorleesGenerator:
 
         nl_lines = nl_welkom.split('\n')
         # id_segments: list of (text, bold) tuples per line, newline-separated
-        id_segments = self._build_id_welkom_segments(nl_lines, predikant, ovd, is_ole, day_id, date_str_id)
+        id_segments = self._build_id_welkom_segments(nl_lines, predikant, ovd, is_ole, opmerking, day_id, date_str_id)
 
         # Welkom row — NL left (black), ID right (dark blue), names bold
         row = table.add_row()
