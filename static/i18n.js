@@ -147,6 +147,20 @@ const GKIN_I18N = {
     'med.generate':           'Genereer bulletin',
     'med.generate_voorlees':  'Genereer voorleesblad',
 
+    /* --- WA-OLE --- */
+    'wa.section_title':       'WA-OLE informatie',
+    'wa.download_liturgie':   'Download Liturgie',
+    'wa.make_message':        'Maak WA bericht',
+    'wa.hint':                'WhatsApp bericht voor OLE weblinks. OLE locatie & tijd worden opgehaald uit het preekroster. Liturgie wordt opgehaald van gkin.org.',
+    'wa.reminder':            '⏰ Stuur dit bericht uiterlijk zaterdag naar de <strong>Kerkenraad GKIN AM</strong> WhatsApp groep.',
+    'wa.modal_title':         'WA-OLE informatie',
+    'wa.loading':             'OLE preekroster laden...',
+    'wa.copy':                'Kopiëren',
+    'wa.copied':              '✓ Gekopieerd!',
+    'wa.no_date':             'Selecteer eerst een datum.',
+    'wa.no_liturgie':         'Geen liturgie URL gevonden voor deze datum op gkin.org.',
+    'wa.liturgie_error':      'Fout bij ophalen liturgie: ',
+
     /* --- Day / month names --- */
     'days':    ['maandag','dinsdag','woensdag','donderdag','vrijdag','zaterdag','zondag'],
     'months':  ['januari','februari','maart','april','mei','juni','juli','augustus','september','oktober','november','december'],
@@ -372,6 +386,20 @@ const GKIN_I18N = {
     'med.sec_bdays':          'Ulang tahun',
     'med.generate':           'Buat buletin',
     'med.generate_voorlees':  'Buat lembar baca',
+
+    /* --- WA-OLE --- */
+    'wa.section_title':       'Info WA-OLE',
+    'wa.download_liturgie':   'Unduh Liturgi',
+    'wa.make_message':        'Buat pesan WA',
+    'wa.hint':                'Pesan WhatsApp untuk tautan OLE. Lokasi & waktu OLE diambil dari jadwal. Liturgi diambil dari gkin.org.',
+    'wa.reminder':            '⏰ Kirim pesan ini paling lambat hari Sabtu ke grup WhatsApp <strong>Kerkenraad GKIN AM</strong>.',
+    'wa.modal_title':         'Info WA-OLE',
+    'wa.loading':             'Memuat jadwal OLE...',
+    'wa.copy':                'Salin',
+    'wa.copied':              '✓ Tersalin!',
+    'wa.no_date':             'Pilih tanggal terlebih dahulu.',
+    'wa.no_liturgie':         'URL liturgi tidak ditemukan untuk tanggal ini di gkin.org.',
+    'wa.liturgie_error':      'Gagal mengambil liturgi: ',
 
     /* --- Day / month names --- */
     'days':    ['Senin','Selasa','Rabu','Kamis','Jumat','Sabtu','Minggu'],
@@ -599,6 +627,20 @@ const GKIN_I18N = {
     'med.generate':           'Generate bulletin',
     'med.generate_voorlees':  'Generate reading sheet',
 
+    /* --- WA-OLE --- */
+    'wa.section_title':       'WA-OLE information',
+    'wa.download_liturgie':   'Download Liturgy',
+    'wa.make_message':        'Create WA message',
+    'wa.hint':                'WhatsApp message for OLE web links. OLE location & time are fetched from the preekroster. Liturgy is fetched from gkin.org.',
+    'wa.reminder':            '⏰ Send this message by Saturday at the latest to the <strong>Kerkenraad GKIN AM</strong> WhatsApp group.',
+    'wa.modal_title':         'WA-OLE information',
+    'wa.loading':             'Loading OLE roster...',
+    'wa.copy':                'Copy',
+    'wa.copied':              '✓ Copied!',
+    'wa.no_date':             'Please select a date first.',
+    'wa.no_liturgie':         'No liturgy URL found for this date on gkin.org.',
+    'wa.liturgie_error':      'Error fetching liturgy: ',
+
     /* --- Day / month names --- */
     'days':    ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'],
     'months':  ['January','February','March','April','May','June','July','August','September','October','November','December'],
@@ -699,6 +741,10 @@ window.GKIN_I18N = GKIN_I18N;
           el.textContent = dict[key];
         }
       }
+    });
+    document.querySelectorAll('[data-i18n-html]').forEach(el => {
+      const key = el.getAttribute('data-i18n-html');
+      if (dict[key] !== undefined) el.innerHTML = dict[key];
     });
 
     // Rebuild date <option> labels using day/month arrays stored in the option's dataset
