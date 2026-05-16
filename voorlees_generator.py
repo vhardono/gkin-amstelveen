@@ -311,8 +311,12 @@ class VoorleesGenerator:
                 # Extract dienst type (e.g., "Pinksteren", "Hemelvaart") before "Eredienst"
                 # Also check for "Online" before dienst type
                 m_dienst = re.search(r'hoop in de (Online\s+)?(\w+\s+)?Eredienst', s, re.IGNORECASE)
+                print(f"DEBUG aanstaande: s='{s}', m_dienst={m_dienst}")
+                if m_dienst:
+                    print(f"DEBUG aanstaande: group(1)='{m_dienst.group(1)}', group(2)='{m_dienst.group(2)}'")
                 is_online = m_dienst.group(1) is not None if m_dienst else False
                 dienst_type = m_dienst.group(2).strip() if m_dienst and m_dienst.group(2) else ''
+                print(f"DEBUG aanstaande: is_online={is_online}, dienst_type='{dienst_type}'")
                 # Match name after 'voor te gaan,' up to '. Aanvang' — allow dots inside (ds., pdt.)
                 m_pred = re.search(r'voor te gaan,?\s+(.+?)(?=\.\s*Aanvang|\. Aanvang|$)', s, re.IGNORECASE)
                 date_part = m_date.group(1) if m_date else ''
@@ -331,6 +335,8 @@ class VoorleesGenerator:
                         dienst_type_id = 'Kenaikan Yesus Kristus '
                     else:
                         dienst_type_id = dienst_type + ' '
+                
+                print(f"DEBUG aanstaande: dienst_type_id='{dienst_type_id}'")
                 
                 if 'donderdag' in s.lower() or 'hemelvaart' in s.lower():
                     dienst = 'ibadah Kebangkitan Yesus Kristus'
