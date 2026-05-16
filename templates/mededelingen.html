@@ -393,6 +393,7 @@
                     </button>
                 </div>
                 <div class="p-5">
+                    <p class="text-xs text-amber-600 mb-3" data-i18n-html="wa.reminder">⏰ Stuur dit bericht uiterlijk zaterdag naar de <strong>Kerkenraad GKIN AM</strong> WhatsApp groep.</p>
                     <div id="waOleLoading" class="hidden text-sm text-gray-500 flex items-center gap-2 mb-3">
                         <svg class="spinner w-4 h-4 text-gkin-green" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg>
                         <span data-i18n="wa.loading">OLE preekroster laden...</span>
@@ -1197,24 +1198,26 @@
                 let youtubeUrl = '';
                 let oleCollecteUrl = '';
                 let dankofferUrl   = '';
+                let _cachedLiturgieUrl = '';
 
                 try {
-                    // 1. Fetch OLE location/time + YouTube from pm-data (uses preekroster + gkin.org scraper)
-                    const pmResp = await fetch('/fetch-pm-data', {
+                    // 1. Fetch all OLE data (location/time/YouTube/liturgie) from fetch-ole-data
+                    const oleResp = await fetch('/fetch-ole-data', {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify({ date: iso })
                     });
-                    const pmData = await pmResp.json();
-                    if (pmData.success) {
-                        oleLocatieCode  = (pmData.ole_location || '').toUpperCase();
-                        oleLocatieLabel = OLE_REGIO_LABELS[oleLocatieCode] || oleLocatieCode;
-                        const rawTime   = pmData.ole_time || '';
-                        // Normalise to "10.00uur"
+                    const oleData = await oleResp.json();
+                    console.log('[WA-OLE] fetch-ole-data:', oleData);
+                    if (oleData.success) {
+                        oleLocatieCode  = (oleData.ole_location_code || '').toUpperCase();
+                        oleLocatieLabel = OLE_REGIO_LABELS[oleLocatieCode] || oleData.ole_location || oleLocatieCode;
+                        const rawTime   = oleData.ole_time || '';
                         oleTijd = rawTime.replace(/[uU]+$/, '').replace(':', '.') + 'uur';
-                        youtubeUrl = pmData.youtube_link || '';
+                        youtubeUrl = oleData.ole_youtube_link || '';
+                        _cachedLiturgieUrl = oleData.ole_liturgie_url || '';
                     }
-                } catch(e) { console.warn('[WA-OLE] pm-data fetch failed', e); }
+                } catch(e) { console.warn('[WA-OLE] fetch-ole-data failed', e); }
 
                 try {
                     // 2. Fetch collecte URLs from email (same as "Collecte informatie – URLs & QR codes")
@@ -1241,42 +1244,17 @@ Dankoffer Amstelveen: ${dankofferUrl || '(nog niet ingevuld)'}`;
                 txtArea.value = msg;
             });
 
-            // Download Liturgie button — fetches liturgie URL from gkin.org and opens it
-            document.getElementById('waLiturgieBtn').addEventListener('click', async () => {
-                const sel = dateSelect._currentSel;
-                if (!sel) { alert(t('wa.no_date')); return; }
-                const btn = document.getElementById('waLiturgieBtn');
-                const origHtml = btn.innerHTML;
-                btn.disabled = true;
-                btn.innerHTML = '<svg class="spinner w-3.5 h-3.5" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg> Laden...';
-                try {
-                    const r = await fetch('/fetch-ole-data', {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({ date: sel.value })
-                    });
-                    const data = await r.json();
-                    console.log('[Liturgie] fetch-ole-data response:', data);
-                    const url = data.ole_liturgie_url || '';
-                    if (url) {
-                        window.open(url, '_blank');
-                    } else {
-                        const noLitEl = document.createElement('p');
-                        noLitEl.className = 'text-xs text-red-500 mt-2';
-                        noLitEl.textContent = t('wa.no_liturgie');
-                        btn.parentNode.insertBefore(noLitEl, btn.nextSibling);
-                        setTimeout(() => noLitEl.remove(), 5000);
-                    }
-                } catch(e) {
-                    console.error('[Liturgie] error:', e);
-                    const errEl = document.createElement('p');
-                    errEl.className = 'text-xs text-red-500 mt-2';
-                    errEl.textContent = t('wa.liturgie_error') + e.message;
-                    btn.parentNode.insertBefore(errEl, btn.nextSibling);
-                    setTimeout(() => errEl.remove(), 5000);
-                } finally {
-                    btn.disabled = false;
-                    btn.innerHTML = origHtml;
+            // Download Liturgie — URL already cached when modal opened
+            document.getElementById('waLiturgieBtn').addEventListener('click', () => {
+                if (_cachedLiturgieUrl) {
+                    window.open(_cachedLiturgieUrl, '_blank');
+                } else {
+                    const btn = document.getElementById('waLiturgieBtn');
+                    const noLitEl = document.createElement('p');
+                    noLitEl.className = 'text-xs text-red-500 mt-2';
+                    noLitEl.textContent = t('wa.no_liturgie');
+                    btn.parentNode.insertBefore(noLitEl, btn.nextSibling);
+                    setTimeout(() => noLitEl.remove(), 5000);
                 }
             });
 

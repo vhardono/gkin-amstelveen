@@ -208,8 +208,9 @@ class GKINOLEScraper:
             if yt_m:
                 result['youtube_link'] = yt_m.group(0).rstrip('.,)')
 
-        # --- Override date with YouTube oEmbed title (most reliable for past services) ---
-        if result['youtube_link']:
+        # --- Use YouTube oEmbed title date only as fallback (not override) ---
+        # For future services the video may not exist yet; the article text date is more reliable.
+        if result['youtube_link'] and not result['date']:
             yt_date = self._get_youtube_title_date(result['youtube_link'])
             if yt_date:
                 result['date'] = yt_date
