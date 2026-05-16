@@ -331,7 +331,12 @@
                 const location = data.ole_location || data.ole_location_code || '';
                 const timeClean = (data.ole_time || '').replace('u', '').replace('U', '').trim();
                 if (location && timeClean) {
-                    document.getElementById('previewText').value = `van ${location} op ${_days[_dateObj.getDay()]} ${_dateStr}, ${timeClean}u`;
+                    const selectedDate = dateSelect.value;
+                    const dateObj = new Date(selectedDate);
+                    const months = ['januari','februari','maart','april','mei','juni','juli','augustus','september','oktober','november','december'];
+                    const days = ['zondag','maandag','dinsdag','woensdag','donderdag','vrijdag','zaterdag'];
+                    const dateStr = `${dateObj.getDate()} ${months[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
+                    document.getElementById('previewText').value = `van ${location} op ${days[dateObj.getDay()]} ${dateStr}, ${timeClean}u`;
                 }
 
                 // Show consolidated status message
