@@ -587,6 +587,8 @@ def _extract_welkom_paragraphs(selected_date: datetime, entry: dict, meded: dict
         # Fill in dynamic date/predikant/ovd from the template text
         predikant = entry.get('predikant', '')
         ovd = entry.get('ovd', '')
+        opmerking = entry.get('opmerking', '')
+        is_ole = 'OLE' in opmerking.upper()
         dutch_months = ['januari','februari','maart','april','mei','juni',
                         'juli','augustus','september','oktober','november','december']
         dutch_days = ['maandag','dinsdag','woensdag','donderdag','vrijdag','zaterdag','zondag']
@@ -598,10 +600,18 @@ def _extract_welkom_paragraphs(selected_date: datetime, entry: dict, meded: dict
         for p in paras:
             if 'Vandaag,' in p:
                 p = f"Vandaag, {day_name} {date_str}, gaat voor {predikant}. De ouderling van dienst is {ovd}. Als u vragen heeft, kunt u de ouderling van dienst aanspreken."
+            # Update "Online Eredienst" to be dynamic based on is_ole
+            elif 'Online Eredienst' in p or 'van harte welkom bij deze' in p:
+                if is_ole:
+                    p = p.replace('Eredienst', 'Online Eredienst')
+                else:
+                    p = p.replace('Online Eredienst', 'Eredienst')
+                result.append(p)
             # Remove hardcoded "Aanstaande..." paragraphs and regenerate from takenrooster
             elif p.strip().startswith('Aanstaande'):
                 continue  # Skip hardcoded aanstaande paragraphs
-            result.append(p)
+            else:
+                result.append(p)
         
         # Add upcoming services from takenrooster if available
         if takenrooster_entries:
@@ -622,16 +632,20 @@ def _extract_welkom_paragraphs(selected_date: datetime, entry: dict, meded: dict
                 upcoming_day = dutch_days[d.weekday()]
                 upcoming_date_str = f"{d.day} {dutch_months[d.month-1]} {d.year}"
                 upcoming_predikant = e.get('predikant', '')
-                opmerking = e.get('opmerking', '')
+                upcoming_opmerking = e.get('opmerking', '')
                 
                 # Extract dienst type from opmerking
                 dienst_type = ''
-                if opmerking:
-                    text = opmerking.split('OLE')[0].strip().rstrip(',').strip()
+                if upcoming_opmerking:
+                    text = upcoming_opmerking.split('OLE')[0].strip().rstrip(',').strip()
                     if text:
                         dienst_type = f"{text} "
                 
-                result.append(f"Aanstaande {upcoming_day} {upcoming_date_str}, hoopt in de {dienst_type}Eredienst in Amstelveen voor te gaan, {upcoming_predikant}. Aanvang is om 10:30 uur.")
+                # Check if upcoming service is OLE
+                upcoming_is_ole = 'OLE' in upcoming_opmerking.upper()
+                online_prefix = 'Online ' if upcoming_is_ole else ''
+                
+                result.append(f"Aanstaande {upcoming_day} {upcoming_date_str}, hoopt in de {online_prefix}{dienst_type}Eredienst in Amstelveen voor te gaan, {upcoming_predikant}. Aanvang is om 10:30 uur.")
         
         return result
     except Exception:

@@ -230,8 +230,8 @@ class VoorleesGenerator:
             bold = part in names
             _r(para, part, bold=bold, color=color)
 
-    def _build_id_welkom_segments(self, nl_lines: list, predikant: str, ovd: str,
-                                   day_id: str, date_id: str) -> list:
+    def _build_id_welkom_segments(self, nl_lines: list, predikant: str, ovd: str, is_ole: bool,
+                                   day_id: str, date_str_id: str) -> list:
         """
         Returns a list of lines, each line is a list of (text, bold) segments.
         Uses hardcoded Indonesian template with bold names injected.
@@ -263,9 +263,11 @@ class VoorleesGenerator:
             if s.startswith('Goedemorgen'):
                 result.append([seg('Selamat pagi saudara-saudari,')])
             elif 'van harte welkom' in s or s.startswith('Namens de kerkenraad'):
+                # Dynamic Online/Offline handling
+                dienst_text = 'ibadah online' if is_ole else 'ibadah'
                 result.append([seg(
-                    'Atas nama Majelis regio Amstelveen, saya mengucapkan selamat datang '
-                    'dalam kebaktian ini, khususnya bagi mereka yang baru pertama kali hadir.'
+                    f'Atas nama Majelis regio Amstelveen, saya mengucapkan selamat datang '
+                    f'dalam {dienst_text} ini, khususnya bagi mereka yang baru pertama kali hadir.'
                 )])
             elif s.startswith('Vandaag,'):
                 line_segs = (
@@ -280,8 +282,10 @@ class VoorleesGenerator:
                 m_date = re.search(r'(\d{1,2}\s+\w+\s+\d{4})', s)
                 m_time = re.search(r'(\d{1,2}[:.\u00b7]\d{2})\s*uur', s)
                 # Extract dienst type (e.g., "Pinksteren", "Hemelvaart") before "Eredienst"
-                m_dienst = re.search(r'hoop in de (\w+\s+)?Eredienst', s, re.IGNORECASE)
-                dienst_type = m_dienst.group(1).strip() if m_dienst and m_dienst.group(1) else ''
+                # Also check for "Online" before dienst type
+                m_dienst = re.search(r'hoop in de (Online\s+)?(\w+\s+)?Eredienst', s, re.IGNORECASE)
+                is_online = m_dienst.group(1) is not None if m_dienst else False
+                dienst_type = m_dienst.group(2).strip() if m_dienst and m_dienst.group(2) else ''
                 # Match name after 'voor te gaan,' up to '. Aanvang' — allow dots inside (ds., pdt.)
                 m_pred = re.search(r'voor te gaan,?\s+(.+?)(?=\.\s*Aanvang|\. Aanvang|$)', s, re.IGNORECASE)
                 date_part = m_date.group(1) if m_date else ''
@@ -298,8 +302,6 @@ class VoorleesGenerator:
                         dienst_type_id = 'Pentakosta '
                     elif 'hemelvaart' in dienst_lower:
                         dienst_type_id = 'Kenaikan Yesus Kristus '
-                    elif 'ole' in dienst_lower:
-                        dienst_type_id = 'OLE '
                     else:
                         dienst_type_id = dienst_type + ' '
                 
@@ -309,8 +311,12 @@ class VoorleesGenerator:
                 else:
                     dienst = 'ibadah'
                     day_word = 'Minggu'
+                
+                # Build Indonesian text: "ibadah Pentakosta Online" or "ibadah Online Pentakosta"
+                # Based on Dutch: "Online Pinksteren Eredienst" -> Indonesian: "ibadah Pentakosta Online"
+                online_text = 'Online ' if is_online else ''
                 line_segs = (
-                    [seg(f'Pada {day_word} yang akan datang, {date_part}, {dienst_type_id}{dienst} di Amstelveen akan dipimpin oleh ')] +
+                    [seg(f'Pada {day_word} yang akan datang, {date_part}, {dienst_type_id}{online_text}{dienst} di Amstelveen akan dipimpin oleh ')] +
                     [seg(pred_part, True)] +
                     [seg(f'. Kebaktian akan dimulai pada pukul {time_part}.')]
                 )
@@ -420,6 +426,8 @@ class VoorleesGenerator:
 
         predikant = takenrooster_entry.get('predikant', '')
         ovd       = takenrooster_entry.get('ovd', '')
+        opmerking = takenrooster_entry.get('opmerking', '')
+        is_ole    = 'OLE' in opmerking.upper()
         eo1       = takenrooster_entry.get('1eo', '')
         beamer    = takenrooster_entry.get('beamer', '')
         date_str_nl = _format_nl_date(mededelingen_date)
@@ -470,7 +478,7 @@ class VoorleesGenerator:
 
         nl_lines = nl_welkom.split('\n')
         # id_segments: list of (text, bold) tuples per line, newline-separated
-        id_segments = self._build_id_welkom_segments(nl_lines, predikant, ovd, day_id, date_str_id)
+        id_segments = self._build_id_welkom_segments(nl_lines, predikant, ovd, is_ole, day_id, date_str_id)
 
         # Welkom row — NL left (black), ID right (dark blue), names bold
         row = table.add_row()
