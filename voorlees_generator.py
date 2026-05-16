@@ -274,6 +274,11 @@ class VoorleesGenerator:
             else:
                 dienst_type_id = dienst_type  # Keep as-is for unknown types
 
+        print(f"DEBUG _build_id_welkom_segments: opmerking='{opmerking}', dienst_type='{dienst_type}', dienst_type_id='{dienst_type_id}'")
+        print(f"DEBUG _build_id_welkom_segments: Processing {len(nl_lines)} lines:")
+        for i, line in enumerate(nl_lines):
+            print(f"  {i}: '{line}'")
+
         for s in nl_lines:
             s = s.strip()
             if not s:

@@ -595,6 +595,11 @@ def _extract_welkom_paragraphs(selected_date: datetime, entry: dict, meded: dict
         date_str = f"{selected_date.day} {dutch_months[selected_date.month-1]} {selected_date.year}"
         day_name = dutch_days[selected_date.weekday()]
         
+        print(f"DEBUG _extract_welkom_paragraphs: is_ole={is_ole}, opmerking='{opmerking}'")
+        print(f"DEBUG _extract_welkom_paragraphs: Extracted {len(paras)} paragraphs from template:")
+        for i, p in enumerate(paras):
+            print(f"  {i}: '{p}'")
+        
         # Update "Vandaag," line with correct date
         result = []
         for p in paras:
