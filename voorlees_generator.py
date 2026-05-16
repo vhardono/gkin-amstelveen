@@ -346,8 +346,8 @@ class VoorleesGenerator:
                     elif 'hemelvaart' in dienst_lower:
                         dienst_type_id = 'Kenaikan Yesus Kristus '
                     else:
+                        # Keep as-is for unknown types
                         dienst_type_id = dienst_type + ' '
-                
                 print(f"DEBUG aanstaande: dienst_type_id='{dienst_type_id}'")
                 
                 if 'donderdag' in s.lower() or 'hemelvaart' in s.lower():
