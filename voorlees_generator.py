@@ -282,8 +282,9 @@ class VoorleesGenerator:
                 result.append([seg('Selamat pagi saudara-saudari,')])
             elif 'van harte welkom' in s or s.startswith('Namens de kerkenraad'):
                 # Dynamic Online/Offline and dienst type handling
-                online_text = 'online' if is_ole else ''
-                dienst_text = f'{dienst_type_id}{online_text}'.strip()
+                # Correct order: "ibadah [online] [dienst_type] ini"
+                online_text = 'online ' if is_ole else ''
+                dienst_text = f'{online_text}{dienst_type_id}'.strip()
                 if dienst_text:
                     dienst_text += ' '
                 result.append([seg(
