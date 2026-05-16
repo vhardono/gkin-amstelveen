@@ -350,7 +350,7 @@
             <!-- WA-AM row -->
             <div class="flex items-center justify-between py-3">
                 <div>
-                    <p class="text-sm font-medium text-gray-700" data-i18n="wa.am_title">WA-AM informatie</p>
+                    <p class="text-sm font-medium text-gray-700" data-i18n="wa.am_title">WA-Dienst informatie</p>
                     <p class="text-xs text-gray-400" data-i18n="wa.am_hint">Tikkie Dankoffer &middot; stuur uiterlijk zaterdag naar <em>Informatie GKIN Amstelveen</em></p>
                 </div>
                 <button type="button" id="waAmBtn"
@@ -365,7 +365,7 @@
         <div id="waAmModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
             <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg">
                 <div class="flex items-center justify-between p-5 border-b border-gray-100">
-                    <h3 class="text-base font-semibold text-gray-800" data-i18n="wa.am_modal_title">WA-AM informatie</h3>
+                    <h3 class="text-base font-semibold text-gray-800" data-i18n="wa.am_modal_title">WA-Dienst informatie</h3>
                     <button type="button" id="waAmClose" class="text-gray-400 hover:text-gray-600">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                     </button>
@@ -1256,14 +1256,24 @@ Dankoffer Amstelveen: ${dankofferUrl || '(nog niet ingevuld)'}`;
                         body: JSON.stringify({ date: sel.value })
                     });
                     const data = await r.json();
+                    console.log('[Liturgie] fetch-ole-data response:', data);
                     const url = data.ole_liturgie_url || '';
                     if (url) {
                         window.open(url, '_blank');
                     } else {
-                        alert(t('wa.no_liturgie'));
+                        const noLitEl = document.createElement('p');
+                        noLitEl.className = 'text-xs text-red-500 mt-2';
+                        noLitEl.textContent = t('wa.no_liturgie');
+                        btn.parentNode.insertBefore(noLitEl, btn.nextSibling);
+                        setTimeout(() => noLitEl.remove(), 5000);
                     }
                 } catch(e) {
-                    alert(t('wa.liturgie_error') + e.message);
+                    console.error('[Liturgie] error:', e);
+                    const errEl = document.createElement('p');
+                    errEl.className = 'text-xs text-red-500 mt-2';
+                    errEl.textContent = t('wa.liturgie_error') + e.message;
+                    btn.parentNode.insertBefore(errEl, btn.nextSibling);
+                    setTimeout(() => errEl.remove(), 5000);
                 } finally {
                     btn.disabled = false;
                     btn.innerHTML = origHtml;
@@ -1283,14 +1293,14 @@ Dankoffer Amstelveen: ${dankofferUrl || '(nog niet ingevuld)'}`;
             });
         })();
 
-        // WA-AM informatie
+        // WA-Dienst informatie
         (function() {
             const modal   = document.getElementById('waAmModal');
             const txtArea = document.getElementById('waAmText');
             const copyBtn = document.getElementById('waAmCopy');
             const closeBtn= document.getElementById('waAmClose');
 
-            document.getElementById('waAmBtn').addEventListener('click', () => {
+            document.getElementById('waAmBtn').addEventListener('click', async () => {
                 const sel = dateSelect._currentSel;
                 if (!sel) { alert(t('wa.no_date')); return; }
 
@@ -1307,13 +1317,27 @@ Dankoffer Amstelveen: ${dankofferUrl || '(nog niet ingevuld)'}`;
                     ? `${dienstType} Dienst ${dateStr}`
                     : `Eredienst ${dateStr}`;
 
-                // Tikkie URL from dankoffer_url field
-                const tikkieUrl = (document.getElementById('dankoffer_url') || {}).value || '(nog niet ingevuld)';
+                // Prefer value already in the form field; if empty fetch from email
+                let tikkieUrl = (document.getElementById('dankoffer_url') || {}).value || '';
+                if (!tikkieUrl) {
+                    try {
+                        const colResp = await fetch('/fetch-email-collecte', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({ date: iso })
+                        });
+                        const colData = await colResp.json();
+                        tikkieUrl = colData.dankoffer_url || '';
+                        // Also populate the form field so WA-OLE picks it up too
+                        const fld = document.getElementById('dankoffer_url');
+                        if (fld && tikkieUrl) fld.value = tikkieUrl;
+                    } catch(e) { console.warn('[WA-Dienst] collecte fetch failed', e); }
+                }
 
                 const msg =
 `${titleLine}
 
-Dankoffer Amstelveen: ${tikkieUrl}`;
+Dankoffer Amstelveen: ${tikkieUrl || '(nog niet ingevuld)'}`;
 
                 txtArea.value = msg;
                 modal.classList.remove('hidden');
