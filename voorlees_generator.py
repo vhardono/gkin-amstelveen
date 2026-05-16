@@ -505,8 +505,8 @@ class VoorleesGenerator:
         table = doc.add_table(rows=0, cols=2)
         table.style = 'Table Grid'
 
-        # ── 1. Welkomswoord ──────────────────────────────────────────────
-        _section_header_row(table, 'Welkomswoord', 'Kata Sambutan')
+        # ── 1. Welkomstwoord ──────────────────────────────────────────────
+        _section_header_row(table, 'Welkomstwoord', 'Kata Sambutan')
 
         if welkom_paragraphs:
             nl_welkom = '\n'.join(p for p in welkom_paragraphs if p.strip())
