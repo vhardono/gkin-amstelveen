@@ -334,11 +334,10 @@ class VoorleesGenerator:
                     dienst = 'ibadah'
                     day_word = 'Minggu'
                 
-                # Build Indonesian text: "ibadah Pentakosta Online" or "ibadah Online Pentakosta"
-                # Based on Dutch: "Online Pinksteren Eredienst" -> Indonesian: "ibadah Pentakosta Online"
+                # Build Indonesian text: "ibadah [online] [dienst_type]" to match first paragraph pattern
                 online_text = 'Online ' if is_online else ''
                 line_segs = (
-                    [seg(f'Pada {day_word} yang akan datang, {date_part}, {dienst_type_id}{online_text}{dienst} di Amstelveen akan dipimpin oleh ')] +
+                    [seg(f'Pada {day_word} yang akan datang, {date_part}, ibadah {online_text}{dienst_type_id}di Amstelveen akan dipimpin oleh ')] +
                     [seg(pred_part, True)] +
                     [seg(f'. Kebaktian akan dimulai pada pukul {time_part}.')]
                 )
