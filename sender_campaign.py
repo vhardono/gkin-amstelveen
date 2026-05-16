@@ -79,7 +79,8 @@ class SenderCampaignGenerator:
 
     def create_campaign(self, name: str, subject: str, html_content: str,
                        list_ids: Optional[List[str]] = None,
-                       scheduled_at: Optional[str] = None) -> Dict:
+                       scheduled_at: Optional[str] = None,
+                       preheader: Optional[str] = None) -> Dict:
         """Create campaign, then schedule it if scheduled_at provided.
         scheduled_at should be ISO 8601 with timezone e.g. '2026-05-16T09:00:00+02:00'.
         """
@@ -97,6 +98,9 @@ class SenderCampaignGenerator:
             "reply_to": self.sender_email,
             "groups": list_ids
         }
+
+        if preheader:
+            data["preheader"] = preheader
 
         result = self._make_request("POST", "/campaigns", data)
 

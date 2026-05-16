@@ -493,6 +493,7 @@
                     body: JSON.stringify({
                         date,
                         subject: document.getElementById('subject').value,
+                        preview_text: document.getElementById('previewText').value,
                         name: document.getElementById('campaignName').value,
                         scheduled_at: (document.getElementById('scheduleCheck').checked && document.getElementById('scheduleDate').value)
                             ? document.getElementById('scheduleDate').value + 'T' + document.getElementById('scheduleTime').value + ':00+02:00'

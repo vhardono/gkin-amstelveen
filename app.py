@@ -2470,6 +2470,7 @@ def campaign_create():
     data = request.get_json() or {}
     iso_date = data.get('date', '')
     subject = data.get('subject', '')
+    preview_text = data.get('preview_text', '')
     name = data.get('name', '')
     scheduled_at_input = data.get('scheduled_at', None)
     list_ids = data.get('list_ids', None)
@@ -2541,7 +2542,8 @@ def campaign_create():
             subject=subject or f"GKIN (OLE): Online Landelijke Eredienst {day_name} {date_str}, {time_clean}u",
             html_content=html_content,
             scheduled_at=scheduled_at,
-            list_ids=list_ids if list_ids else None
+            list_ids=list_ids if list_ids else None,
+            preheader=preview_text
         )
         
         if 'error' in result:
