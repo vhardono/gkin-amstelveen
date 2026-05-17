@@ -372,27 +372,25 @@
                 </div>
                 <div class="p-5">
                     <p class="text-xs text-amber-600 mb-3" data-i18n-html="wa.am_reminder">⏰ Stuur dit bericht uiterlijk zaterdag naar de <strong>Informatie GKIN Amstelveen</strong> WhatsApp groep. Voeg Liturgie en Mededelingen toe als bijlage.</p>
-                    <!-- Attachment download buttons -->
-                    <div class="flex gap-2 mb-3">
-                        <button type="button" id="waAmLiturgieBtn"
-                                class="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-semibold py-2 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm disabled:opacity-50">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17v3a2 2 0 002 2h14a2 2 0 002-2v-3"/></svg>
-                            <span data-i18n="wa.download_liturgie">Download Liturgie</span>
-                        </button>
-                        <button type="button" id="waAmMededBtn"
-                                class="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-semibold py-2 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm disabled:opacity-50">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17v3a2 2 0 002 2h14a2 2 0 002-2v-3"/></svg>
-                            <span data-i18n="wa.download_meded">Download Mededelingen</span>
-                        </button>
+                    <div id="waAmLoading" class="hidden text-sm text-gray-500 flex items-center gap-2 mb-3">
+                        <svg class="spinner w-4 h-4 text-gkin-green" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg>
+                        <span data-i18n="wa.loading_tikkie">Tikkie ophalen...</span>
                     </div>
                     <div id="waAmAttStatus" class="hidden text-xs rounded-lg p-2 border mb-3"></div>
                     <textarea id="waAmText" rows="5" readonly
                               class="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm font-mono bg-gray-50 focus:outline-none resize-none"></textarea>
-                    <button type="button" id="waAmCopy"
-                            class="mt-3 w-full bg-gkin-green hover:bg-gkin-dark text-white font-semibold py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
-                        <span data-i18n="wa.copy">Kopiëren</span>
-                    </button>
+                    <div class="mt-3 flex gap-2">
+                        <button type="button" id="waAmDownloadBtn"
+                                class="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-semibold py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm disabled:opacity-50">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17v3a2 2 0 002 2h14a2 2 0 002-2v-3"/></svg>
+                            <span data-i18n="wa.download_bijlagen">Download Bijlagen</span>
+                        </button>
+                        <button type="button" id="waAmCopy"
+                                class="flex-1 bg-gkin-green hover:bg-gkin-dark text-white font-semibold py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                            <span data-i18n="wa.copy">Kopiëren</span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1298,9 +1296,16 @@ Dankoffer Amstelveen: ${dankofferUrl || '(nog niet ingevuld)'}`;
             const copyBtn = document.getElementById('waAmCopy');
             const closeBtn= document.getElementById('waAmClose');
 
+            const amLoading = document.getElementById('waAmLoading');
+
             document.getElementById('waAmBtn').addEventListener('click', async () => {
                 const sel = dateSelect._currentSel;
                 if (!sel) { alert(t('wa.no_date')); return; }
+
+                // Open modal immediately so user gets instant feedback
+                modal.classList.remove('hidden');
+                txtArea.value = '';
+                _attCache = null;
 
                 const iso = sel.value;
                 const d = new Date(iso + 'T00:00:00');
@@ -1318,6 +1323,7 @@ Dankoffer Amstelveen: ${dankofferUrl || '(nog niet ingevuld)'}`;
                 // Prefer value already in the form field; if empty fetch from email
                 let tikkieUrl = (document.getElementById('dankoffer_url') || {}).value || '';
                 if (!tikkieUrl) {
+                    amLoading.classList.remove('hidden');
                     try {
                         const colResp = await fetch('/fetch-email-collecte', {
                             method: 'POST',
@@ -1326,10 +1332,10 @@ Dankoffer Amstelveen: ${dankofferUrl || '(nog niet ingevuld)'}`;
                         });
                         const colData = await colResp.json();
                         tikkieUrl = colData.dankoffer_url || '';
-                        // Also populate the form field so WA-OLE picks it up too
                         const fld = document.getElementById('dankoffer_url');
                         if (fld && tikkieUrl) fld.value = tikkieUrl;
                     } catch(e) { console.warn('[WA-Dienst] collecte fetch failed', e); }
+                    finally { amLoading.classList.add('hidden'); }
                 }
 
                 const msg =
@@ -1338,7 +1344,6 @@ Dankoffer Amstelveen: ${dankofferUrl || '(nog niet ingevuld)'}`;
 Dankoffer Amstelveen: ${tikkieUrl || '(nog niet ingevuld)'}`;
 
                 txtArea.value = msg;
-                modal.classList.remove('hidden');
             });
 
             closeBtn.addEventListener('click', () => { modal.classList.add('hidden'); _attCache = null; });
@@ -1404,22 +1409,23 @@ Dankoffer Amstelveen: ${tikkieUrl || '(nog niet ingevuld)'}`;
                 document.body.removeChild(a);
             }
 
-            document.getElementById('waAmLiturgieBtn').addEventListener('click', async () => {
+            document.getElementById('waAmDownloadBtn').addEventListener('click', async () => {
                 const data = await _fetchAttachments();
-                if (data && data.liturgie_url) {
+                if (!data) return;
+                const errors = [];
+                if (data.liturgie_url) {
                     _triggerDownload(data.liturgie_url, data.liturgie_orig_name || 'Liturgie.pdf');
-                } else if (data) {
-                    _showAttStatus('Liturgie PDF niet gevonden in e-mail.', true);
+                } else {
+                    errors.push('Liturgie niet gevonden');
                 }
-            });
-
-            document.getElementById('waAmMededBtn').addEventListener('click', async () => {
-                const data = await _fetchAttachments();
-                if (data && data.mededelingen_url) {
+                // Small delay so browser doesn't block the second download
+                await new Promise(r => setTimeout(r, 300));
+                if (data.mededelingen_url) {
                     _triggerDownload(data.mededelingen_url, data.mededelingen_orig_name || 'Mededelingen.pdf');
-                } else if (data) {
-                    _showAttStatus('Mededelingen PDF niet gevonden in e-mail.', true);
+                } else {
+                    errors.push('Mededelingen niet gevonden');
                 }
+                if (errors.length) _showAttStatus(errors.join(' | '), true);
             });
         })();
     </script>
