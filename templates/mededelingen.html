@@ -1218,36 +1218,31 @@
                 let oleCollecteUrl = '';
                 let dankofferUrl   = '';
 
-                try {
-                    // 1. Fetch all OLE data (location/time/YouTube/liturgie) from fetch-ole-data
-                    const oleResp = await fetch('/fetch-ole-data', {
+                // Fire both requests in parallel
+                const [oleData, colData] = await Promise.all([
+                    fetch('/fetch-ole-data', {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify({ date: iso })
-                    });
-                    const oleData = await oleResp.json();
-                    console.log('[WA-OLE] fetch-ole-data:', oleData);
-                    if (oleData.success) {
-                        oleLocatieCode  = (oleData.ole_location_code || '').toUpperCase();
-                        oleLocatieLabel = OLE_REGIO_LABELS[oleLocatieCode] || oleData.ole_location || oleLocatieCode;
-                        const rawTime   = oleData.ole_time || '';
-                        oleTijd = rawTime.replace(/[uU]+$/, '').replace(':', '.') + 'uur';
-                        youtubeUrl = oleData.ole_youtube_link || '';
-                        _cachedLiturgieUrl = oleData.ole_liturgie_url || '';
-                    }
-                } catch(e) { console.warn('[WA-OLE] fetch-ole-data failed', e); }
+                    }).then(r => r.json()).catch(e => { console.warn('[WA-OLE] fetch-ole-data failed', e); return {}; }),
+                    fetch('/fetch-email-collecte', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ date: iso })
+                    }).then(r => r.json()).catch(e => { console.warn('[WA-OLE] collecte fetch failed', e); return {}; }),
+                ]);
 
-                try {
-                    // 2. Fetch collecte URLs from email (same as "Collecte informatie – URLs & QR codes")
-                    const colResp = await fetch('/fetch-email-collecte', {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({ date: iso })
-                    });
-                    const colData = await colResp.json();
-                    oleCollecteUrl = colData.ole_url      || '';
-                    dankofferUrl   = colData.dankoffer_url || '';
-                } catch(e) { console.warn('[WA-OLE] collecte fetch failed', e); }
+                console.log('[WA-OLE] fetch-ole-data:', oleData);
+                if (oleData.success) {
+                    oleLocatieCode  = (oleData.ole_location_code || '').toUpperCase();
+                    oleLocatieLabel = OLE_REGIO_LABELS[oleLocatieCode] || oleData.ole_location || oleLocatieCode;
+                    const rawTime   = oleData.ole_time || '';
+                    oleTijd = rawTime.replace(/[uU]+$/, '').replace(':', '.') + 'uur';
+                    youtubeUrl = oleData.ole_youtube_link || '';
+                    _cachedLiturgieUrl = oleData.ole_liturgie_url || '';
+                }
+                oleCollecteUrl = colData.ole_url      || '';
+                dankofferUrl   = colData.dankoffer_url || '';
 
                 loading.classList.add('hidden');
 

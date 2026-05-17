@@ -2379,7 +2379,7 @@ def fetch_ole_data():
             reader = EmailReader()
             print("[OLE Fetch] Email reader initialized")
             # Fetch collecte data for the selected date
-            collecte_data = reader.fetch_collecte_data(target_date=selected_date)
+            collecte_data = reader.fetch_collecte_data(target_date=selected_date, since_days=14)
             print(f"[OLE Fetch] Collecte data: {collecte_data}")
             if collecte_data:
                 qr_filename = collecte_data.get('ole_qr') or collecte_data.get('dankoffer_qr')
