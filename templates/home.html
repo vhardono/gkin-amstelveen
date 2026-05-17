@@ -31,6 +31,25 @@
     </header>
 
     <main class="max-w-2xl mx-auto px-6 py-10">
+
+        <!-- Takenrooster / Schedule section -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-8">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-9 h-9 rounded-full bg-green-50 flex items-center justify-center">
+                    <svg class="w-5 h-5 text-gkin-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                </div>
+                <h2 class="text-base font-semibold text-gray-800" data-i18n="home.schedule.title">Takenrooster</h2>
+            </div>
+            <select id="scheduleDate" class="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gkin-green/30 focus:border-gkin-green">
+                <option value="" data-i18n="home.schedule.select">-- Kies een datum --</option>
+            </select>
+            <div id="scheduleDetail" class="hidden mt-4 rounded-lg bg-gray-50 border border-gray-100 p-4">
+                <!-- Filled by JS -->
+            </div>
+        </div>
+
         <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
 
             <!-- Preekbevestiging -->
@@ -121,5 +140,64 @@
         </div>
     </main>
 
+    <script>
+    (function() {
+        const scheduleData = {{ schedule_dates | tojson }};
+        const sel = document.getElementById('scheduleDate');
+        const detail = document.getElementById('scheduleDetail');
+
+        // Task labels (bold) — localized via i18n keys where needed
+        const TASK_LABELS = {
+            predikant:   'Predikant',
+            ovd:         'OvD',
+            '1eo':       '1e Ouderling',
+            beamer:      'Beamer',
+            muziek:      'Muziek',
+            voorzangers: 'Voorzangers',
+            multimedia:  'Multimedia',
+            knd:         'KND',
+            tieners:     'Tieners',
+        };
+
+        // Populate dropdown with localized labels
+        const MONTHS = (window._i18n && window._i18n[window._currentLang || 'nl'] || {})['months']
+            || ['januari','februari','maart','april','mei','juni','juli','augustus','september','oktober','november','december'];
+        const DAYS = (window._i18n && window._i18n[window._currentLang || 'nl'] || {})['days']
+            || ['maandag','dinsdag','woensdag','donderdag','vrijdag','zaterdag','zondag'];
+
+        scheduleData.forEach((d, idx) => {
+            const opt = document.createElement('option');
+            opt.value = idx;
+            const label = `${DAYS[d.day_idx]} ${d.day_num} ${MONTHS[d.month_idx]} ${d.year}`;
+            opt.textContent = label;
+            sel.appendChild(opt);
+        });
+
+        sel.addEventListener('change', () => {
+            const idx = sel.value;
+            if (idx === '') { detail.classList.add('hidden'); return; }
+            const entry = scheduleData[idx];
+            if (!entry) { detail.classList.add('hidden'); return; }
+
+            let html = '';
+            // Show time + opmerking header
+            let header = `<span class="font-bold">${entry.tijd} uur</span>`;
+            if (entry.opmerking) header += ` <span class="text-gray-500 text-xs ml-2">(${entry.opmerking})</span>`;
+            html += `<div class="mb-3 text-sm">${header}</div>`;
+
+            // Task list
+            html += '<div class="space-y-1.5 text-sm">';
+            for (const [key, label] of Object.entries(TASK_LABELS)) {
+                const val = entry[key];
+                if (val && val !== '-') {
+                    html += `<div><span class="font-bold text-gray-700">${label}:</span> <span class="text-gray-600">${val}</span></div>`;
+                }
+            }
+            html += '</div>';
+            detail.innerHTML = html;
+            detail.classList.remove('hidden');
+        });
+    })();
+    </script>
 </body>
 </html>

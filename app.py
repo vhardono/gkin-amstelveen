@@ -178,7 +178,42 @@ def _get_takenrooster_and_render_page():
 
 @app.route('/')
 def home():
-    return render_template('home.html')
+    # Build schedule data for the date picker on the landing page
+    schedule_dates = []
+    try:
+        taken = _get_takenrooster()
+        dutch_months = ['januari','februari','maart','april','mei','juni',
+                        'juli','augustus','september','oktober','november','december']
+        dutch_days = ['maandag','dinsdag','woensdag','donderdag','vrijdag','zaterdag','zondag']
+        today = datetime.now().date()
+        for entry in taken.get('entries', []):
+            d = entry['date']
+            d_date = d.date() if hasattr(d, 'date') else d
+            if d_date < today:
+                continue
+            label = f"{dutch_days[d.weekday()]} {d.day} {dutch_months[d.month - 1]} {d.year}"
+            schedule_dates.append({
+                'value': d.strftime('%Y-%m-%d'),
+                'label': label,
+                'day_idx': d.weekday(),
+                'month_idx': d.month - 1,
+                'day_num': d.day,
+                'year': d.year,
+                'predikant': entry.get('predikant', ''),
+                'ovd': entry.get('ovd', ''),
+                '1eo': entry.get('1eo', ''),
+                'beamer': entry.get('beamer', ''),
+                'muziek': entry.get('muziek', ''),
+                'voorzangers': entry.get('voorzangers', ''),
+                'multimedia': entry.get('multimedia', ''),
+                'knd': entry.get('knd', ''),
+                'tieners': entry.get('tieners', ''),
+                'opmerking': entry.get('opmerking', ''),
+                'tijd': entry.get('tijd', '10:30') or '10:30',
+            })
+    except Exception as e:
+        print(f"[Home] takenrooster load error: {e}")
+    return render_template('home.html', schedule_dates=schedule_dates)
 
 
 @app.route('/proxy-download')

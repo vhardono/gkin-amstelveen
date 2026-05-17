@@ -21,6 +21,8 @@ const GKIN_I18N = {
     'login.btn':              'Inloggen',
 
     /* --- Home --- */
+    'home.schedule.title':    'Takenrooster',
+    'home.schedule.select':   '-- Kies een datum --',
     'home.preek.title':       'Preekbevestiging',
     'home.preek.desc':        'Stuur preekbevestiging e-mail naar de predikant',
     'home.liturgie.title':    'Liturgie',
@@ -271,6 +273,8 @@ const GKIN_I18N = {
     'login.btn':              'Masuk',
 
     /* --- Home --- */
+    'home.schedule.title':    'Jadwal Tugas',
+    'home.schedule.select':   '-- Pilih tanggal --',
     'home.preek.title':       'Konfirmasi Khotbah',
     'home.preek.desc':        'Kirim e-mail konfirmasi khotbah ke pendeta',
     'home.liturgie.title':    'Liturgi',
@@ -521,6 +525,8 @@ const GKIN_I18N = {
     'login.btn':              'Log in',
 
     /* --- Home --- */
+    'home.schedule.title':    'Service Schedule',
+    'home.schedule.select':   '-- Select a date --',
     'home.preek.title':       'Sermon Confirmation',
     'home.preek.desc':        'Send sermon confirmation email to the minister',
     'home.liturgie.title':    'Liturgy',
