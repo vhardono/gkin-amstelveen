@@ -180,13 +180,15 @@
             if (!entry) { detail.classList.add('hidden'); return; }
 
             let html = '';
-            // Show time + opmerking header
-            let header = `<span class="font-bold">${entry.tijd} uur</span>`;
-            if (entry.opmerking) header += ` <span class="text-gray-500 text-xs ml-2">(${entry.opmerking})</span>`;
-            html += `<div class="mb-3 text-sm">${header}</div>`;
+            // Dienst type from opmerking (strip OLE suffix handling)
+            const opm = entry.opmerking || '';
+            let dienstType = opm.split('OLE')[0].trim().replace(/,$/, '').trim();
+            if (opm.includes('OLE') && !dienstType) dienstType = 'OLE';
+            const dienstLabel = dienstType ? `${dienstType} Dienst` : 'Eredienst';
+            html += `<div class="mb-2 text-xs font-semibold text-gkin-green">${dienstLabel}</div>`;
 
             // Task list
-            html += '<div class="space-y-1.5 text-sm">';
+            html += '<div class="space-y-1 text-xs">';
             for (const [key, label] of Object.entries(TASK_LABELS)) {
                 const val = entry[key] && entry[key] !== '-' ? entry[key] : '';
                 html += `<div><span class="font-bold text-gray-700">${label}:</span> <span class="text-gray-600">${val || '—'}</span></div>`;
