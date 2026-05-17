@@ -181,6 +181,32 @@ def home():
     return render_template('home.html')
 
 
+@app.route('/proxy-download')
+@_password_required
+def proxy_download():
+    """Fetch a remote file and serve it as an attachment so the browser downloads it instead of opening it."""
+    import requests as _req
+    from flask import Response as _Resp
+    url = request.args.get('url', '')
+    filename = request.args.get('filename', 'download.pdf')
+    if not url:
+        return 'No URL provided', 400
+    try:
+        r = _req.get(url, timeout=20, stream=True)
+        r.raise_for_status()
+        content_type = r.headers.get('Content-Type', 'application/octet-stream')
+        def generate():
+            for chunk in r.iter_content(chunk_size=8192):
+                yield chunk
+        headers = {
+            'Content-Disposition': f'attachment; filename="{filename}"',
+            'Content-Type': content_type,
+        }
+        return _Resp(generate(), headers=headers)
+    except Exception as e:
+        return f'Download failed: {e}', 500
+
+
 @app.route('/mededelingen')
 @_password_required
 def mededelingen_index():

@@ -393,23 +393,25 @@
                     </button>
                 </div>
                 <div class="p-5">
-                    <p class="text-xs text-amber-600 mb-3" data-i18n-html="wa.reminder">⏰ Stuur dit bericht uiterlijk zaterdag naar de <strong>Kerkenraad GKIN AM</strong> WhatsApp groep.</p>
+                    <p class="text-xs text-amber-600 mb-3" data-i18n-html="wa.reminder">⏰ Stuur dit bericht uiterlijk zaterdag naar de <strong>Kerkenraad GKIN AM</strong> WhatsApp groep. Voeg Liturgie toe als bijlage.</p>
                     <div id="waOleLoading" class="hidden text-sm text-gray-500 flex items-center gap-2 mb-3">
                         <svg class="spinner w-4 h-4 text-gkin-green" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg>
                         <span data-i18n="wa.loading">OLE preekroster laden...</span>
                     </div>
-                    <button type="button" id="waLiturgieBtn"
-                            class="mb-3 w-full bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-semibold py-2 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm disabled:opacity-50">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17v3a2 2 0 002 2h14a2 2 0 002-2v-3"/></svg>
-                        <span data-i18n="wa.download_liturgie">Download Liturgie</span>
-                    </button>
                     <textarea id="waOleText" rows="9" readonly
                               class="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm font-mono bg-gray-50 focus:outline-none resize-none"></textarea>
-                    <button type="button" id="waOleCopy"
-                            class="mt-3 w-full bg-gkin-green hover:bg-gkin-dark text-white font-semibold py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
-                        <span data-i18n="wa.copy">Kopiëren</span>
-                    </button>
+                    <div class="mt-3 flex gap-2">
+                        <button type="button" id="waLiturgieBtn"
+                                class="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-semibold py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm disabled:opacity-50">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17v3a2 2 0 002 2h14a2 2 0 002-2v-3"/></svg>
+                            <span data-i18n="wa.download_liturgie">Download Liturgie</span>
+                        </button>
+                        <button type="button" id="waOleCopy"
+                                class="flex-1 bg-gkin-green hover:bg-gkin-dark text-white font-semibold py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                            <span data-i18n="wa.copy">Kopiëren</span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1246,13 +1248,14 @@ Dankoffer Amstelveen: ${dankofferUrl || '(nog niet ingevuld)'}`;
                 txtArea.value = msg;
             });
 
-            // Download Liturgie — URL already cached when modal opened
+            // Download Liturgie — proxy through Flask to force file download (avoids Safari cross-origin tab open)
             document.getElementById('waLiturgieBtn').addEventListener('click', () => {
                 if (_cachedLiturgieUrl) {
+                    const filename = _cachedLiturgieUrl.split('/').pop().split('?')[0] || 'Liturgie.pdf';
+                    const proxyUrl = '/proxy-download?url=' + encodeURIComponent(_cachedLiturgieUrl) + '&filename=' + encodeURIComponent(filename);
                     const a = document.createElement('a');
-                    a.href = _cachedLiturgieUrl;
-                    a.download = _cachedLiturgieUrl.split('/').pop().split('?')[0] || 'Liturgie.pdf';
-                    a.target = '_blank';
+                    a.href = proxyUrl;
+                    a.download = filename;
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);
