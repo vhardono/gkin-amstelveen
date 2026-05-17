@@ -188,10 +188,8 @@
             // Task list
             html += '<div class="space-y-1.5 text-sm">';
             for (const [key, label] of Object.entries(TASK_LABELS)) {
-                const val = entry[key];
-                if (val && val !== '-') {
-                    html += `<div><span class="font-bold text-gray-700">${label}:</span> <span class="text-gray-600">${val}</span></div>`;
-                }
+                const val = entry[key] && entry[key] !== '-' ? entry[key] : '';
+                html += `<div><span class="font-bold text-gray-700">${label}:</span> <span class="text-gray-600">${val || '—'}</span></div>`;
             }
             html += '</div>';
             detail.innerHTML = html;
