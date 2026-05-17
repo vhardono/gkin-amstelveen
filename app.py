@@ -874,6 +874,34 @@ def fetch_email_collecte():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/fetch-wa-attachments', methods=['POST'])
+@_password_required
+def fetch_wa_attachments():
+    """Fetch Liturgie and Mededelingen PDF attachments from email for WA-Dienst download buttons."""
+    try:
+        reader = OutlookCollecteReader()
+        if not reader.is_authenticated():
+            return jsonify({'error': 'login_required',
+                            'message': 'Nog niet ingelogd bij Outlook.'}), 401
+        date_str = request.json.get('date', '') if request.is_json else ''
+        target_date = None
+        if date_str:
+            try:
+                target_date = datetime.strptime(date_str, '%Y-%m-%d')
+            except ValueError:
+                pass
+        data = reader.fetch_wa_attachments(target_date=target_date, since_days=60)
+        # Convert filenames to download URLs
+        if data.get('liturgie_filename'):
+            data['liturgie_url'] = f"/uploads/{data['liturgie_filename']}"
+        if data.get('mededelingen_filename'):
+            data['mededelingen_url'] = f"/uploads/{data['mededelingen_filename']}"
+        return jsonify(data)
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/fetch-email-overdenking', methods=['POST'])
 def fetch_email_overdenking():
     """Fetch overdenking content from scriba email attachment."""

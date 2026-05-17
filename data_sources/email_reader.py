@@ -1218,5 +1218,161 @@ class OutlookCollecteReader:
         return result
 
 
+    def fetch_wa_attachments(self, target_date: datetime = None, since_days: int = 7) -> dict:
+        """Fetch Liturgie and Mededelingen PDF attachments from email for WA-Dienst.
+
+        Liturgie:     esiemyoe@gmail.com  OR  lisa.lie@gmail.com  — any subject, PDF attachment with date
+        Mededelingen: vega.hardono@outlook.com — subject "Definitieve mededelingen zondag DD maand YYYY"
+        """
+        import base64 as _b64
+
+        since = (datetime.utcnow() - timedelta(days=since_days)).strftime('%Y-%m-%dT00:00:00Z')
+        NL_MONTHS = ['','januari','februari','maart','april','mei','juni',
+                     'juli','augustus','september','oktober','november','december']
+
+        result = {
+            'liturgie_filename': '',
+            'liturgie_orig_name': '',
+            'mededelingen_filename': '',
+            'mededelingen_orig_name': '',
+            'not_found': [],
+        }
+
+        # Date variants for matching subject / attachment name
+        date_variants_strong = []  # include year — preferred
+        date_variants_weak   = []  # day+month only — fallback
+        if target_date:
+            d, m, y = target_date.day, target_date.month, target_date.year
+            y2 = str(y)[-2:]
+            date_variants_strong = [
+                f"{d:02d}{m:02d}{y}",        # 17052026
+                f"{d:02d}-{m:02d}-{y}",      # 17-05-2026
+                f"{d}-{m}-{y}",              # 17-5-2026
+                f"{d:02d}{m:02d}{y2}",       # 170526
+                f"{d} {NL_MONTHS[m]} {y}",   # 17 mei 2026
+            ]
+            date_variants_weak = [
+                f"{d} {NL_MONTHS[m]}",       # 17 mei (no year — only used as last resort)
+            ]
+        date_variants = date_variants_strong + date_variants_weak
+
+        def _date_matches(text: str) -> bool:
+            """Match subject/filename against date — strong (with year) preferred, weak fallback."""
+            if not date_variants:
+                return True
+            tl = text.lower()
+            return any(v.lower() in tl for v in date_variants)
+
+        def _date_matches_strong(text: str) -> bool:
+            """Match only variants that include the year — avoids cross-year false positives."""
+            if not date_variants_strong:
+                return True
+            tl = text.lower()
+            return any(v.lower() in tl for v in date_variants_strong)
+
+        def _save_pdf_attachment(msg_id: str, prefix: str) -> tuple:
+            """Save first PDF attachment from message. Returns (saved_filename, original_name)."""
+            try:
+                atts = self._graph_get(
+                    f"/me/messages/{msg_id}/attachments",
+                    params={'$select': 'id,name,contentType,size'}
+                ).get('value', [])
+                for att in atts:
+                    name = att.get('name', '')
+                    ctype = att.get('contentType', '').lower()
+                    if name.lower().endswith('.pdf') or 'pdf' in ctype:
+                        full = self._graph_get(f"/me/messages/{msg_id}/attachments/{att['id']}")
+                        cb = full.get('contentBytes', '')
+                        if not cb:
+                            continue
+                        os.makedirs(UPLOAD_DIR, exist_ok=True)
+                        tmp = tempfile.NamedTemporaryFile(
+                            delete=False, suffix='.pdf', dir=UPLOAD_DIR, prefix=prefix + '_'
+                        )
+                        tmp.write(_b64.b64decode(cb))
+                        tmp.close()
+                        return os.path.basename(tmp.name), name
+            except Exception as e:
+                print(f'[wa_attachments] _save_pdf_attachment error: {e}')
+            return '', ''
+
+        # --- Liturgie: esiemyoe@gmail.com or lisa.lie@gmail.com ---
+        liturgie_found = False
+        for sender in ('esiemyoe@gmail.com', 'lisa.lie@gmail.com'):
+            try:
+                data = self._graph_get('/me/messages', params={
+                    '$filter': f"receivedDateTime ge {since} and hasAttachments eq true",
+                    '$top': 10,
+                    '$select': 'id,subject,receivedDateTime,from,hasAttachments',
+                    '$orderby': 'receivedDateTime desc',
+                }).get('value', [])
+                msgs = [m for m in data
+                        if sender.lower() in m.get('from', {}).get('emailAddress', {}).get('address', '').lower()
+                        and m.get('hasAttachments')]
+                # Match by date in subject or just take most recent if no date filter
+                for msg in msgs:
+                    subj = msg.get('subject', '')
+                    if _date_matches(subj) or not date_variants:
+                        saved, orig = _save_pdf_attachment(msg['id'], 'liturgie')
+                        if saved:
+                            result['liturgie_filename'] = saved
+                            result['liturgie_orig_name'] = orig
+                            liturgie_found = True
+                            print(f'[wa_attachments] Liturgie found from {sender}: {orig}')
+                            break
+                        # Also try matching date in attachment name
+                    # If no subject match, try attachment name match
+                    saved, orig = _save_pdf_attachment(msg['id'], 'liturgie')
+                    if saved and _date_matches(orig):
+                        result['liturgie_filename'] = saved
+                        result['liturgie_orig_name'] = orig
+                        liturgie_found = True
+                        print(f'[wa_attachments] Liturgie found (att name) from {sender}: {orig}')
+                        break
+                if liturgie_found:
+                    break
+            except Exception as e:
+                print(f'[wa_attachments] liturgie fetch error from {sender}: {e}')
+
+        if not liturgie_found:
+            result['not_found'].append('Liturgie e-mail niet gevonden voor deze datum')
+
+        # --- Mededelingen: vega.hardono@outlook.com ---
+        # Subject format: "Definitieve mededelingen [dag] DD maand YYYY"
+        # Day name is ignored — match by date at end of subject (year required)
+        try:
+            data = self._graph_get('/me/messages', params={
+                '$filter': (f"receivedDateTime ge {since} and "
+                            "contains(subject,'Definitieve mededelingen')"),
+                '$top': 10,
+                '$select': 'id,subject,receivedDateTime,from,hasAttachments',
+                '$orderby': 'receivedDateTime desc',
+            }).get('value', [])
+            msgs = [m for m in data
+                    if 'vega.hardono@outlook.com' in
+                    m.get('from', {}).get('emailAddress', {}).get('address', '').lower()
+                    and m.get('hasAttachments')]
+            meded_found = False
+            for msg in msgs:
+                subj = msg.get('subject', '')
+                # Strip leading "Definitieve mededelingen" + optional day name, then match date
+                # e.g. "Definitieve mededelingen zondag 17 mei 2026" → check "17 mei 2026"
+                if _date_matches_strong(subj):
+                    saved, orig = _save_pdf_attachment(msg['id'], 'mededelingen')
+                    if saved:
+                        result['mededelingen_filename'] = saved
+                        result['mededelingen_orig_name'] = orig
+                        meded_found = True
+                        print(f'[wa_attachments] Mededelingen found: {orig}')
+                        break
+            if not meded_found:
+                result['not_found'].append('Definitieve mededelingen e-mail niet gevonden voor deze datum')
+        except Exception as e:
+            print(f'[wa_attachments] mededelingen fetch error: {e}')
+            result['not_found'].append(f'Fout bij ophalen mededelingen: {e}')
+
+        return result
+
+
 # Alias for backward compatibility
 EmailReader = OutlookCollecteReader
