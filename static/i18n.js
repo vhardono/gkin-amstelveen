@@ -787,7 +787,7 @@ window.GKIN_I18N = GKIN_I18N;
     const days   = dict['days']   || GKIN_I18N.nl['days'];
     const months = dict['months'] || GKIN_I18N.nl['months'];
     const pastLbl = dict['day.past'] || '';
-    document.querySelectorAll('select[id="date"] option[data-day-idx], select[id="dateSelect"] option[data-day-idx]').forEach(opt => {
+    document.querySelectorAll('select[id="date"] option[data-day-idx], select[id="dateSelect"] option[data-day-idx], select[id="scheduleDate"] option[data-day-idx]').forEach(opt => {
       const di = parseInt(opt.dataset.dayIdx, 10);
       const mi = parseInt(opt.dataset.monthIdx, 10);
       const dn = parseInt(opt.dataset.dayNum, 10);

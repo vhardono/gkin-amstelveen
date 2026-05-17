@@ -168,6 +168,11 @@
         scheduleData.forEach((d, idx) => {
             const opt = document.createElement('option');
             opt.value = idx;
+            opt.dataset.dayIdx = d.day_idx;
+            opt.dataset.monthIdx = d.month_idx;
+            opt.dataset.dayNum = d.day_num;
+            opt.dataset.year = d.year;
+            opt.dataset.suffix = '';
             const label = `${DAYS[d.day_idx]} ${d.day_num} ${MONTHS[d.month_idx]} ${d.year}`;
             opt.textContent = label;
             sel.appendChild(opt);
@@ -180,15 +185,22 @@
             if (!entry) { detail.classList.add('hidden'); return; }
 
             let html = '';
-            // Dienst type from opmerking (strip OLE suffix handling)
+            // Dienst type from opmerking — combine all parts (e.g. "Pinksteren, OLE" → "OLE Pinksteren Dienst")
             const opm = entry.opmerking || '';
-            let dienstType = opm.split('OLE')[0].trim().replace(/,$/, '').trim();
-            if (opm.includes('OLE') && !dienstType) dienstType = 'OLE';
-            const dienstLabel = dienstType ? `${dienstType} Dienst` : 'Eredienst';
+            const hasOLE = /\bOLE\b/i.test(opm);
+            let otherPart = opm.replace(/\bOLE\b/gi, '').replace(/[,]+/g, ' ').trim();
+            let dienstLabel = 'Eredienst';
+            if (hasOLE && otherPart) {
+                dienstLabel = `OLE ${otherPart} Dienst`;
+            } else if (hasOLE) {
+                dienstLabel = 'OLE Dienst';
+            } else if (otherPart) {
+                dienstLabel = `${otherPart} Dienst`;
+            }
             html += `<div class="mb-2 text-xs font-semibold text-gkin-green">${dienstLabel}</div>`;
 
             // Task list
-            html += '<div class="space-y-1 text-xs">';
+            html += '<div class="space-y-0.5 text-xs leading-tight">';
             for (const [key, label] of Object.entries(TASK_LABELS)) {
                 const val = entry[key] && entry[key] !== '-' ? entry[key] : '';
                 html += `<div><span class="font-bold text-gray-700">${label}:</span> <span class="text-gray-600">${val || '—'}</span></div>`;
