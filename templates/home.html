@@ -186,7 +186,9 @@
 
             let html = '';
             // Dienst type from opmerking — combine all parts (e.g. "Pinksteren, OLE" → "OLE Pinksteren Dienst")
-            const opm = entry.opmerking || '';
+            // Clean opmerking: strip URLs, text after ":" or "http", keep only keywords
+            let opm = (entry.opmerking || '').split(/\s*[:]\s*/)[0];  // take part before first ":"
+            opm = opm.replace(/https?:\/\/\S+/gi, '').trim();         // remove any URLs
             const hasOLE = /\bOLE\b/i.test(opm);
             let otherPart = opm.replace(/\bOLE\b/gi, '').replace(/[,]+/g, ' ').trim();
             let dienstLabel = 'Eredienst';
