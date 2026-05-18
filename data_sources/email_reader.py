@@ -873,27 +873,16 @@ class OutlookCollecteReader:
             'not_found': [],
         }
 
-        # Search last 14 days, then verify subject contains the target date
+        # Search from previous Sunday through the selected Sunday
+        # e.g. for Sunday 24 May: Sun 17 May 00:00Z → Sun 24 May 23:59Z
         window_start = None
         window_end = None
         if target_date:
-            window_start = (target_date - timedelta(days=14)).strftime('%Y-%m-%dT00:00:00Z')
+            days_since_sunday = (target_date.weekday() + 1) % 7  # Sun=0
+            prev_sunday = target_date - timedelta(days=7 if days_since_sunday == 0 else days_since_sunday)
+            window_start = prev_sunday.strftime('%Y-%m-%dT00:00:00Z')
             window_end = target_date.strftime('%Y-%m-%dT23:59:59Z')
             print(f"[Overdenking] Looking for emails between {window_start} and {window_end}")
-
-        # Build date variants to match in subject (e.g. "24 mei", "24 Mei")
-        date_variants = []
-        if target_date:
-            d, m = target_date.day, target_date.month
-            ID_MONTHS_SUBJ = ['','Januari','Februari','Maret','April','Mei','Juni',
-                              'Juli','Agustus','September','Oktober','November','Desember']
-            date_variants = [
-                f"{d} {NL_MONTHS[m]}",           # "24 mei"
-                f"{d} {NL_MONTHS[m].title()}",    # "24 Mei"
-                f"{d} {ID_MONTHS_SUBJ[m]}",       # "24 Mei" (ID)
-                f"{d} {ID_MONTHS_SUBJ[m].lower()}", # "24 mei" (ID)
-            ]
-            print(f"[Overdenking] Subject date variants: {date_variants}")
 
         date_filter = f"receivedDateTime ge {window_start} and receivedDateTime le {window_end}" \
             if window_start else f"receivedDateTime ge {since}"
@@ -911,14 +900,6 @@ class OutlookCollecteReader:
         scriba_msgs = [m for m in msgs if 'scribagkin@gmail.com' in
                        m.get('from', {}).get('emailAddress', {}).get('address', '').lower()]
         print(f"[Overdenking] From scribagkin: {len(scriba_msgs)} msgs")
-
-        # Filter by subject containing the target date (e.g. "24 mei")
-        if date_variants:
-            date_matched = [m for m in scriba_msgs
-                            if any(v.lower() in m.get('subject', '').lower() for v in date_variants)]
-            print(f"[Overdenking] Subject date-matched: {len(date_matched)} msgs")
-            if date_matched:
-                scriba_msgs = date_matched
 
         # Find most recent scriba overdenking with a .docx attachment
         match_msg = None
