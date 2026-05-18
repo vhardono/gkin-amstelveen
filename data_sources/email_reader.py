@@ -873,17 +873,16 @@ class OutlookCollecteReader:
             'not_found': [],
         }
 
-        # Compute the Mon–Sat window before the selected Sunday
-        # e.g. for Sunday 17 May: window = Mon 11 May 00:00 → Sat 16 May 23:59
+        # Compute the search window: Sunday before the service week through the target date
+        # Start one day before Monday to catch emails sent late night local time (UTC offset)
+        # e.g. for Sunday 24 May: Sun 17 May 00:00Z → Sun 24 May 23:59Z
         window_start = None
         window_end = None
         if target_date:
-            # target_date is the Sunday; go back to the Monday before it
             days_since_monday = target_date.weekday()  # Monday=0, Sunday=6
-            monday = target_date - timedelta(days=days_since_monday)
-            saturday = target_date - timedelta(days=1)
-            window_start = monday.strftime('%Y-%m-%dT00:00:00Z')
-            window_end = saturday.strftime('%Y-%m-%dT23:59:59Z')
+            sunday_before = target_date - timedelta(days=days_since_monday + 1)
+            window_start = sunday_before.strftime('%Y-%m-%dT00:00:00Z')
+            window_end = target_date.strftime('%Y-%m-%dT23:59:59Z')
             print(f"[Overdenking] Looking for emails between {window_start} and {window_end}")
 
         # Search emails — filter by window if available, else use since_days
