@@ -873,19 +873,28 @@ class OutlookCollecteReader:
             'not_found': [],
         }
 
-        # Compute the search window: Sunday before the service week through the target date
-        # Start one day before Monday to catch emails sent late night local time (UTC offset)
-        # e.g. for Sunday 24 May: Sun 17 May 00:00Z → Sun 24 May 23:59Z
+        # Search last 14 days, then verify subject contains the target date
         window_start = None
         window_end = None
         if target_date:
-            days_since_monday = target_date.weekday()  # Monday=0, Sunday=6
-            sunday_before = target_date - timedelta(days=days_since_monday + 1)
-            window_start = sunday_before.strftime('%Y-%m-%dT00:00:00Z')
+            window_start = (target_date - timedelta(days=14)).strftime('%Y-%m-%dT00:00:00Z')
             window_end = target_date.strftime('%Y-%m-%dT23:59:59Z')
             print(f"[Overdenking] Looking for emails between {window_start} and {window_end}")
 
-        # Search emails — filter by window if available, else use since_days
+        # Build date variants to match in subject (e.g. "24 mei", "24 Mei")
+        date_variants = []
+        if target_date:
+            d, m = target_date.day, target_date.month
+            ID_MONTHS_SUBJ = ['','Januari','Februari','Maret','April','Mei','Juni',
+                              'Juli','Agustus','September','Oktober','November','Desember']
+            date_variants = [
+                f"{d} {NL_MONTHS[m]}",           # "24 mei"
+                f"{d} {NL_MONTHS[m].title()}",    # "24 Mei"
+                f"{d} {ID_MONTHS_SUBJ[m]}",       # "24 Mei" (ID)
+                f"{d} {ID_MONTHS_SUBJ[m].lower()}", # "24 mei" (ID)
+            ]
+            print(f"[Overdenking] Subject date variants: {date_variants}")
+
         date_filter = f"receivedDateTime ge {window_start} and receivedDateTime le {window_end}" \
             if window_start else f"receivedDateTime ge {since}"
         msgs = self._graph_get('/me/messages', params={
@@ -903,7 +912,15 @@ class OutlookCollecteReader:
                        m.get('from', {}).get('emailAddress', {}).get('address', '').lower()]
         print(f"[Overdenking] From scribagkin: {len(scriba_msgs)} msgs")
 
-        # Find most recent scriba overdenking in the window with a .docx attachment
+        # Filter by subject containing the target date (e.g. "24 mei")
+        if date_variants:
+            date_matched = [m for m in scriba_msgs
+                            if any(v.lower() in m.get('subject', '').lower() for v in date_variants)]
+            print(f"[Overdenking] Subject date-matched: {len(date_matched)} msgs")
+            if date_matched:
+                scriba_msgs = date_matched
+
+        # Find most recent scriba overdenking with a .docx attachment
         match_msg = None
         match_att = None
 
