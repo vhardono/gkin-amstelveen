@@ -2889,13 +2889,16 @@ def campaign_pm():
                     'juli', 'augustus', 'september', 'oktober', 'november', 'december']
     dutch_days = ['maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag', 'zondag']
     today = datetime.now().date()
+    from datetime import timedelta as _td
+    cutoff = today - _td(days=7)
     dates = []
     for entry in taken['entries']:
         d = entry['date']
         d_date = d.date() if hasattr(d, 'date') else d
-        if d_date < today:
+        if d_date < cutoff:
             continue
-        label = f"{dutch_days[d.weekday()]} {d.day} {dutch_months[d.month - 1]} {d.year}"
+        past_marker = ' (afgelopen)' if d_date < today else ''
+        label = f"{dutch_days[d.weekday()]} {d.day} {dutch_months[d.month - 1]} {d.year}{past_marker}"
         dates.append({
             'value': d.strftime('%Y-%m-%d'),
             'label': label,
@@ -2903,7 +2906,7 @@ def campaign_pm():
             'month_idx': d.month - 1,
             'day_num':   d.day,
             'year':      d.year,
-            'suffix':    '',
+            'suffix':    past_marker,
             'predikant': entry.get('predikant', ''),
             'ovd': entry.get('ovd', ''),
             'beamer': entry.get('beamer', ''),
