@@ -495,9 +495,14 @@
                         subject: document.getElementById('subject').value,
                         preview_text: document.getElementById('previewText').value,
                         name: document.getElementById('campaignName').value,
-                        scheduled_at: (document.getElementById('scheduleCheck').checked && document.getElementById('scheduleDate').value)
-                            ? document.getElementById('scheduleDate').value + 'T' + document.getElementById('scheduleTime').value + ':00+02:00'
-                            : null,
+                        scheduled_at: (() => {
+                            if (!document.getElementById('scheduleCheck').checked || !document.getElementById('scheduleDate').value) return null;
+                            const d = document.getElementById('scheduleDate').value;
+                            const t = document.getElementById('scheduleTime').value;
+                            const local = new Date(`${d}T${t}:00`);
+                            if (local <= new Date()) { local.setTime(Date.now() + 10 * 60000); }
+                            return local.toISOString();
+                        })(),
                         theme: document.getElementById('theme').value,
                         bible_verse: document.getElementById('bibleVerse').value,
                         youtube_link: document.getElementById('youtubeLink').value,

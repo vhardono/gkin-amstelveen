@@ -109,8 +109,9 @@ class SenderCampaignGenerator:
             campaign_id = result['data']['id']
             try:
                 from datetime import timezone
-                # Python 3.7+ fromisoformat handles '2026-05-16T09:00:00+02:00'
-                dt = datetime.fromisoformat(scheduled_at)
+                # Handle JS toISOString() format '2026-05-18T07:00:00.000Z' and '+02:00' variants
+                sa = scheduled_at.replace('Z', '+00:00')
+                dt = datetime.fromisoformat(sa)
                 dt_utc = dt.astimezone(timezone.utc)
                 schedule_time = dt_utc.strftime('%Y-%m-%d %H:%M:%S')
                 sched_result = self.schedule_campaign(campaign_id, schedule_time)

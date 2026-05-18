@@ -418,9 +418,15 @@
                     ...buildPayload(),
                     subject:      document.getElementById('subject').value,
                     name:         document.getElementById('campaignName').value,
-                    scheduled_at: (document.getElementById('scheduleCheck').checked && document.getElementById('scheduleDate').value)
-                        ? document.getElementById('scheduleDate').value + 'T' + document.getElementById('scheduleTime').value + ':00+02:00'
-                        : null,
+                    scheduled_at: (() => {
+                        if (!document.getElementById('scheduleCheck').checked || !document.getElementById('scheduleDate').value) return null;
+                        const d = document.getElementById('scheduleDate').value;
+                        const t = document.getElementById('scheduleTime').value;
+                        const local = new Date(`${d}T${t}:00`);
+                        // If scheduled time is in the past, bump to now + 10 min
+                        if (local <= new Date()) { local.setTime(Date.now() + 10 * 60000); }
+                        return local.toISOString();
+                    })(),
                     list_ids: Array.from(document.querySelectorAll('.list-checkbox:checked')).map(el => el.value),
                 };
                 const resp = await fetch('/campaign/pm/create', {
