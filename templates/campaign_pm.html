@@ -349,17 +349,27 @@
             }
         }
 
+        function _dropboxRaw(url) {
+            // Convert Dropbox shared links to direct raw content (opens in browser, no Dropbox UI)
+            if (!url) return url;
+            if (url.includes('dropbox.com/')) {
+                url = url.replace(/[?&]dl=[01]/, '').replace(/[?&]raw=[01]/, '');
+                url += (url.includes('?') ? '&' : '?') + 'raw=1';
+            }
+            return url;
+        }
+
         function buildPayload() {
             const loc = document.getElementById('oleLocation').value;
             return {
                 date:             dateSelect.value,
                 am_predikant:     document.getElementById('amPredikant').value,
-                mededelingen_url: document.getElementById('mededUrl').value,
-                preek_am_url:     document.getElementById('preekAmUrl').value,
+                mededelingen_url: _dropboxRaw(document.getElementById('mededUrl').value),
+                preek_am_url:     _dropboxRaw(document.getElementById('preekAmUrl').value),
                 ole_location:     loc,
                 ole_predikant:    document.getElementById('olePredikant').value,
                 youtube_link:     document.getElementById('youtubeLink').value,
-                preek_ole_url:    (loc && loc !== 'AM') ? document.getElementById('preekOleUrl').value : '',
+                preek_ole_url:    (loc && loc !== 'AM') ? _dropboxRaw(document.getElementById('preekOleUrl').value) : '',
             };
         }
 
