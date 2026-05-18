@@ -375,7 +375,7 @@
 
         previewBtn.addEventListener('click', async () => {
             previewBtn.disabled = true;
-            previewBtn.textContent = t('common.loading');
+            previewBtn.innerHTML = `<span data-i18n="common.loading">${t('common.loading')}</span>`;
             try {
                 const resp = await fetch('/campaign/pm/preview', {
                     method: 'POST',
@@ -403,13 +403,13 @@
                 console.error('Preview error:', err);
             } finally {
                 previewBtn.disabled = false;
-                previewBtn.querySelector('[data-i18n]').textContent = t('camp.preview');
+                previewBtn.innerHTML = `<span data-i18n="camp.preview">${t('camp.preview')}</span>`;
             }
         });
 
         createBtn.addEventListener('click', async () => {
             createBtn.disabled = true;
-            createBtn.textContent = t('common.loading');
+            createBtn.innerHTML = `<span data-i18n="common.loading">${t('common.loading')}</span>`;
             try {
                 const payload = {
                     ...buildPayload(),
@@ -439,7 +439,7 @@
                 console.error('Create error:', err);
             } finally {
                 createBtn.disabled = false;
-                createBtn.querySelector('[data-i18n]').textContent = t('camp.create');
+                createBtn.innerHTML = `<span data-i18n="camp.create">${t('camp.create')}</span>`;
             }
         });
     </script>
