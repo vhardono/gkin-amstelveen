@@ -263,7 +263,10 @@
             document.getElementById('subject').value = `GKIN Amstelveen ${dateStr}: Preek & mededelingen`;
             const [yr, mo, dy] = date.split('-');
             document.getElementById('campaignName').value = `PM ${dy}-${mo}-${yr}`;
-            document.getElementById('scheduleDate').value = date;
+            // Auto-suggest today (or tomorrow if evening) as schedule send date
+            const _now = new Date();
+            if (_now.getHours() >= 18) _now.setDate(_now.getDate() + 1);
+            document.getElementById('scheduleDate').value = _now.toISOString().split('T')[0];
 
             loadSenderLists();
 
