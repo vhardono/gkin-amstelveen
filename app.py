@@ -1911,7 +1911,7 @@ def preview_liturgie_fill_data():
             (4, 'Voorganger'),       # B4
             (5, 'OvD'),              # B5
             (6, '1e Ontvangst'),     # B6
-            (7, '2e Ontvangst'),     # B7
+            (7, 'Muzikanten'),       # B7
             (8, 'Voorzangers'),      # B8
             (9, 'Beamer'),           # B9
             (10, 'Geluid'),          # B10
@@ -2295,7 +2295,7 @@ def preview_working_file():
         
         # Current values
         field_rows = {
-            'Voorganger': 4, 'OvD': 5, '1e Ontvangst': 6, '2e Ontvangst': 7,
+            'Voorganger': 4, 'OvD': 5, '1e Ontvangst': 6, 'Muzikanten': 7,
             'Voorzangers': 8, 'Beamer': 9, 'Geluid': 10, 'KND': 11, 'Tieners': 12
         }
         
@@ -2333,7 +2333,7 @@ def preview_working_file():
             if entry:
                 print(f"[DEBUG] Takenrooster entry keys: {list(entry.keys())}")
                 for field, key in [('Voorganger', 'predikant'), ('OvD', 'ovd'), ('1e Ontvangst', '1eo'),
-                                   ('2e Ontvangst', '2eo'), ('Voorzangers', 'voorzangers'), 
+                                   ('Muzikanten', 'muziek'), ('Voorzangers', 'voorzangers'),
                                    ('Beamer', 'beamer'), ('Geluid', 'multimedia'),
                                    ('KND', 'knd'), ('Tieners', 'tieners')]:
                     val = str(entry.get(key, '')).strip()
