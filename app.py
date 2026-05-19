@@ -1276,13 +1276,22 @@ def _get_dankoffer_verse(dbx, service_date: datetime, mark_as_used: bool = True)
         verses_data = []
         for idx, row in df.iterrows():
             verse = str(row.iloc[0]).strip() if pd.notna(row.iloc[0]) else ''
-            # Column C (index 2) contains Date Used
-            date_used = str(row.iloc[2]).strip() if len(row) > 2 and pd.notna(row.iloc[2]) else ''
+            # Column C (index 2) contains Date Used — may be datetime obj or string
+            raw_date = row.iloc[2] if len(row) > 2 else None
+            if raw_date is not None and pd.notna(raw_date):
+                if hasattr(raw_date, 'strftime'):
+                    date_used = raw_date.strftime('%Y-%m-%d')
+                else:
+                    date_used = str(raw_date).strip()[:10]  # take YYYY-MM-DD portion
+                if date_used.lower() in ('nan', 'none', ''):
+                    date_used = ''
+            else:
+                date_used = ''
 
             if verse and verse.lower() not in ('nan', 'none', ''):
                 verses_data.append({
                     'verse': verse,
-                    'date_used': date_used if date_used.lower() not in ('nan', 'none', '') else '',
+                    'date_used': date_used,
                     'row_idx': idx
                 })
 
@@ -1351,9 +1360,9 @@ def _get_dankoffer_verse(dbx, service_date: datetime, mark_as_used: bool = True)
             return None
 
         book = match.group(1).strip()
-        chapter = match.group(2)
-        verse_start = match.group(3)
-        verse_end = match.group(4)  # None if single verse
+        chapter = int(match.group(2))
+        verse_start = int(match.group(3))
+        verse_end = int(match.group(4)) if match.group(4) else None
 
         # Calculate unused count (for display purposes)
         if already_assigned:
@@ -1656,8 +1665,8 @@ def liturgie_fill_data():
                 current_val = str(cell.value).strip() if cell.value else ''
                 if current_val and current_val.lower() not in ('nan', 'none', ''):
                     return False  # Already has content
-                elif value:
-                    cell.value = value
+                elif value is not None and value != '':
+                    cell.value = value  # int values written directly as numbers
                     return True
                 return False
             
@@ -2169,17 +2178,16 @@ def auto_fill_working_file():
                 current_val = str(cell.value).strip() if cell.value else ''
                 if current_val and current_val.lower() not in ('nan', 'none', ''):
                     return False
-                elif value:
-                    cell.value = value
+                elif value is not None and value != '':
+                    cell.value = value  # int values written directly as numbers
                     return True
                 return False
             
-            set_dankoffer_cell(ws_active, dankoffer_row, 2, dankoffer_book)
-            set_dankoffer_cell(ws_active, dankoffer_row, 3, dankoffer['chapter'])
-            verse_text = dankoffer['verse_start']
+            set_dankoffer_cell(ws_active, dankoffer_row, 2, dankoffer_book)           # B21: book name
+            set_dankoffer_cell(ws_active, dankoffer_row, 3, dankoffer['chapter'])     # C21: chapter (int)
+            set_dankoffer_cell(ws_active, dankoffer_row, 4, dankoffer['verse_start']) # D21: start verse (int)
             if dankoffer['verse_end']:
-                verse_text += f'-{dankoffer["verse_end"]}'
-            set_dankoffer_cell(ws_active, dankoffer_row, 4, verse_text)
+                set_dankoffer_cell(ws_active, dankoffer_row, 5, dankoffer['verse_end']) # E21: end verse (int)
             
             alerts['auto_populated'].append(f'Dankoffer vers: {dankoffer["full_text"]}')
             
