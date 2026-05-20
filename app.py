@@ -2187,13 +2187,19 @@ def auto_fill_working_file():
                     return True
                 return False
             
-            set_dankoffer_cell(ws_active, dankoffer_row, 2, dankoffer_book)           # B21: book name
-            set_dankoffer_cell(ws_active, dankoffer_row, 3, dankoffer['chapter'])     # C21: chapter (int)
-            set_dankoffer_cell(ws_active, dankoffer_row, 4, dankoffer['verse_start']) # D21: start verse (int)
+            # Track if any cell was actually written (not already filled)
+            b21_written = set_dankoffer_cell(ws_active, dankoffer_row, 2, dankoffer_book)           # B21: book name
+            c21_written = set_dankoffer_cell(ws_active, dankoffer_row, 3, dankoffer['chapter'])     # C21: chapter (int)
+            d21_written = set_dankoffer_cell(ws_active, dankoffer_row, 4, dankoffer['verse_start']) # D21: start verse (int)
+            e21_written = False
             if dankoffer['verse_end']:
-                set_dankoffer_cell(ws_active, dankoffer_row, 5, dankoffer['verse_end']) # E21: end verse (int)
+                e21_written = set_dankoffer_cell(ws_active, dankoffer_row, 5, dankoffer['verse_end']) # E21: end verse (int)
             
-            alerts['auto_populated'].append(f'Dankoffer vers: {dankoffer["full_text"]}')
+            # Only show as auto_populated if something was actually written
+            # If already_assigned, the verse was already there - don't show as "filled"
+            any_written = b21_written or c21_written or d21_written or e21_written
+            if any_written and not dankoffer.get('already_assigned'):
+                alerts['auto_populated'].append(f'Dankoffer vers: {dankoffer["full_text"]}')
             
             # Build status detail
             status_detail = f'Rij {dankoffer["row_index"]} van {dankoffer["total_count"]} ({dankoffer["unused_count"]} resterend)'
