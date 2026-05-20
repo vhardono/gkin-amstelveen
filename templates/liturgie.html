@@ -433,19 +433,29 @@
             const changesTable = document.getElementById('previewChangesTable');
             changesTable.innerHTML = '';
             let totalChanges = 0;
+            // Helper to escape URL for display as plain text (prevents browser auto-linking)
+            function escapeUrlForDisplay(url) {
+                if (!url) return url;
+                // Add zero-width space after protocol to break auto-linking
+                return url.replace(/^(https?:\/\/)/, '$1\u200B');
+            }
+
             for (const [field, currentVal] of Object.entries(previewData.current_values)) {
                 const newVal = previewData.proposed_changes[field];
                 const row = document.createElement('tr');
                 row.className = 'border-b border-gray-100 last:border-0';
                 const hasChange = newVal && newVal !== currentVal;
                 if (hasChange) totalChanges++;
+                // For Tikkie link, escape URLs to display as plain text
+                const displayCurrent = field === 'Tikkie link' ? escapeUrlForDisplay(currentVal) : currentVal;
+                const displayNew = field === 'Tikkie link' ? escapeUrlForDisplay(newVal) : newVal;
                 row.innerHTML = `
                     <td class="py-1 px-1" style="text-align:center">
                         <input type="checkbox" class="change-checkbox rounded border-gray-300" data-field="${field}" ${hasChange ? 'checked' : ''} ${hasChange ? '' : 'disabled'}>
                     </td>
                     <td class="py-1 px-1 text-gray-600" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${field}</td>
-                    <td class="py-1 px-1 ${currentVal ? 'text-gray-600' : 'text-gray-400 italic'}" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${currentVal || ''}">${currentVal || '(leeg)'}</td>
-                    <td class="py-1 px-1 ${hasChange ? 'text-green-600 font-medium' : 'text-gray-400'}" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${hasChange ? newVal : ''}">${hasChange ? newVal : '-'}</td>
+                    <td class="py-1 px-1 ${currentVal ? 'text-gray-600' : 'text-gray-400 italic'}" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${currentVal || ''}">${displayCurrent || '(leeg)'}</td>
+                    <td class="py-1 px-1 ${hasChange ? 'text-green-600 font-medium' : 'text-gray-400'}" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${hasChange ? newVal : ''}">${hasChange ? displayNew : '-'}</td>
                 `;
                 changesTable.appendChild(row);
             }

@@ -1934,12 +1934,16 @@ def preview_liturgie_fill_data():
             current_tikkie = str(ws.cell(row=tikkie_row, column=2).value).strip() if ws.cell(row=tikkie_row, column=2).value else ''
             preview['current_values']['Tikkie link'] = current_tikkie
             
-        # Current Dankoffer verse
+        # Current Dankoffer verse (B21=book, C21=chapter, D21=verse_start, E21=verse_end)
         dankoffer_book = str(ws.cell(row=21, column=2).value).strip() if ws.cell(row=21, column=2).value else ''
         dankoffer_chapter = str(ws.cell(row=21, column=3).value).strip() if ws.cell(row=21, column=3).value else ''
         dankoffer_verse = str(ws.cell(row=21, column=4).value).strip() if ws.cell(row=21, column=4).value else ''
+        dankoffer_verse_end = str(ws.cell(row=21, column=5).value).strip() if ws.cell(row=21, column=5).value else ''
         if dankoffer_book and dankoffer_chapter and dankoffer_verse:
-            preview['current_values']['Dankoffer vers'] = f'{dankoffer_book} {dankoffer_chapter}:{dankoffer_verse}'
+            current_verse = f'{dankoffer_book} {dankoffer_chapter}:{dankoffer_verse}'
+            if dankoffer_verse_end:
+                current_verse += f'-{dankoffer_verse_end}'
+            preview['current_values']['Dankoffer vers'] = current_verse
         else:
             preview['current_values']['Dankoffer vers'] = ''
         
@@ -2311,12 +2315,16 @@ def preview_working_file():
                 preview['current_values']['Tikkie link'] = val
                 break
         
-        # Dankoffer current
+        # Dankoffer current (B21=book, C21=chapter, D21=verse_start, E21=verse_end)
         b21 = str(ws.cell(row=21, column=2).value).strip() if ws.cell(row=21, column=2).value else ''
         c21 = str(ws.cell(row=21, column=3).value).strip() if ws.cell(row=21, column=3).value else ''
         d21 = str(ws.cell(row=21, column=4).value).strip() if ws.cell(row=21, column=4).value else ''
+        e21 = str(ws.cell(row=21, column=5).value).strip() if ws.cell(row=21, column=5).value else ''
         if b21 and c21 and d21:
-            preview['current_values']['Dankoffer vers'] = f'{b21} {c21}:{d21}'
+            current_verse = f'{b21} {c21}:{d21}'
+            if e21:
+                current_verse += f'-{e21}'
+            preview['current_values']['Dankoffer vers'] = current_verse
         else:
             preview['current_values']['Dankoffer vers'] = ''
         
