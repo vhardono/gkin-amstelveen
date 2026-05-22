@@ -7,7 +7,7 @@ app = 'gkin-amstelveen'
 primary_region = 'ams'
 
 [build]
-  dockerfile = 'Dockerfile'
+  dockerfile = 'Dockerfile.fly'
 
 [deploy]
   release_command = "python -c \"print('Release command executed')\""
