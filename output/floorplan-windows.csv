@@ -1,0 +1,25 @@
+Room,Wall,Position X1,Position X2,Position Z1,Position Z2,Sill Height,Height,Type
+Slaapkamer 1,North,0.8,2.765,0,0,0,2.8,window
+Slaapkamer 1,North,2.765,4.73,0,0,0,2.8,window
+Badkamer,West,0,0,2,7.06,1.8,0.6,high_window
+Slaapkamer 2,West,0,0,9.56,10.36,0,2.8,window
+Foyer,East,5.03,5.03,4,6.11,0,2.8,window
+Foyer,East,5.03,5.03,6.11,8.22,0,2.8,window
+Foyer,East,5.03,5.03,8.22,10.33,0,2.8,window
+Keuken,North,5.03,6.97,4,4,0,2.8,window
+Keuken,North,6.97,8.9,4,4,0,2.8,window
+Keuken,North,8.9,11.34,4,4,0,2.8,window
+Keuken,South,5.03,6.03,15.4,15.4,0,2.8,window
+Keuken,South,9.54,11.34,15.4,15.4,0,2.8,window
+Woonkamer,East,14.44,14.44,10.36,11.16,0,2.8,side_door
+Entrance,South,1.15,1.85,14.08,14.08,0,2.8,window
+Entrance,South,2.85,3.55,14.08,14.08,0,2.8,window
+Office,North,19.07,20.07,3.12,3.12,0,2.8,window
+Office,North,20.07,21.07,3.12,3.12,0,2.8,window
+Office,North,21.07,22.07,3.12,3.12,0,2.8,window
+Office,North,22.07,23.07,3.12,3.12,0,2.8,window
+Office,East,23.7,23.7,3.44,4.24,0,2.8,window
+Office,West,18.44,18.44,3.44,4.94,0,2.8,window
+Office,West,18.44,18.44,4.94,6.44,0,2.8,window
+Garage,South,19.07,23.07,12.28,12.28,0,2.26,garage_door
+Garage,West,18.44,18.44,7.79,8.59,0,2,side_door

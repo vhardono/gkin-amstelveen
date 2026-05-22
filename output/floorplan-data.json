@@ -1,0 +1,200 @@
+{
+  "unit": "meters",
+  "origin_offset": { "x": 12.72, "z": 7.70 },
+  "wall_height": 2.8,
+  "wall_thickness": 0.2,
+  
+  "main_building": {
+    "total_width": 14.44,
+    "total_depth": 15.40,
+    "rooms": [
+      {
+        "id": "slaapkamer_1",
+        "name": "Slaapkamer 1",
+        "type": "bedroom",
+        "coordinates": { "x1": 0, "x2": 5.53, "z1": 0, "z2": 4.00 },
+        "center": { "x": 2.765, "z": 2.00 },
+        "dimensions": { "width": 5.53, "depth": 4.00 },
+        "windows": [
+          { "wall": "north", "x1": 0.80, "x2": 2.765, "sill_height": 0, "height": 2.8 },
+          { "wall": "north", "x1": 2.765, "x2": 4.73, "sill_height": 0, "height": 2.8 }
+        ]
+      },
+      {
+        "id": "badkamer",
+        "name": "Badkamer",
+        "type": "bathroom",
+        "coordinates": { "x1": 0, "x2": 3.66, "z1": 4.00, "z2": 7.06 },
+        "center": { "x": 1.83, "z": 5.53 },
+        "dimensions": { "width": 3.66, "depth": 3.06 },
+        "floor_material": "tile_dark",
+        "windows": [
+          { "wall": "west", "z1": 2.00, "z2": 7.06, "sill_height": 1.80, "height": 0.60 }
+        ]
+      },
+      {
+        "id": "slaapkamer_2",
+        "name": "Slaapkamer 2",
+        "type": "bedroom",
+        "coordinates": { "x1": 0, "x2": 3.66, "z1": 7.06, "z2": 10.36 },
+        "center": { "x": 1.83, "z": 8.71 },
+        "dimensions": { "width": 3.66, "depth": 3.30 },
+        "windows": [
+          { "wall": "west", "z1": 9.56, "z2": 10.36, "sill_height": 0, "height": 2.8 }
+        ]
+      },
+      {
+        "id": "toilet",
+        "name": "Toilet",
+        "type": "toilet",
+        "coordinates": { "x1": 0, "x2": 1.15, "z1": 10.36, "z2": 11.86 },
+        "center": { "x": 0.575, "z": 11.11 },
+        "dimensions": { "width": 1.15, "depth": 1.50 },
+        "floor_material": "tile_dark"
+      },
+      {
+        "id": "cv",
+        "name": "CV / Berging",
+        "type": "utility",
+        "coordinates": { "x1": 0, "x2": 1.15, "z1": 11.86, "z2": 14.08 },
+        "center": { "x": 0.575, "z": 12.97 },
+        "dimensions": { "width": 1.15, "depth": 2.22 }
+      },
+      {
+        "id": "corridor",
+        "name": "Foyer (Corridor)",
+        "type": "hallway",
+        "coordinates": { "x1": 3.66, "x2": 5.03, "z1": 4.00, "z2": 9.82 },
+        "center": { "x": 4.345, "z": 6.91 },
+        "dimensions": { "width": 1.37, "depth": 5.82 },
+        "windows": [
+          { "wall": "east", "z1": 4.00, "z2": 6.11, "sill_height": 0, "height": 2.8 },
+          { "wall": "east", "z1": 6.11, "z2": 8.22, "sill_height": 0, "height": 2.8 },
+          { "wall": "east", "z1": 8.22, "z2": 10.33, "sill_height": 0, "height": 2.8 }
+        ]
+      },
+      {
+        "id": "entrance",
+        "name": "Entrance",
+        "type": "entrance",
+        "coordinates": { "x1": 1.15, "x2": 3.66, "z1": 10.36, "z2": 14.08 },
+        "center": { "x": 2.405, "z": 12.22 },
+        "dimensions": { "width": 2.51, "depth": 3.72 },
+        "windows": [
+          { "wall": "south", "x1": 1.15, "x2": 1.85, "sill_height": 0, "height": 2.8 },
+          { "wall": "south", "x1": 2.85, "x2": 3.55, "sill_height": 0, "height": 2.8 }
+        ],
+        "doors": [
+          { "type": "front_door", "wall": "south", "x1": 1.85, "x2": 2.85, "height": 2.8, "swing": "inward" }
+        ]
+      },
+      {
+        "id": "keuken",
+        "name": "Keuken",
+        "type": "kitchen",
+        "coordinates": { "x1": 3.66, "x2": 11.34, "z1": 9.82, "z2": 15.40 },
+        "center": { "x": 7.5, "z": 12.61 },
+        "dimensions": { "width": 7.68, "depth": 5.58 },
+        "windows": [
+          { "wall": "north", "x1": 5.03, "x2": 6.97, "sill_height": 0, "height": 2.8 },
+          { "wall": "north", "x1": 6.97, "x2": 8.90, "sill_height": 0, "height": 2.8 },
+          { "wall": "north", "x1": 8.90, "x2": 11.34, "sill_height": 0, "height": 2.8 },
+          { "wall": "south", "x1": 5.03, "x2": 6.03, "sill_height": 0, "height": 2.8 },
+          { "wall": "south", "x1": 9.54, "x2": 11.34, "sill_height": 0, "height": 2.8 }
+        ]
+      },
+      {
+        "id": "woonkamer",
+        "name": "Woonkamer",
+        "type": "living_room",
+        "coordinates": { "x1": 11.34, "x2": 14.44, "z1": 9.82, "z2": 15.40 },
+        "center": { "x": 12.89, "z": 12.61 },
+        "dimensions": { "width": 3.10, "depth": 5.58 },
+        "doors": [
+          { "type": "side_door", "wall": "east", "z1": 10.36, "z2": 11.16, "height": 2.8, "swing": "outward" }
+        ]
+      }
+    ]
+  },
+  
+  "garage_office": {
+    "gap_from_main": 4.0,
+    "coordinates": { "x1": 18.44, "x2": 23.70, "z1": 3.12, "z2": 12.28 },
+    "width": 5.26,
+    "depth": 9.16,
+    "rooms": [
+      {
+        "id": "office",
+        "name": "Office",
+        "type": "office",
+        "coordinates": { "x1": 18.44, "x2": 23.70, "z1": 3.12, "z2": 6.99 },
+        "center": { "x": 21.07, "z": 5.055 },
+        "dimensions": { "width": 5.26, "depth": 3.87 },
+        "wall_height": 2.8,
+        "windows": [
+          { "wall": "north", "x1": 19.07, "x2": 20.07, "sill_height": 0, "height": 2.8 },
+          { "wall": "north", "x1": 20.07, "x2": 21.07, "sill_height": 0, "height": 2.8 },
+          { "wall": "north", "x1": 21.07, "x2": 22.07, "sill_height": 0, "height": 2.8 },
+          { "wall": "north", "x1": 22.07, "x2": 23.07, "sill_height": 0, "height": 2.8 },
+          { "wall": "east", "z1": 3.44, "z2": 4.24, "sill_height": 0, "height": 2.8 },
+          { "wall": "west", "z1": 3.44, "z2": 4.94, "sill_height": 0, "height": 2.8 },
+          { "wall": "west", "z1": 4.94, "z2": 6.44, "sill_height": 0, "height": 2.8 }
+        ]
+      },
+      {
+        "id": "garage",
+        "name": "Garage",
+        "type": "garage",
+        "coordinates": { "x1": 18.44, "x2": 23.70, "z1": 6.99, "z2": 12.28 },
+        "center": { "x": 21.07, "z": 9.635 },
+        "dimensions": { "width": 5.26, "depth": 5.29 },
+        "wall_height": 2.46,
+        "windows": [
+          { "wall": "south", "x1": 19.07, "x2": 23.07, "type": "garage_door", "height": 2.26 },
+          { "wall": "west", "z1": 7.79, "z2": 8.59, "type": "garage_side_door", "height": 2.0 }
+        ],
+        "doors": [
+          { "type": "internal_door", "wall": "divider", "x1": 19.04, "x2": 19.84, "z": 6.99, "height": 2.8 }
+        ]
+      }
+    ]
+  },
+  
+  "walls": {
+    "outer": [
+      { "id": "north_main", "x1": 0, "x2": 5.53, "z": 0, "height": 2.8 },
+      { "id": "north_keuken", "x1": 5.03, "x2": 14.44, "z": 4.00, "height": 2.8 },
+      { "id": "east_main", "x1": 14.44, "z1": 4.00, "z2": 15.40, "height": 2.8 },
+      { "id": "south_main", "x1": 3.66, "x2": 14.44, "z": 15.40, "height": 2.8 },
+      { "id": "south_left", "x1": 0, "x2": 3.66, "z": 14.08, "height": 2.8 },
+      { "id": "west_main", "x": 0, "z1": 0, "z2": 14.08, "height": 2.8 },
+      { "id": "north_garage", "x1": 18.44, "x2": 23.70, "z": 3.12, "height": 2.8 },
+      { "id": "east_garage", "x": 23.70, "z1": 3.12, "z2": 12.28, "height": 2.46 },
+      { "id": "south_garage", "x1": 18.44, "x2": 23.70, "z": 12.28, "height": 2.46 },
+      { "id": "west_garage", "x": 18.44, "z1": 3.12, "z2": 12.28, "height": 2.46 }
+    ],
+    "interior": [
+      { "id": "slaapkamer1_south", "x1": 0.80, "x2": 3.66, "z": 4.00, "height": 2.8 },
+      { "id": "badkamer_east_1", "x": 3.66, "z1": 4.00, "z2": 4.40, "height": 2.8 },
+      { "id": "badkamer_east_2", "x": 3.66, "z1": 5.20, "z2": 7.06, "height": 2.8 },
+      { "id": "badkamer_south", "x1": 0, "x2": 3.66, "z": 7.06, "height": 2.8 },
+      { "id": "slaapkamer2_east_1", "x": 3.66, "z1": 7.06, "z2": 7.46, "height": 2.8 },
+      { "id": "slaapkamer2_east_2", "x": 3.66, "z1": 8.26, "z2": 10.36, "height": 2.8 },
+      { "id": "slaapkamer2_south", "x1": 0, "x2": 3.66, "z": 10.36, "height": 2.8 },
+      { "id": "toilet_east", "x": 1.15, "z1": 10.36, "z2": 11.06, "height": 2.8 },
+      { "id": "toilet_south", "x1": 0, "x2": 1.15, "z": 11.86, "height": 2.8 },
+      { "id": "cv_east_1", "x": 1.15, "z1": 11.86, "z2": 12.57, "height": 2.8 },
+      { "id": "cv_east_2", "x": 1.15, "z1": 13.37, "z2": 14.08, "height": 2.8 },
+      { "id": "cv_south", "x1": 0, "x2": 1.15, "z": 14.08, "height": 2.8 },
+      { "id": "partition", "x": 3.66, "z1": 11.86, "z2": 15.40, "height": 2.8 },
+      { "id": "garage_divider", "x1": 18.44, "x2": 23.70, "z": 6.99, "height": 2.8 }
+    ]
+  },
+  
+  "export_notes": {
+    "sketchup_import": "Import as meters. Use Floor Generator or Draw Rectangle for rooms. Wall height 2.8m standard, garage 2.46m.",
+    "origin": "World origin at (12.72, 7.70) - center of combined main + garage",
+    "window_frames": "0.08m thick, glass 0.05m from outer wall face",
+    "plinth": "0.30m protrusion on all solid outer wall segments"
+  }
+}

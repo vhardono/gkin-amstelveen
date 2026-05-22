@@ -1,0 +1,12 @@
+Room Name,Type,X1,X2,Z1,Z2,Width,Depth,Center X,Center Z,Wall Height,Floor Material
+Slaapkamer 1,Bedroom,0,5.53,0,4,5.53,4,2.765,2,2.8,default
+Badkamer,Bathroom,0,3.66,4,7.06,3.66,3.06,1.83,5.53,2.8,tile_dark
+Slaapkamer 2,Bedroom,0,3.66,7.06,10.36,3.66,3.3,1.83,8.71,2.8,default
+Toilet,Toilet,0,1.15,10.36,11.86,1.15,1.5,0.575,11.11,2.8,tile_dark
+CV,Utility,0,1.15,11.86,14.08,1.15,2.22,0.575,12.97,2.8,default
+Foyer,Hallway,3.66,5.03,4,9.82,1.37,5.82,4.345,6.91,2.8,default
+Entrance,Entrance,1.15,3.66,10.36,14.08,2.51,3.72,2.405,12.22,2.8,default
+Keuken,Kitchen,3.66,11.34,9.82,15.4,7.68,5.58,7.5,12.61,2.8,default
+Woonkamer,Living Room,11.34,14.44,9.82,15.4,3.1,5.58,12.89,12.61,2.8,default
+Office,Office,18.44,23.7,3.12,6.99,5.26,3.87,21.07,5.055,2.8,default
+Garage,Garage,18.44,23.7,6.99,12.28,5.26,5.29,21.07,9.635,2.46,concrete
