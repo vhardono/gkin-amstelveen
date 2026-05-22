@@ -194,6 +194,7 @@ class OutlookCollecteReader:
         result: Dict[str, Any] = {
             'dankoffer_url': '', 'ole_url': '',
             'dankoffer_qr':  '', 'ole_qr':  '',
+            'dankoffer_qr_b64': '', 'ole_qr_b64': '',
             'collecte_contant': '', 'collecte_bonnen': '',
             'collecte_bank':    '', 'collecte_tikkie': '',
             'collecte_ole':     '',
@@ -253,7 +254,8 @@ class OutlookCollecteReader:
                     return m.group(0).rstrip('.,)<>')
             return ''
 
-        def _save_first_image(msg_id: str, prefix: str) -> str:
+        def _save_first_image(msg_id: str, prefix: str) -> tuple:
+            """Returns (filename, data_uri_b64) tuple. filename may be empty on ephemeral FS."""
             try:
                 # Fetch attachment list with contentType included
                 atts = self._graph_get(
@@ -270,17 +272,25 @@ class OutlookCollecteReader:
                     cb = full.get('contentBytes', '')
                     if not cb:
                         continue
-                    ext = os.path.splitext(att.get('name', 'qr.png'))[1] or '.png'
-                    os.makedirs(UPLOAD_DIR, exist_ok=True)
-                    tmp = tempfile.NamedTemporaryFile(
-                        delete=False, suffix=ext, dir=UPLOAD_DIR, prefix=prefix + '_'
-                    )
-                    tmp.write(base64.b64decode(cb))
-                    tmp.close()
-                    return os.path.basename(tmp.name)  # return filename only
+                    mime = ct.split(';')[0].strip()
+                    data_uri = f'data:{mime};base64,{cb}'
+                    # Also try saving to disk (may fail on ephemeral FS)
+                    filename = ''
+                    try:
+                        ext = os.path.splitext(att.get('name', 'qr.png'))[1] or '.png'
+                        os.makedirs(UPLOAD_DIR, exist_ok=True)
+                        tmp = tempfile.NamedTemporaryFile(
+                            delete=False, suffix=ext, dir=UPLOAD_DIR, prefix=prefix + '_'
+                        )
+                        tmp.write(base64.b64decode(cb))
+                        tmp.close()
+                        filename = os.path.basename(tmp.name)
+                    except Exception:
+                        pass
+                    return filename, data_uri
             except Exception as e:
                 print(f'[email_reader] _save_first_image error: {e}')
-            return ''
+            return '', ''
 
         # --- Fetch Tikkie collecte email ---
         tikkie_msgs = _search_messages('Tikkie', 'fokkedj@gmail.com')
@@ -302,7 +312,7 @@ class OutlookCollecteReader:
             result['emails_found'] += 1
             result['source_subjects'].append(tikkie_match.get('subject',''))
             # Always try attachments — hasAttachments may miss inline images
-            result['dankoffer_qr'] = _save_first_image(tikkie_match['id'], 'dankoffer')
+            result['dankoffer_qr'], result['dankoffer_qr_b64'] = _save_first_image(tikkie_match['id'], 'dankoffer')
         else:
             result['not_found'].append('Tikkie Collecte e-mail niet gevonden voor deze datum')
 
@@ -315,7 +325,7 @@ class OutlookCollecteReader:
             body = re.sub(r'<[^>]+>', ' ', ole_match.get('body', {}).get('content', ''))
             result['ole_url'] = _extract_url(body)
             # Always try attachments — OLE QR is inline (isInline=True, hasAttachments=False)
-            result['ole_qr'] = _save_first_image(ole_match['id'], 'ole')
+            result['ole_qr'], result['ole_qr_b64'] = _save_first_image(ole_match['id'], 'ole')
         else:
             result['not_found'].append('QR Code OLE e-mail niet gevonden voor deze datum')
 

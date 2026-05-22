@@ -2430,6 +2430,7 @@ def fetch_ole_data():
         # Also try to get QR code and Tikkie URL from recent emails
         qr_filename = None
         ole_url = None
+        collecte_data = None
 
         try:
             from data_sources.email_reader import EmailReader
@@ -2493,6 +2494,10 @@ def fetch_ole_data():
         except Exception as e:
             print(f"[OLE Fetch] Website scrape error: {e}")
             import traceback; traceback.print_exc()
+
+        # Fallback: use email QR base64 if website scraper found no QR image
+        if not qr_image_b64 and collecte_data:
+            qr_image_b64 = collecte_data.get('ole_qr_b64', '')
 
         result = {
             'ole_predikant': ole_data.get('predikant', ''),
