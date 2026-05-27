@@ -155,7 +155,7 @@
 
                 <!-- Upload Area (hidden by default) -->
                 <div id="preekUploadSection" class="hidden mt-3">
-                    <input type="file" id="preekFile" accept=".docx" class="hidden">
+                    <input type="file" id="preekFile" accept=".docx,.doc" class="hidden">
                     <div id="preekDrop" class="drop-zone border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:border-gkin-green hover:bg-green-50 mb-2">
                         <svg class="w-8 h-8 mx-auto text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
@@ -461,7 +461,7 @@
         let _translatedFilename = null;
 
         setupDropZone('excelDrop', 'excelFile', 'excelName', 'excelNameText', 'excelClear');
-        setupDropZone('preekDrop', 'preekFile', 'preekName', 'preekNameText', 'preekClear', '.docx', (file) => {
+        setupDropZone('preekDrop', 'preekFile', 'preekName', 'preekNameText', 'preekClear', '.docx,.doc', (file) => {
             const panel = document.getElementById('preekTranslatePanel');
             if (file) {
                 panel.classList.remove('hidden');

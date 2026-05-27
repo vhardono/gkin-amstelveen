@@ -3036,6 +3036,27 @@ def campaign_pm_create():
 # Health Check
 # =============================================================================
 
+def _read_doc_paragraphs(file_bytes, filename=''):
+    """Extract paragraph texts from .doc or .docx bytes. Returns list of strings."""
+    import io
+    from docx import Document as DocxDocument
+    ext = (filename or '').lower().rsplit('.', 1)[-1]
+    try:
+        doc = DocxDocument(io.BytesIO(file_bytes))
+        return [p.text for p in doc.paragraphs], doc
+    except Exception:
+        if ext == 'doc':
+            # Try extracting raw text from legacy .doc via zipfile fallback
+            # .doc is OLE, not zip — extract plain text by stripping binary
+            import re
+            text = file_bytes.decode('latin-1', errors='ignore')
+            # Extract readable ASCII/latin text runs
+            runs = re.findall(r'[\x20-\x7e\x80-\xff]{4,}', text)
+            paragraphs = [r.strip() for r in runs if r.strip()]
+            return paragraphs, None
+        raise
+
+
 @app.route('/liturgie/translate-preek', methods=['POST'])
 def translate_preek():
     """Translate an uploaded DOCX preek file using OpenAI (NL↔ID) and return translated DOCX."""
@@ -3056,7 +3077,7 @@ def translate_preek():
         client = OpenAI(api_key=api_key)
 
         file_bytes = file.read()
-        doc = DocxDocument(io.BytesIO(file_bytes))
+        paragraphs, orig_doc = _read_doc_paragraphs(file_bytes, file.filename or '')
 
         SYSTEM_PROMPT = (
             "Je bent een zorgvuldige kerkelijke vertaalassistent.\n\n"
@@ -3074,8 +3095,6 @@ def translate_preek():
             "Voeg geen toelichting, samenvatting of commentaar toe — alleen de volledige vertaalde tekst."
         )
 
-        # Extract paragraphs preserving structure
-        paragraphs = [p.text for p in doc.paragraphs]
         source_text = '\n|||'.join(paragraphs)
 
         response = client.chat.completions.create(
@@ -3090,23 +3109,24 @@ def translate_preek():
         translated_text = response.choices[0].message.content.strip()
         translated_paragraphs = translated_text.split('|||')
 
-        # Build new DOCX with translated paragraphs, preserving styles
-        orig_doc = DocxDocument(io.BytesIO(file_bytes))
+        # Build new DOCX with translated paragraphs, preserving styles where possible
         new_doc = DocxDocument()
-        for i, para in enumerate(orig_doc.paragraphs):
-            new_para = new_doc.add_paragraph()
-            new_para.style = para.style
-            # Copy paragraph formatting
-            new_para.paragraph_format.alignment = para.paragraph_format.alignment
-            translated = translated_paragraphs[i].strip() if i < len(translated_paragraphs) else ''
-            run = new_para.add_run(translated)
-            # Copy run formatting from first run if available
-            if para.runs:
-                orig_run = para.runs[0]
-                run.bold = orig_run.bold
-                run.italic = orig_run.italic
-                run.font.size = orig_run.font.size
-                run.font.name = orig_run.font.name
+        if orig_doc:
+            for i, para in enumerate(orig_doc.paragraphs):
+                new_para = new_doc.add_paragraph()
+                new_para.style = para.style
+                new_para.paragraph_format.alignment = para.paragraph_format.alignment
+                translated = translated_paragraphs[i].strip() if i < len(translated_paragraphs) else ''
+                run = new_para.add_run(translated)
+                if para.runs:
+                    orig_run = para.runs[0]
+                    run.bold = orig_run.bold
+                    run.italic = orig_run.italic
+                    run.font.size = orig_run.font.size
+                    run.font.name = orig_run.font.name
+        else:
+            for t in translated_paragraphs:
+                new_doc.add_paragraph(t.strip())
 
         out = io.BytesIO()
         new_doc.save(out)
@@ -3148,7 +3168,7 @@ def translate_preek_inline():
         client = OpenAI(api_key=api_key)
 
         file_bytes = file.read()
-        doc = DocxDocument(io.BytesIO(file_bytes))
+        paragraphs, orig_doc = _read_doc_paragraphs(file_bytes, file.filename or '')
 
         SYSTEM_PROMPT = (
             "Je bent een zorgvuldige kerkelijke vertaalassistent.\n\n"
@@ -3166,7 +3186,6 @@ def translate_preek_inline():
             "Voeg geen toelichting, samenvatting of commentaar toe — alleen de volledige vertaalde tekst."
         )
 
-        paragraphs = [p.text for p in doc.paragraphs]
         source_text = '\n|||'.join(paragraphs)
 
         response = client.chat.completions.create(
@@ -3181,21 +3200,24 @@ def translate_preek_inline():
         translated_text = response.choices[0].message.content.strip()
         translated_paragraphs = translated_text.split('|||')
 
-        # Build translated DOCX preserving original styles
-        orig_doc = DocxDocument(io.BytesIO(file_bytes))
+        # Build translated DOCX preserving original styles where possible
         new_doc = DocxDocument()
-        for i, para in enumerate(orig_doc.paragraphs):
-            new_para = new_doc.add_paragraph()
-            new_para.style = para.style
-            new_para.paragraph_format.alignment = para.paragraph_format.alignment
-            translated = translated_paragraphs[i].strip() if i < len(translated_paragraphs) else ''
-            run = new_para.add_run(translated)
-            if para.runs:
-                orig_run = para.runs[0]
-                run.bold = orig_run.bold
-                run.italic = orig_run.italic
-                run.font.size = orig_run.font.size
-                run.font.name = orig_run.font.name
+        if orig_doc:
+            for i, para in enumerate(orig_doc.paragraphs):
+                new_para = new_doc.add_paragraph()
+                new_para.style = para.style
+                new_para.paragraph_format.alignment = para.paragraph_format.alignment
+                translated = translated_paragraphs[i].strip() if i < len(translated_paragraphs) else ''
+                run = new_para.add_run(translated)
+                if para.runs:
+                    orig_run = para.runs[0]
+                    run.bold = orig_run.bold
+                    run.italic = orig_run.italic
+                    run.font.size = orig_run.font.size
+                    run.font.name = orig_run.font.name
+        else:
+            for t in translated_paragraphs:
+                new_doc.add_paragraph(t.strip())
 
         out = io.BytesIO()
         new_doc.save(out)
