@@ -3089,34 +3089,18 @@ def translate_preek():
             "kopjes\nalinea's\nnummering\nopsommingen\nwitregels\n\n"
             "Gebruik passende kerkelijke en liturgische terminologie in de doeltaal.\n\n"
             "Houd de toon respectvol en inhoudelijk trouw aan de brontekst.\n\n"
-            "Lever de vertaling terug als platte tekst met dezelfde structuur, "
-            "gebruik '|||' als scheidingsteken tussen paragrafen.\n\n"
+            "Lever de vertaling terug als platte tekst met dezelfde structuur als het origineel.\n\n"
             "Voeg geen toelichting, samenvatting of commentaar toe — alleen de volledige vertaalde tekst."
         )
 
-        source_text = '\n|||'.join(paragraphs)
+        source_text = '\n'.join(paragraphs)
         response = client.models.generate_content(model='gemini-2.5-flash-lite', contents=SYSTEM_PROMPT + '\n\n' + source_text)
         translated_text = response.text.strip()
-        translated_paragraphs = translated_text.split('|||')
 
-        # Build new DOCX with translated paragraphs, preserving styles where possible
+        # Build new DOCX from translated text lines only
         new_doc = DocxDocument()
-        if orig_doc:
-            for i, para in enumerate(orig_doc.paragraphs):
-                new_para = new_doc.add_paragraph()
-                new_para.style = para.style
-                new_para.paragraph_format.alignment = para.paragraph_format.alignment
-                translated = translated_paragraphs[i].strip() if i < len(translated_paragraphs) else ''
-                run = new_para.add_run(translated)
-                if para.runs:
-                    orig_run = para.runs[0]
-                    run.bold = orig_run.bold
-                    run.italic = orig_run.italic
-                    run.font.size = orig_run.font.size
-                    run.font.name = orig_run.font.name
-        else:
-            for t in translated_paragraphs:
-                new_doc.add_paragraph(t.strip())
+        for line in translated_text.splitlines():
+            new_doc.add_paragraph(line)
 
         out = io.BytesIO()
         new_doc.save(out)
@@ -3169,34 +3153,18 @@ def translate_preek_inline():
             "kopjes\nalinea's\nnummering\nopsommingen\nwitregels\n\n"
             "Gebruik passende kerkelijke en liturgische terminologie in de doeltaal.\n\n"
             "Houd de toon respectvol en inhoudelijk trouw aan de brontekst.\n\n"
-            "Lever de vertaling terug als platte tekst met dezelfde structuur, "
-            "gebruik '|||' als scheidingsteken tussen paragrafen.\n\n"
+            "Lever de vertaling terug als platte tekst met dezelfde structuur als het origineel.\n\n"
             "Voeg geen toelichting, samenvatting of commentaar toe — alleen de volledige vertaalde tekst."
         )
 
-        source_text = '\n|||'.join(paragraphs)
+        source_text = '\n'.join(paragraphs)
         response = client.models.generate_content(model='gemini-2.5-flash-lite', contents=SYSTEM_PROMPT + '\n\n' + source_text)
         translated_text = response.text.strip()
-        translated_paragraphs = translated_text.split('|||')
 
-        # Build translated DOCX preserving original styles where possible
+        # Build new DOCX from translated text lines only
         new_doc = DocxDocument()
-        if orig_doc:
-            for i, para in enumerate(orig_doc.paragraphs):
-                new_para = new_doc.add_paragraph()
-                new_para.style = para.style
-                new_para.paragraph_format.alignment = para.paragraph_format.alignment
-                translated = translated_paragraphs[i].strip() if i < len(translated_paragraphs) else ''
-                run = new_para.add_run(translated)
-                if para.runs:
-                    orig_run = para.runs[0]
-                    run.bold = orig_run.bold
-                    run.italic = orig_run.italic
-                    run.font.size = orig_run.font.size
-                    run.font.name = orig_run.font.name
-        else:
-            for t in translated_paragraphs:
-                new_doc.add_paragraph(t.strip())
+        for line in translated_text.splitlines():
+            new_doc.add_paragraph(line)
 
         out = io.BytesIO()
         new_doc.save(out)
