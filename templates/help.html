@@ -8,7 +8,6 @@
     <script>tailwind.config={theme:{extend:{colors:{gkin:{green:'#3A7C22',dark:'#2d6119'}}}}}</script>
     <style>
         html{overflow-y:scroll}
-        .ss-box{background:repeating-linear-gradient(45deg,#f9fafb,#f9fafb 10px,#f3f4f6 10px,#f3f4f6 20px);border:2px dashed #d1d5db;border-radius:.5rem;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:.75rem;padding:1rem;text-align:center;min-height:9rem}
     </style>
     <script src="/static/i18n.js"></script>
 </head>
@@ -54,7 +53,7 @@ var HELP = {
               'Klik op <strong>Inloggen</strong>. Je wordt doorgestuurd naar de homepagina.'],
        notes:[{type:'amber',text:'💡 De sessie blijft actief zolang je browser open is. Bij het sluiten moet je opnieuw inloggen.'},
               {type:'blue',text:'🔓 Liturgie Generator: vrij toegankelijk — geen login nodig.<br>🔒 Preekbevestiging, Mededelingen, Mailing List: wachtwoord vereist.'}],
-       screenshot:'Login pagina'},
+}
       {id:'home',num:'2',title:'Home – Overzicht tools',color:'bg-gkin-green',
        intro:'Na het inloggen zie je de homepagina met alle beschikbare tools en het takenrooster.',
        cards:[{icon:'📅',title:'Takenrooster',text:'Bekijk het wekelijkse rooster: predikant, OvD, beamer, muziek enz. Kies een datum uit het dropdown-menu.'},
@@ -62,7 +61,7 @@ var HELP = {
               {icon:'📄',title:'Mededelingen',text:'Genereer het wekelijkse mededelingen-bulletin als Word-document.'},
               {icon:'✉️',title:'Preekbevestiging',text:'Stuur een bevestigings-e-mail naar de predikant met dienst-details.'},
               {icon:'📧',title:'Mailing List',text:'Maak en verstuur een e-mailcampagne via Sender.net met liturgie-bestanden als bijlage.'}],
-       screenshot:'Homepagina met alle tools'},
+}
       {id:'liturgie',num:'3',title:'Liturgie Generator',color:'bg-gkin-green',
        intro:'Genereer liturgiedocumenten voor de zondagsdienst. Vrij toegankelijk — geen login nodig.',
        substeps:[
@@ -81,28 +80,28 @@ var HELP = {
            'Klik op de groene <strong>Genereer</strong> knop. De geselecteerde bestanden worden automatisch gedownload.'
          ]}],
        notes:[{type:'blue',text:'💡 Preek-vertaling vereist een GEMINI_API_KEY op de server. Neem contact op met de beheerder als de vertaling niet werkt.'}],
-       screenshot:'Liturgie Generator pagina'},
+}
       {id:'meded',num:'4',title:'Mededelingen Bulletin',color:'bg-gkin-green',
        intro:'Genereer het wekelijkse mededelingen-bulletin als Word-document. De pagina haalt automatisch gegevens op uit meerdere bronnen.',
        steps:['Ga naar <strong>Mededelingen</strong> via de home en selecteer de datum.',
               'De pagina laadt automatisch gegevens uit de volgende bronnen:<ul class="mt-1 ml-3 space-y-1 list-disc text-gray-500"><li><strong>Takenrooster (Dropbox)</strong> – predikant, OvD, dienst-details</li><li><strong>Mededelingen Overzicht.xlsx (Dropbox)</strong> – regionale &amp; landelijke mededelingen (NL + ID), activiteitenkalender</li><li><strong>Scipio</strong> – verjaardagenlijst van leden</li><li><strong>GKIN Website</strong> – preekrooster AM &amp; OLE</li><li><strong>E-mail (scribagkin@gmail.com)</strong> – overdenking: thema, schriftlezing, predikant</li></ul>',
               'Controleer en pas de tekstvelden aan waar nodig (collecte, bezoekers, handmatige velden).',
               'Klik op <strong>Genereer</strong>. Het bulletin wordt gedownload als <code class="bg-gray-100 px-1 rounded text-xs">.docx</code>.'],
-       screenshot:'Mededelingen pagina'},
+}
       {id:'preekbev',num:'5',title:'Preekbevestiging',color:'bg-gkin-green',
        intro:'Stuur een bevestigings-e-mail naar de predikant met alle dienst-gegevens. Gegevens worden automatisch vooraf ingevuld.',
        steps:['Ga naar <strong>Preekbevestiging</strong> via de home. Selecteer de datum van de dienst.',
               'De velden worden automatisch gevuld vanuit:<ul class="mt-1 ml-3 space-y-1 list-disc text-gray-500"><li><strong>Takenrooster (Dropbox)</strong> – predikant (naam + e-mail), OvD, 1e Ontvangst, beamer, muziek, tijd, opmerking</li><li><strong>People-tab in Takenrooster</strong> – volledige namen &amp; e-mailadressen via short-name koppeling</li></ul>',
               'Vul de liederen in het formulier in en pas overige velden aan indien nodig.',
               'Klik op <strong>Genereer &amp; Verstuur</strong>. Het bevestigingsdocument wordt gemaakt en de e-mail verstuurd naar de predikant.'],
-       screenshot:'Preekbevestiging formulier'},
+}
       {id:'mailing',num:'6',title:'Mailing List / E-mailcampagne',color:'bg-gkin-green',
        intro:'Verstuur de wekelijkse liturgie-e-mail naar de mailinglijst via Sender.net.',
        steps:['Ga naar <strong>Mailing List</strong>. Kies een bestaande campagne of maak een nieuwe aan.',
               'De bijlagen worden automatisch opgehaald uit e-mails:<ul class="mt-1 ml-3 space-y-1 list-disc text-gray-500"><li><strong>Liturgie PDF</strong> – opgehaald uit e-mail van <code class="bg-gray-100 px-1 rounded text-xs">esiemyoe@gmail.com</code> of <code class="bg-gray-100 px-1 rounded text-xs">lisa.lie@gmail.com</code></li><li><strong>Mededelingen PDF</strong> – opgehaald uit e-mail van <code class="bg-gray-100 px-1 rounded text-xs">vega.hardono@outlook.com</code> met onderwerp "Definitieve mededelingen zondag DD maand YYYY"</li><li><strong>OLE Mededeling</strong> – opgehaald uit e-mail van <code class="bg-gray-100 px-1 rounded text-xs">scribagkin@gmail.com</code> met onderwerp "Mededeling OLE …"</li></ul>',
               'Controleer de bijlagen en pas onderwerp en e-mailtekst aan waar nodig.',
               'Klik op <strong>Verstuur campagne</strong>. De e-mail wordt via Sender.net verstuurd naar alle ontvangers in de lijst.'],
-       screenshot:'Mailing List campagne pagina'},
+}
       {id:'taal',num:'7',title:'Taal wisselen',color:'bg-gkin-green',
        intro:'De app ondersteunt <strong>Nederlands (NL)</strong>, <strong>Indonesisch (ID)</strong> en <strong>Engels (EN)</strong>.',
        steps:['Klik rechtsboven op <code class="bg-gray-100 px-1 rounded text-xs">NL</code>, <code class="bg-gray-100 px-1 rounded text-xs">ID</code> of <code class="bg-gray-100 px-1 rounded text-xs">EN</code> om de taal te wisselen. De voorkeur wordt opgeslagen in de browser.',
@@ -126,7 +125,7 @@ var HELP = {
               'Klik <strong>Login</strong>. Kamu akan diarahkan ke halaman beranda.'],
        notes:[{type:'amber',text:'💡 Sesi tetap aktif selama browser terbuka. Jika ditutup, kamu perlu login kembali.'},
               {type:'blue',text:'🔓 Generator Liturgi: dapat diakses bebas — tidak perlu login.<br>🔒 Konfirmasi Khotbah, Pengumuman, Mailing List: membutuhkan kata sandi.'}],
-       screenshot:'Halaman login'},
+}
       {id:'home',num:'2',title:'Beranda \u2013 Ikhtisar alat',color:'bg-gkin-green',
        intro:'Setelah login, kamu akan melihat halaman beranda dengan semua alat yang tersedia dan jadwal tugas.',
        cards:[{icon:'📅',title:'Jadwal Tugas',text:'Lihat jadwal mingguan: siapa predikant, OvD, beamer, musik, dll. Pilih tanggal dari menu dropdown.'},
@@ -134,7 +133,7 @@ var HELP = {
               {icon:'📄',title:'Pengumuman',text:'Buat buletin pengumuman mingguan sebagai dokumen Word.'},
               {icon:'✉️',title:'Konfirmasi Khotbah',text:'Kirim e-mail konfirmasi kepada pendeta dengan detail ibadah.'},
               {icon:'📧',title:'Mailing List',text:'Buat dan kirim kampanye e-mail melalui Sender.net dengan lampiran file liturgi.'}],
-       screenshot:'Halaman beranda dengan semua alat'},
+}
       {id:'liturgie',num:'3',title:'Generator Liturgi',color:'bg-gkin-green',
        intro:'Buat dokumen liturgi untuk kebaktian hari Minggu. Dapat diakses bebas — tidak perlu login.',
        substeps:[
@@ -153,28 +152,28 @@ var HELP = {
            'Klik tombol hijau <strong>Buat</strong>. File akan diunduh secara otomatis.'
          ]}],
        notes:[{type:'blue',text:'💡 Terjemahan khotbah membutuhkan GEMINI_API_KEY di server. Hubungi administrator jika tidak berfungsi.'}],
-       screenshot:'Halaman Generator Liturgi'},
+}
       {id:'meded',num:'4',title:'Buletin Pengumuman',color:'bg-gkin-green',
        intro:'Buat buletin pengumuman mingguan sebagai dokumen Word. Halaman mengambil data secara otomatis dari berbagai sumber.',
        steps:['Buka <strong>Pengumuman</strong> dari beranda dan pilih tanggal.',
               'Halaman secara otomatis memuat data dari sumber berikut:<ul class="mt-1 ml-3 space-y-1 list-disc text-gray-500"><li><strong>Jadwal Tugas (Dropbox)</strong> \u2013 pendeta, OvD, detail ibadah</li><li><strong>Mededelingen Overzicht.xlsx (Dropbox)</strong> \u2013 pengumuman regional &amp; nasional (NL + ID), kalender kegiatan</li><li><strong>Scipio</strong> \u2013 daftar ulang tahun anggota</li><li><strong>Website GKIN</strong> \u2013 jadwal khotbah AM &amp; OLE</li><li><strong>E-mail (scribagkin@gmail.com)</strong> \u2013 renungan: tema, bacaan Alkitab, pendeta</li></ul>',
               'Periksa dan sesuaikan kolom teks jika perlu (kolekte, pengunjung, kolom manual).',
               'Klik <strong>Buat</strong>. Buletin akan diunduh sebagai <code class="bg-gray-100 px-1 rounded text-xs">.docx</code>.'],
-       screenshot:'Halaman Pengumuman'},
+}
       {id:'preekbev',num:'5',title:'Konfirmasi Khotbah',color:'bg-gkin-green',
        intro:'Kirim e-mail konfirmasi kepada pendeta dengan semua detail ibadah. Data diisi otomatis.',
        steps:['Buka <strong>Konfirmasi Khotbah</strong> dari beranda. Pilih tanggal ibadah.',
               'Kolom diisi otomatis dari:<ul class="mt-1 ml-3 space-y-1 list-disc text-gray-500"><li><strong>Jadwal Tugas (Dropbox)</strong> \u2013 pendeta (nama + e-mail), OvD, Penerima Tamu, beamer, musik, waktu, catatan</li><li><strong>Tab People di Jadwal Tugas</strong> \u2013 nama lengkap &amp; alamat e-mail melalui pemetaan nama singkat</li></ul>',
               'Isi lagu-lagu di formulir dan sesuaikan kolom lain jika perlu.',
               'Klik <strong>Buat &amp; Kirim</strong>. Dokumen konfirmasi dibuat dan e-mail dikirim ke pendeta.'],
-       screenshot:'Formulir Konfirmasi Khotbah'},
+}
       {id:'mailing',num:'6',title:'Mailing List / Kampanye E-mail',color:'bg-gkin-green',
        intro:'Kirim e-mail liturgi mingguan ke mailing list melalui Sender.net.',
        steps:['Buka <strong>Mailing List</strong>. Pilih kampanye yang ada atau buat yang baru.',
               'Lampiran diambil otomatis dari e-mail:<ul class="mt-1 ml-3 space-y-1 list-disc text-gray-500"><li><strong>PDF Liturgi</strong> \u2013 dari e-mail <code class="bg-gray-100 px-1 rounded text-xs">esiemyoe@gmail.com</code> atau <code class="bg-gray-100 px-1 rounded text-xs">lisa.lie@gmail.com</code></li><li><strong>PDF Pengumuman</strong> \u2013 dari e-mail <code class="bg-gray-100 px-1 rounded text-xs">vega.hardono@outlook.com</code> dengan subjek "Definitieve mededelingen zondag DD bulan YYYY"</li><li><strong>Pengumuman OLE</strong> \u2013 dari e-mail <code class="bg-gray-100 px-1 rounded text-xs">scribagkin@gmail.com</code> dengan subjek "Mededeling OLE \u2026"</li></ul>',
               'Periksa lampiran dan sesuaikan subjek serta teks e-mail.',
               'Klik <strong>Kirim kampanye</strong>. E-mail dikirim melalui Sender.net ke semua penerima.'],
-       screenshot:'Halaman kampanye Mailing List'},
+}
       {id:'taal',num:'7',title:'Ganti Bahasa',color:'bg-gkin-green',
        intro:'Aplikasi mendukung <strong>Belanda (NL)</strong>, <strong>Indonesia (ID)</strong>, dan <strong>Inggris (EN)</strong>.',
        steps:['Klik tombol <code class="bg-gray-100 px-1 rounded text-xs">NL</code>, <code class="bg-gray-100 px-1 rounded text-xs">ID</code>, atau <code class="bg-gray-100 px-1 rounded text-xs">EN</code> di kanan atas untuk mengganti bahasa. Preferensi disimpan di browser.',
@@ -198,7 +197,7 @@ var HELP = {
               'Click <strong>Login</strong>. You will be redirected to the home page.'],
        notes:[{type:'amber',text:'💡 The session stays active while your browser is open. When closed, you need to log in again.'},
               {type:'blue',text:'🔓 Liturgy Generator: freely accessible \u2014 no login required.<br>🔒 Sermon Confirmation, Announcements, Mailing List: password required.'}],
-       screenshot:'Login page'},
+}
       {id:'home',num:'2',title:'Home \u2013 Tools Overview',color:'bg-gkin-green',
        intro:'After logging in you will see the home page with all available tools and the duty roster.',
        cards:[{icon:'📅',title:'Duty Roster',text:'View the weekly roster: preacher, OvD, beamer, music, etc. Choose a date from the dropdown.'},
@@ -206,7 +205,7 @@ var HELP = {
               {icon:'📄',title:'Announcements',text:'Generate the weekly announcements bulletin as a Word document.'},
               {icon:'✉️',title:'Sermon Confirmation',text:'Send a confirmation e-mail to the preacher with service details.'},
               {icon:'📧',title:'Mailing List',text:'Create and send an e-mail campaign via Sender.net with liturgy files attached.'}],
-       screenshot:'Home page with all tools'},
+}
       {id:'liturgie',num:'3',title:'Liturgy Generator',color:'bg-gkin-green',
        intro:'Generate liturgy documents for the Sunday service. Freely accessible \u2014 no login required.',
        substeps:[
@@ -225,28 +224,28 @@ var HELP = {
            'Click the green <strong>Generate</strong> button. Files download automatically.'
          ]}],
        notes:[{type:'blue',text:'💡 Sermon translation requires GEMINI_API_KEY on the server. Contact the administrator if it does not work.'}],
-       screenshot:'Liturgy Generator page'},
+}
       {id:'meded',num:'4',title:'Announcements Bulletin',color:'bg-gkin-green',
        intro:'Generate the weekly announcements bulletin as a Word document. Data is fetched automatically from multiple sources.',
        steps:['Go to <strong>Announcements</strong> from the home page and select the date.',
               'The page automatically loads data from:<ul class="mt-1 ml-3 space-y-1 list-disc text-gray-500"><li><strong>Duty Roster (Dropbox)</strong> \u2013 preacher, OvD, service details</li><li><strong>Mededelingen Overzicht.xlsx (Dropbox)</strong> \u2013 regional &amp; national announcements (NL + ID), activity calendar</li><li><strong>Scipio</strong> \u2013 member birthday list</li><li><strong>GKIN Website</strong> \u2013 AM &amp; OLE preaching roster</li><li><strong>E-mail (scribagkin@gmail.com)</strong> \u2013 reflection: theme, Bible reading, preacher</li></ul>',
               'Review and adjust text fields where needed (offering amounts, attendance, manual fields).',
               'Click <strong>Generate</strong>. The bulletin downloads as a <code class="bg-gray-100 px-1 rounded text-xs">.docx</code> file.'],
-       screenshot:'Announcements page'},
+}
       {id:'preekbev',num:'5',title:'Sermon Confirmation',color:'bg-gkin-green',
        intro:'Send a confirmation e-mail to the preacher with all service details. Fields are auto-filled.',
        steps:['Go to <strong>Sermon Confirmation</strong> from the home page. Select the service date.',
               'Fields are automatically filled from:<ul class="mt-1 ml-3 space-y-1 list-disc text-gray-500"><li><strong>Duty Roster (Dropbox)</strong> \u2013 preacher (name + e-mail), OvD, 1st Reception, beamer, music, time, notes</li><li><strong>People tab in Duty Roster</strong> \u2013 full names &amp; e-mail addresses via short-name lookup</li></ul>',
               'Fill in the songs in the form and adjust other fields if needed.',
               'Click <strong>Generate &amp; Send</strong>. The confirmation document is created and e-mail sent to the preacher.'],
-       screenshot:'Sermon confirmation form'},
+}
       {id:'mailing',num:'6',title:'Mailing List / E-mail Campaign',color:'bg-gkin-green',
        intro:'Send the weekly liturgy e-mail to the mailing list via Sender.net.',
        steps:['Go to <strong>Mailing List</strong>. Choose an existing campaign or create a new one.',
               'Attachments are automatically fetched from e-mail:<ul class="mt-1 ml-3 space-y-1 list-disc text-gray-500"><li><strong>Liturgy PDF</strong> \u2013 from e-mail by <code class="bg-gray-100 px-1 rounded text-xs">esiemyoe@gmail.com</code> or <code class="bg-gray-100 px-1 rounded text-xs">lisa.lie@gmail.com</code></li><li><strong>Announcements PDF</strong> \u2013 from e-mail by <code class="bg-gray-100 px-1 rounded text-xs">vega.hardono@outlook.com</code> with subject "Definitieve mededelingen zondag DD month YYYY"</li><li><strong>OLE Announcement</strong> \u2013 from e-mail by <code class="bg-gray-100 px-1 rounded text-xs">scribagkin@gmail.com</code> with subject "Mededeling OLE \u2026"</li></ul>',
               'Check attachments and adjust subject and e-mail text as needed.',
               'Click <strong>Send campaign</strong>. The e-mail is sent via Sender.net to all recipients.'],
-       screenshot:'Mailing List campaign page'},
+}
       {id:'taal',num:'7',title:'Switch Language',color:'bg-gkin-green',
        intro:'The app supports <strong>Dutch (NL)</strong>, <strong>Indonesian (ID)</strong> and <strong>English (EN)</strong>.',
        steps:['Click <code class="bg-gray-100 px-1 rounded text-xs">NL</code>, <code class="bg-gray-100 px-1 rounded text-xs">ID</code> or <code class="bg-gray-100 px-1 rounded text-xs">EN</code> in the top-right header. Your preference is saved in the browser.',
@@ -264,8 +263,6 @@ var HELP = {
 
 function badge(num,color){return '<div class="w-8 h-8 rounded-full '+color+' text-white flex items-center justify-center text-sm font-bold shrink-0">'+num+'</div>';}
 function stepBadge(lbl,c){c=c||'bg-green-100 text-gkin-green';return '<div class="min-w-[1.75rem] h-7 rounded-full '+c+' text-xs font-bold flex items-center justify-center shrink-0 px-1">'+lbl+'</div>';}
-function ssBox(lbl){return '<div class="ss-box mt-3"><div><div class="text-2xl mb-1">📸</div><div>'+lbl+'</div><div class="text-gray-300 mt-1" style="font-size:.65rem">Add screenshot here</div></div></div>';}
-
 function renderSection(s){
   var html='<section id="'+s.id+'" class="mb-10"><div class="flex items-center gap-3 mb-4">'+badge(s.num,s.color)+'<h2 class="text-xl font-bold text-gray-800">'+s.title+'</h2></div><div class="bg-white border border-gray-200 rounded-xl shadow-sm p-5 space-y-4">';
   if(s.intro) html+='<p class="text-sm text-gray-600">'+s.intro+'</p>';
@@ -277,7 +274,6 @@ function renderSection(s){
   if(s.cards){html+='<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">';s.cards.forEach(function(c){html+='<div class="border border-gray-100 rounded-lg p-3 bg-gray-50"><p class="text-xs font-semibold text-gkin-green mb-1">'+c.icon+' '+c.title+'</p><p class="text-xs text-gray-600">'+c.text+'</p></div>';});html+='</div>';}
   if(s.faqs) s.faqs.forEach(function(faq,i){var bdr=i<s.faqs.length-1?'border-b border-gray-100 pb-4':'';html+='<div class="'+bdr+'"><p class="text-sm font-semibold text-gray-800 mb-1">'+faq.q+'</p><p class="text-sm text-gray-600">'+faq.a+'</p></div>';});
   if(s.notes) s.notes.forEach(function(n){var cls=n.type==='amber'?'bg-amber-50 border-amber-200 text-amber-800':'bg-blue-50 border-blue-200 text-blue-800';html+='<div class="'+cls+' border rounded-lg p-3 text-xs">'+n.text+'</div>';});
-  if(s.screenshot) html+=ssBox(s.screenshot);
   html+='</div></section>';
   return html;
 }
