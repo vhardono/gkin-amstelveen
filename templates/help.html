@@ -3,452 +3,290 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GKIN Amstelveen – Gebruikershandleiding</title>
+    <title>GKIN Amstelveen – User Guide</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: { extend: { colors: { gkin: { green: '#3A7C22', dark: '#2d6119' } } } }
-        }
-    </script>
+    <script>tailwind.config={theme:{extend:{colors:{gkin:{green:'#3A7C22',dark:'#2d6119'}}}}}</script>
     <style>
-        html { overflow-y: scroll; }
-        .step-badge { min-width: 1.75rem; height: 1.75rem; }
-        .screenshot-box {
-            background: repeating-linear-gradient(
-                45deg, #f9fafb, #f9fafb 10px, #f3f4f6 10px, #f3f4f6 20px
-            );
-        }
+        html{overflow-y:scroll}
+        .ss-box{background:repeating-linear-gradient(45deg,#f9fafb,#f9fafb 10px,#f3f4f6 10px,#f3f4f6 20px);border:2px dashed #d1d5db;border-radius:.5rem;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:.75rem;padding:1rem;text-align:center;min-height:9rem}
     </style>
     <script src="/static/i18n.js"></script>
 </head>
 <body class="bg-gray-50 min-h-screen">
 
-    <!-- Header -->
-    <header class="bg-gkin-green shadow-md">
-        <div class="max-w-3xl mx-auto px-6 py-5 flex items-center gap-4">
-            <a href="/"><img src="/static/logo2.png" alt="GKIN Logo" class="h-12 w-12 object-contain shrink-0"></a>
-            <div class="flex-1">
-                <h1 class="text-white text-2xl font-bold tracking-tight">GKIN Amstelveen</h1>
-                <p class="text-green-100 text-sm mt-0.5">Gebruikershandleiding</p>
-            </div>
-            <div class="flex items-center gap-1 bg-gkin-dark rounded-lg p-1">
-                <button class="lang-btn text-xs px-2 py-1 rounded" data-lang="nl">NL</button>
-                <button class="lang-btn text-xs px-2 py-1 rounded" data-lang="id">ID</button>
-                <button class="lang-btn text-xs px-2 py-1 rounded" data-lang="en">EN</button>
-            </div>
-        </div>
-    </header>
+<header class="bg-gkin-green shadow-md">
+  <div class="max-w-3xl mx-auto px-6 py-5 flex items-center gap-4">
+    <a href="/"><img src="/static/logo2.png" alt="GKIN Logo" class="h-12 w-12 object-contain shrink-0"></a>
+    <div class="flex-1">
+      <h1 class="text-white text-2xl font-bold tracking-tight">GKIN Amstelveen</h1>
+      <p id="hdr-sub" class="text-green-100 text-sm mt-0.5"></p>
+    </div>
+    <div class="flex items-center gap-1 bg-gkin-dark rounded-lg p-1">
+      <button class="lang-btn text-xs px-2 py-1 rounded" data-lang="nl">NL</button>
+      <button class="lang-btn text-xs px-2 py-1 rounded" data-lang="id">ID</button>
+      <button class="lang-btn text-xs px-2 py-1 rounded" data-lang="en">EN</button>
+    </div>
+  </div>
+</header>
 
-    <main class="max-w-3xl mx-auto px-6 py-8">
+<main class="max-w-3xl mx-auto px-6 py-8">
+  <a href="/" class="inline-flex items-center gap-1 text-sm text-gkin-green hover:text-gkin-dark mb-6">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+    <span id="back-lbl"></span>
+  </a>
+  <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-5 mb-8">
+    <h2 id="toc-title" class="text-base font-semibold text-gray-800 mb-3"></h2>
+    <ol id="toc-list" class="space-y-1 text-sm text-gkin-green"></ol>
+  </div>
+  <div id="help-content"></div>
+  <div class="text-center text-xs text-gray-400 mt-4 mb-8">GKIN Amstelveen &mdash; <span id="footer-lbl"></span> &mdash; v2026.05</div>
+</main>
 
-        <a href="/" class="inline-flex items-center gap-1 text-sm text-gkin-green hover:text-gkin-dark mb-6">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-            </svg>
-            Terug naar home
-        </a>
+<script>
+var HELP = {
+  nl: {
+    subtitle:'Gebruikershandleiding', back:'Terug naar home', toc:'Inhoudsopgave', footer:'Gebruikershandleiding',
+    sections:[
+      {id:'login',num:'1',title:'Inloggen',color:'bg-gkin-green',
+       intro:'De app is beveiligd met een wachtwoord. Je hebt inloggegevens nodig van de beheerder.',
+       steps:['Ga naar de app-URL (bijv. <code class="bg-gray-100 px-1 rounded text-xs">https://railway.gkin-amstelveen.top</code>)',
+              'Je wordt automatisch doorgestuurd naar de <strong>inlogpagina</strong>. Vul je gebruikersnaam en wachtwoord in.',
+              'Klik op <strong>Inloggen</strong>. Je wordt doorgestuurd naar de homepagina.'],
+       notes:[{type:'amber',text:'💡 De sessie blijft actief zolang je browser open is. Bij het sluiten moet je opnieuw inloggen.'}],
+       screenshot:'Login pagina'},
+      {id:'home',num:'2',title:'Home – Overzicht tools',color:'bg-gkin-green',
+       intro:'Na het inloggen zie je de homepagina met alle beschikbare tools en het takenrooster.',
+       cards:[{icon:'📅',title:'Takenrooster',text:'Bekijk het wekelijkse rooster: predikant, OvD, beamer, muziek enz. Kies een datum uit het dropdown-menu.'},
+              {icon:'📖',title:'Liturgie',text:'Genereer liturgiedocumenten (gemeente, muziekteam) en beamer PPT voor de zondagsdienst.'},
+              {icon:'📄',title:'Mededelingen',text:'Genereer het wekelijkse mededelingen-bulletin als Word-document.'},
+              {icon:'✉️',title:'Preekbevestiging',text:'Stuur een bevestigings-e-mail naar de predikant met dienst-details.'},
+              {icon:'📧',title:'Mailing List',text:'Maak en verstuur een e-mailcampagne via Sender.net met liturgie-bestanden als bijlage.'}],
+       screenshot:'Homepagina met alle tools'},
+      {id:'liturgie',num:'3',title:'Liturgie Generator',color:'bg-gkin-green',
+       intro:'Genereer liturgiedocumenten voor de zondagsdienst op basis van een Excel-bestand en optioneel een Preek.docx.',
+       substeps:[
+         {heading:'Stap 1 – Excel-bestand kiezen',items:['<strong>Gebruik huidige week bestand</strong> — laadt automatisch <code class="bg-gray-100 px-1 rounded text-xs">Main Liturgy file.xlsx</code> uit Dropbox. Geen upload nodig.','<strong>Upload eigen bestand</strong> — sleep een <code class="bg-gray-100 px-1 rounded text-xs">.xlsx</code> naar het vak of klik om te bladeren.']},
+         {heading:'Stap 2 – Automatisch bijwerken (optioneel)',items:['Zet het vinkje <strong>"Automatisch bijwerken"</strong> aan om de liturgie te vullen met de meest recente gegevens. Klik op <strong>"Wijzigingen bekijken"</strong> om te controleren voor ze worden toegepast.']},
+         {heading:'Stap 3 – Preek.docx kiezen (optioneel)',items:['<strong>Gebruik huidige week bestand</strong> — laadt automatisch <code class="bg-gray-100 px-1 rounded text-xs">Preek.docx</code> uit Dropbox.','<strong>Upload eigen bestand</strong> — sleep of selecteer een <code class="bg-gray-100 px-1 rounded text-xs">.docx</code> of <code class="bg-gray-100 px-1 rounded text-xs">.doc</code> bestand.']},
+         {heading:'Stap 4 – Bestanden kiezen & genereren',items:['Vink aan welke bestanden je wilt: <strong>Liturgie A</strong> (gemeente), <strong>Liturgie B</strong> (muziekteam), <strong>Beamer PPT</strong>.','Klik op de groene <strong>Genereer</strong> knop. De bestanden worden automatisch gedownload.']}],
+       screenshot:'Liturgie Generator pagina'},
+      {id:'preek',num:'3a',title:'Preek vertalen (NL \u2194 ID)',color:'bg-blue-500',
+       intro:'Na het uploaden van een preek-bestand verschijnt automatisch een blauw paneel om de preek te vertalen. Werkt voor <code class="bg-gray-100 px-1 rounded text-xs">.docx</code> en <code class="bg-gray-100 px-1 rounded text-xs">.doc</code>.',
+       steps:['Upload een preek-bestand (drag &amp; drop of klik). Het blauwe paneel verschijnt direct.',
+              'Klik <strong>Ja, vertaal preek (NL\u2194ID)</strong> om AI-vertaling te starten, of <strong>Nee</strong> om het over te slaan.',
+              'Wacht op de vertaling (max. ~1 minuut bij lange preken). Een spinner geeft de voortgang aan.',
+              'Klik <strong>Download vertaling</strong> om op te slaan als <code class="bg-gray-100 px-1 rounded text-xs">Preek.docx</code>, of <strong>Gebruik vertaling voor liturgie</strong> om direct te gebruiken.'],
+       notes:[{type:'blue',text:'💡 Vereist een GEMINI_API_KEY op de server. Neem contact op met de beheerder als de vertaling niet werkt.'}],
+       screenshot:'Blauw vertaalpaneel na preek upload'},
+      {id:'meded',num:'4',title:'Mededelingen Bulletin',color:'bg-gkin-green',
+       intro:'Genereer het wekelijkse mededelingen-bulletin als Word-document.',
+       steps:['Ga naar <strong>Mededelingen</strong> via de home. De pagina laadt automatisch de inhoud voor de komende week.',
+              'Controleer en pas de tekstvelden aan waar nodig.',
+              'Klik op <strong>Genereer</strong>. Het bulletin wordt gedownload als <code class="bg-gray-100 px-1 rounded text-xs">.docx</code>.'],
+       screenshot:'Mededelingen pagina'},
+      {id:'preekbev',num:'5',title:'Preekbevestiging',color:'bg-gkin-green',
+       intro:'Stuur een bevestigings-e-mail naar de predikant met alle dienst-gegevens.',
+       steps:['Ga naar <strong>Preekbevestiging</strong> via de home. Selecteer de datum van de dienst.',
+              'Controleer de vooraf ingevulde gegevens en pas aan indien nodig.',
+              'Klik op <strong>Verstuur bevestiging</strong>. De e-mail wordt verzonden naar de predikant.'],
+       screenshot:'Preekbevestiging formulier'},
+      {id:'mailing',num:'6',title:'Mailing List / E-mailcampagne',color:'bg-gkin-green',
+       intro:'Verstuur de wekelijkse liturgie-e-mail naar de mailinglijst via Sender.net.',
+       steps:['Ga naar <strong>Mailing List</strong>. Kies een bestaande campagne of maak een nieuwe aan.',
+              'Upload de liturgie-bestanden (optioneel). Vul het onderwerp en de e-mailtekst in.',
+              'Klik op <strong>Verstuur campagne</strong>. De e-mail wordt via Sender.net verstuurd.'],
+       screenshot:'Mailing List campagne pagina'},
+      {id:'taal',num:'7',title:'Taal wisselen',color:'bg-gkin-green',
+       intro:'De app ondersteunt <strong>Nederlands (NL)</strong>, <strong>Indonesisch (ID)</strong> en <strong>Engels (EN)</strong>.',
+       steps:['Klik rechtsboven op <code class="bg-gray-100 px-1 rounded text-xs">NL</code>, <code class="bg-gray-100 px-1 rounded text-xs">ID</code> of <code class="bg-gray-100 px-1 rounded text-xs">EN</code> om de taal te wisselen. De voorkeur wordt opgeslagen in de browser.',
+              'Op elke pagina is een <strong>?</strong> help-knop beschikbaar naast de taalknop om direct naar deze handleiding te gaan.']},
+      {id:'faq',num:'8',title:'Tips & Veelgestelde vragen',color:'bg-gkin-green',
+       faqs:[
+         {q:'❓ De vertaling werkt niet / geeft een foutmelding',a:'Controleer of de <code class="bg-gray-100 px-1 rounded text-xs">GEMINI_API_KEY</code> is ingesteld op de server. Zorg ook dat je Google Gemini-account voldoende tegoed heeft.'},
+         {q:'❓ Mijn .doc bestand wordt niet herkend',a:'De app ondersteunt zowel .docx als .doc. Als .doc niet werkt, sla het op als .docx via <em>Opslaan als \u2192 Word-document (.docx)</em> in Microsoft Word.'},
+         {q:'❓ Het blauwe vertaalpaneel verschijnt niet',a:'Het paneel verschijnt pas nadat je een bestand hebt geselecteerd. Zorg dat je het bestand loslaat <em>in</em> het upload-vak.'},
+         {q:'❓ Hoe weet ik welk bestand in Dropbox staat?',a:'Bij "Gebruik huidige week bestand" haalt de app automatisch het meest recente bestand op uit de geconfigureerde Dropbox-werkomap.'},
+         {q:'❓ De gegenereerde bestanden worden niet gedownload',a:'Controleer of je browser automatische downloads toestaat. In Chrome: slotje in adresbalk \u2192 <em>Site-instellingen \u2192 Downloads toestaan</em>.'}]}
+    ]
+  },
+  id: {
+    subtitle:'Panduan Pengguna', back:'Kembali ke beranda', toc:'Daftar Isi', footer:'Panduan Pengguna',
+    sections:[
+      {id:'login',num:'1',title:'Masuk (Login)',color:'bg-gkin-green',
+       intro:'Aplikasi ini dilindungi kata sandi. Kamu membutuhkan kredensial login dari administrator.',
+       steps:['Buka URL aplikasi (mis. <code class="bg-gray-100 px-1 rounded text-xs">https://railway.gkin-amstelveen.top</code>)',
+              'Kamu akan otomatis diarahkan ke <strong>halaman login</strong>. Masukkan nama pengguna dan kata sandi.',
+              'Klik <strong>Login</strong>. Kamu akan diarahkan ke halaman beranda.'],
+       notes:[{type:'amber',text:'💡 Sesi tetap aktif selama browser terbuka. Jika ditutup, kamu perlu login kembali.'}],
+       screenshot:'Halaman login'},
+      {id:'home',num:'2',title:'Beranda \u2013 Ikhtisar alat',color:'bg-gkin-green',
+       intro:'Setelah login, kamu akan melihat halaman beranda dengan semua alat yang tersedia dan jadwal tugas.',
+       cards:[{icon:'📅',title:'Jadwal Tugas',text:'Lihat jadwal mingguan: siapa predikant, OvD, beamer, musik, dll. Pilih tanggal dari menu dropdown.'},
+              {icon:'📖',title:'Liturgi',text:'Buat dokumen liturgi (jemaat, tim musik) dan PPT beamer untuk kebaktian hari Minggu.'},
+              {icon:'📄',title:'Pengumuman',text:'Buat buletin pengumuman mingguan sebagai dokumen Word.'},
+              {icon:'✉️',title:'Konfirmasi Khotbah',text:'Kirim e-mail konfirmasi kepada pendeta dengan detail ibadah.'},
+              {icon:'📧',title:'Mailing List',text:'Buat dan kirim kampanye e-mail melalui Sender.net dengan lampiran file liturgi.'}],
+       screenshot:'Halaman beranda dengan semua alat'},
+      {id:'liturgie',num:'3',title:'Generator Liturgi',color:'bg-gkin-green',
+       intro:'Buat dokumen liturgi untuk kebaktian hari Minggu berdasarkan file Excel dan opsional file Preek.docx.',
+       substeps:[
+         {heading:'Langkah 1 \u2013 Pilih file Excel',items:['<strong>Gunakan file minggu ini</strong> \u2014 memuat <code class="bg-gray-100 px-1 rounded text-xs">Main Liturgy file.xlsx</code> dari Dropbox secara otomatis.','<strong>Unggah file sendiri</strong> \u2014 seret file <code class="bg-gray-100 px-1 rounded text-xs">.xlsx</code> ke kotak atau klik untuk memilih.']},
+         {heading:'Langkah 2 \u2013 Pembaruan otomatis (opsional)',items:['Centang <strong>"Pembaruan otomatis"</strong> untuk mengisi liturgi dengan data terkini. Klik <strong>"Lihat perubahan"</strong> untuk meninjau sebelum diterapkan.']},
+         {heading:'Langkah 3 \u2013 Pilih file Preek.docx (opsional)',items:['<strong>Gunakan file minggu ini</strong> \u2014 memuat <code class="bg-gray-100 px-1 rounded text-xs">Preek.docx</code> dari Dropbox.','<strong>Unggah file sendiri</strong> \u2014 seret atau pilih file <code class="bg-gray-100 px-1 rounded text-xs">.docx</code> atau <code class="bg-gray-100 px-1 rounded text-xs">.doc</code>.']},
+         {heading:'Langkah 4 \u2013 Pilih file & buat',items:['Centang file yang diinginkan: <strong>Liturgi A</strong> (jemaat), <strong>Liturgi B</strong> (tim musik), <strong>Beamer PPT</strong>.','Klik tombol hijau <strong>Buat</strong>. File akan diunduh secara otomatis.']}],
+       screenshot:'Halaman Generator Liturgi'},
+      {id:'preek',num:'3a',title:'Terjemahkan Khotbah (NL \u2194 ID)',color:'bg-blue-500',
+       intro:'Setelah mengunggah file khotbah, panel biru akan muncul secara otomatis. Mendukung <code class="bg-gray-100 px-1 rounded text-xs">.docx</code> dan <code class="bg-gray-100 px-1 rounded text-xs">.doc</code>.',
+       steps:['Unggah file khotbah (drag &amp; drop atau klik). Panel biru akan langsung muncul.',
+              'Klik <strong>Ya, terjemahkan (NL\u2194ID)</strong> untuk memulai terjemahan AI, atau <strong>Tidak</strong> untuk melewatinya.',
+              'Tunggu terjemahan selesai (maks. ~1 menit untuk khotbah panjang). Spinner menunjukkan progres.',
+              'Klik <strong>Unduh terjemahan</strong> untuk menyimpan sebagai <code class="bg-gray-100 px-1 rounded text-xs">Preek.docx</code>, atau <strong>Gunakan terjemahan untuk liturgi</strong> untuk langsung digunakan.'],
+       notes:[{type:'blue',text:'💡 Membutuhkan GEMINI_API_KEY di server. Hubungi administrator jika terjemahan tidak berfungsi.'}],
+       screenshot:'Panel biru terjemahan setelah unggah khotbah'},
+      {id:'meded',num:'4',title:'Buletin Pengumuman',color:'bg-gkin-green',
+       intro:'Buat buletin pengumuman mingguan sebagai dokumen Word.',
+       steps:['Buka <strong>Pengumuman</strong> dari beranda. Halaman akan otomatis memuat konten untuk minggu mendatang.',
+              'Periksa dan sesuaikan kolom teks jika perlu.',
+              'Klik <strong>Buat</strong>. Buletin akan diunduh sebagai <code class="bg-gray-100 px-1 rounded text-xs">.docx</code>.'],
+       screenshot:'Halaman Pengumuman'},
+      {id:'preekbev',num:'5',title:'Konfirmasi Khotbah',color:'bg-gkin-green',
+       intro:'Kirim e-mail konfirmasi kepada pendeta dengan semua detail ibadah.',
+       steps:['Buka <strong>Konfirmasi Khotbah</strong> dari beranda. Pilih tanggal ibadah.',
+              'Periksa data yang sudah diisi dan sesuaikan jika perlu.',
+              'Klik <strong>Kirim konfirmasi</strong>. E-mail akan dikirim ke pendeta.'],
+       screenshot:'Formulir Konfirmasi Khotbah'},
+      {id:'mailing',num:'6',title:'Mailing List / Kampanye E-mail',color:'bg-gkin-green',
+       intro:'Kirim e-mail liturgi mingguan ke mailing list melalui Sender.net.',
+       steps:['Buka <strong>Mailing List</strong>. Pilih kampanye yang ada atau buat yang baru.',
+              'Unggah file liturgi (opsional). Isi subjek dan teks e-mail.',
+              'Klik <strong>Kirim kampanye</strong>. E-mail akan dikirim melalui Sender.net.'],
+       screenshot:'Halaman kampanye Mailing List'},
+      {id:'taal',num:'7',title:'Ganti Bahasa',color:'bg-gkin-green',
+       intro:'Aplikasi mendukung <strong>Belanda (NL)</strong>, <strong>Indonesia (ID)</strong>, dan <strong>Inggris (EN)</strong>.',
+       steps:['Klik tombol <code class="bg-gray-100 px-1 rounded text-xs">NL</code>, <code class="bg-gray-100 px-1 rounded text-xs">ID</code>, atau <code class="bg-gray-100 px-1 rounded text-xs">EN</code> di kanan atas untuk mengganti bahasa. Preferensi disimpan di browser.',
+              'Di setiap halaman tersedia tombol <strong>?</strong> di sebelah pilihan bahasa untuk langsung membuka panduan ini.']},
+      {id:'faq',num:'8',title:'Tips & Pertanyaan Umum',color:'bg-gkin-green',
+       faqs:[
+         {q:'❓ Terjemahan tidak berfungsi / menampilkan error',a:'Periksa apakah <code class="bg-gray-100 px-1 rounded text-xs">GEMINI_API_KEY</code> sudah diatur di server. Pastikan juga akun Google Gemini memiliki saldo yang cukup.'},
+         {q:'❓ File .doc saya tidak dikenali',a:'Aplikasi mendukung .docx dan .doc. Jika .doc tidak berfungsi, simpan sebagai .docx melalui <em>Simpan Sebagai \u2192 Dokumen Word (.docx)</em> di Microsoft Word.'},
+         {q:'❓ Panel biru terjemahan tidak muncul',a:'Panel muncul setelah kamu memilih file. Pastikan file dijatuhkan <em>di dalam</em> kotak unggah.'},
+         {q:'❓ Bagaimana cara mengetahui file mana yang ada di Dropbox?',a:'Opsi "Gunakan file minggu ini" secara otomatis mengambil file terbaru dari folder kerja Dropbox yang sudah dikonfigurasi.'},
+         {q:'❓ File yang dibuat tidak terunduh',a:'Periksa apakah browser mengizinkan unduhan otomatis. Di Chrome: klik gembok di bilah alamat \u2192 <em>Pengaturan situs \u2192 Izinkan unduhan</em>.'}]}
+    ]
+  },
+  en: {
+    subtitle:'User Guide', back:'Back to home', toc:'Table of Contents', footer:'User Guide',
+    sections:[
+      {id:'login',num:'1',title:'Login',color:'bg-gkin-green',
+       intro:'The app is password-protected. You need login credentials from the administrator.',
+       steps:['Go to the app URL (e.g. <code class="bg-gray-100 px-1 rounded text-xs">https://railway.gkin-amstelveen.top</code>)',
+              'You will be automatically redirected to the <strong>login page</strong>. Enter your username and password.',
+              'Click <strong>Login</strong>. You will be redirected to the home page.'],
+       notes:[{type:'amber',text:'💡 The session stays active while your browser is open. When closed, you need to log in again.'}],
+       screenshot:'Login page'},
+      {id:'home',num:'2',title:'Home \u2013 Tools Overview',color:'bg-gkin-green',
+       intro:'After logging in you will see the home page with all available tools and the duty roster.',
+       cards:[{icon:'📅',title:'Duty Roster',text:'View the weekly roster: preacher, OvD, beamer, music, etc. Choose a date from the dropdown.'},
+              {icon:'📖',title:'Liturgy',text:'Generate liturgy documents (congregation, music team) and beamer PPT for the Sunday service.'},
+              {icon:'📄',title:'Announcements',text:'Generate the weekly announcements bulletin as a Word document.'},
+              {icon:'✉️',title:'Sermon Confirmation',text:'Send a confirmation e-mail to the preacher with service details.'},
+              {icon:'📧',title:'Mailing List',text:'Create and send an e-mail campaign via Sender.net with liturgy files attached.'}],
+       screenshot:'Home page with all tools'},
+      {id:'liturgie',num:'3',title:'Liturgy Generator',color:'bg-gkin-green',
+       intro:'Generate liturgy documents for the Sunday service based on an Excel file and optionally a Preek.docx.',
+       substeps:[
+         {heading:'Step 1 \u2013 Choose Excel file',items:['<strong>Use current week file</strong> \u2014 automatically loads <code class="bg-gray-100 px-1 rounded text-xs">Main Liturgy file.xlsx</code> from Dropbox.','<strong>Upload own file</strong> \u2014 drag an <code class="bg-gray-100 px-1 rounded text-xs">.xlsx</code> to the box or click to browse.']},
+         {heading:'Step 2 \u2013 Auto-update (optional)',items:['Check <strong>"Auto-update"</strong> to fill the liturgy with the latest data. Click <strong>"View changes"</strong> to review before applying.']},
+         {heading:'Step 3 \u2013 Choose Preek.docx (optional)',items:['<strong>Use current week file</strong> \u2014 automatically loads <code class="bg-gray-100 px-1 rounded text-xs">Preek.docx</code> from Dropbox.','<strong>Upload own file</strong> \u2014 drag or select a <code class="bg-gray-100 px-1 rounded text-xs">.docx</code> or <code class="bg-gray-100 px-1 rounded text-xs">.doc</code> file.']},
+         {heading:'Step 4 \u2013 Select files & generate',items:['Check which files you want: <strong>Liturgy A</strong> (congregation), <strong>Liturgy B</strong> (music team), <strong>Beamer PPT</strong>.','Click the green <strong>Generate</strong> button. Files download automatically.']}],
+       screenshot:'Liturgy Generator page'},
+      {id:'preek',num:'3a',title:'Translate Sermon (NL \u2194 ID)',color:'bg-blue-500',
+       intro:'After uploading a sermon file, a blue panel appears automatically. Works for <code class="bg-gray-100 px-1 rounded text-xs">.docx</code> and <code class="bg-gray-100 px-1 rounded text-xs">.doc</code>.',
+       steps:['Upload a sermon file (drag &amp; drop or click). The blue panel appears immediately.',
+              'Click <strong>Yes, translate (NL\u2194ID)</strong> to start AI translation, or <strong>No</strong> to skip.',
+              'Wait for the translation (max ~1 minute for long sermons). A spinner shows progress.',
+              'Click <strong>Download translation</strong> to save as <code class="bg-gray-100 px-1 rounded text-xs">Preek.docx</code>, or <strong>Use translation for liturgy</strong> to use it directly.'],
+       notes:[{type:'blue',text:'💡 Requires GEMINI_API_KEY on the server. Contact the administrator if translation does not work.'}],
+       screenshot:'Blue translation panel after sermon upload'},
+      {id:'meded',num:'4',title:'Announcements Bulletin',color:'bg-gkin-green',
+       intro:'Generate the weekly announcements bulletin as a Word document.',
+       steps:['Go to <strong>Announcements</strong> from the home page. Content for the coming week loads automatically.',
+              'Review and adjust text fields where needed.',
+              'Click <strong>Generate</strong>. The bulletin downloads as a <code class="bg-gray-100 px-1 rounded text-xs">.docx</code> file.'],
+       screenshot:'Announcements page'},
+      {id:'preekbev',num:'5',title:'Sermon Confirmation',color:'bg-gkin-green',
+       intro:'Send a confirmation e-mail to the preacher with all service details.',
+       steps:['Go to <strong>Sermon Confirmation</strong> from the home page. Select the service date.',
+              'Check the pre-filled details and adjust if needed.',
+              'Click <strong>Send confirmation</strong>. The e-mail is sent to the preacher.'],
+       screenshot:'Sermon confirmation form'},
+      {id:'mailing',num:'6',title:'Mailing List / E-mail Campaign',color:'bg-gkin-green',
+       intro:'Send the weekly liturgy e-mail to the mailing list via Sender.net.',
+       steps:['Go to <strong>Mailing List</strong>. Choose an existing campaign or create a new one.',
+              'Upload liturgy files (optional). Fill in the subject and e-mail text.',
+              'Click <strong>Send campaign</strong>. The e-mail is sent via Sender.net.'],
+       screenshot:'Mailing List campaign page'},
+      {id:'taal',num:'7',title:'Switch Language',color:'bg-gkin-green',
+       intro:'The app supports <strong>Dutch (NL)</strong>, <strong>Indonesian (ID)</strong> and <strong>English (EN)</strong>.',
+       steps:['Click <code class="bg-gray-100 px-1 rounded text-xs">NL</code>, <code class="bg-gray-100 px-1 rounded text-xs">ID</code> or <code class="bg-gray-100 px-1 rounded text-xs">EN</code> in the top-right header. Your preference is saved in the browser.',
+              'A <strong>?</strong> help button is available next to the language selector on every page.']},
+      {id:'faq',num:'8',title:'Tips & FAQ',color:'bg-gkin-green',
+       faqs:[
+         {q:'❓ Translation does not work / shows an error',a:'Check that <code class="bg-gray-100 px-1 rounded text-xs">GEMINI_API_KEY</code> is set on the server. Also ensure your Google Gemini account has sufficient credit.'},
+         {q:'❓ My .doc file is not recognised',a:'The app supports both .docx and .doc. If .doc does not work, re-save as .docx via <em>Save As \u2192 Word Document (.docx)</em> in Microsoft Word.'},
+         {q:'❓ The blue translation panel does not appear',a:'The panel appears only after you select a file. Make sure you drop the file <em>inside</em> the upload box.'},
+         {q:'❓ How do I know which file is in Dropbox?',a:'The "Use current week file" option automatically fetches the most recent file from the configured Dropbox working folder.'},
+         {q:'❓ Generated files are not downloading',a:'Check that your browser allows automatic downloads. In Chrome: padlock in address bar \u2192 <em>Site settings \u2192 Allow downloads</em>.'}]}
+    ]
+  }
+};
 
-        <!-- TOC -->
-        <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-5 mb-8">
-            <h2 class="text-base font-semibold text-gray-800 mb-3">📋 Inhoudsopgave</h2>
-            <ol class="space-y-1 text-sm text-gkin-green">
-                <li><a href="#inloggen" class="hover:underline">1. Inloggen</a></li>
-                <li><a href="#home" class="hover:underline">2. Home – overzicht tools</a></li>
-                <li><a href="#liturgie" class="hover:underline">3. Liturgie Generator</a></li>
-                <li><a href="#preek-vertaling" class="hover:underline">&nbsp;&nbsp;&nbsp;3a. Preek vertalen (NL↔ID)</a></li>
-                <li><a href="#mededelingen" class="hover:underline">4. Mededelingen Bulletin</a></li>
-                <li><a href="#preekbevestiging" class="hover:underline">5. Preekbevestiging</a></li>
-                <li><a href="#mailing" class="hover:underline">6. Mailing List / E-mailcampagne</a></li>
-                <li><a href="#taal" class="hover:underline">7. Taal wisselen</a></li>
-                <li><a href="#tips" class="hover:underline">8. Tips &amp; veelgestelde vragen</a></li>
-            </ol>
-        </div>
+function badge(num,color){return '<div class="w-8 h-8 rounded-full '+color+' text-white flex items-center justify-center text-sm font-bold shrink-0">'+num+'</div>';}
+function stepBadge(lbl,c){c=c||'bg-green-100 text-gkin-green';return '<div class="min-w-[1.75rem] h-7 rounded-full '+c+' text-xs font-bold flex items-center justify-center shrink-0 px-1">'+lbl+'</div>';}
+function ssBox(lbl){return '<div class="ss-box mt-3"><div><div class="text-2xl mb-1">📸</div><div>'+lbl+'</div><div class="text-gray-300 mt-1" style="font-size:.65rem">Add screenshot here</div></div></div>';}
 
-        <!-- ══════════════════════════════════════════ -->
-        <!-- 1. INLOGGEN -->
-        <!-- ══════════════════════════════════════════ -->
-        <section id="inloggen" class="mb-10">
-            <div class="flex items-center gap-3 mb-4">
-                <div class="w-8 h-8 rounded-full bg-gkin-green text-white flex items-center justify-center text-sm font-bold shrink-0">1</div>
-                <h2 class="text-xl font-bold text-gray-800">Inloggen</h2>
-            </div>
-            <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-5 space-y-4">
-                <p class="text-sm text-gray-600">De app is beveiligd met een wachtwoord. Je hebt een gebruikersnaam en wachtwoord nodig van de beheerder.</p>
+function renderSection(s){
+  var html='<section id="'+s.id+'" class="mb-10"><div class="flex items-center gap-3 mb-4">'+badge(s.num,s.color)+'<h2 class="text-xl font-bold text-gray-800">'+s.title+'</h2></div><div class="bg-white border border-gray-200 rounded-xl shadow-sm p-5 space-y-4">';
+  if(s.intro) html+='<p class="text-sm text-gray-600">'+s.intro+'</p>';
+  if(s.steps) s.steps.forEach(function(step,i){html+='<div class="flex gap-3">'+stepBadge(i+1)+'<p class="text-sm text-gray-700">'+step+'</p></div>';});
+  if(s.substeps) s.substeps.forEach(function(sub){
+    html+='<h3 class="text-sm font-semibold text-gray-700 border-b border-gray-100 pb-1">'+sub.heading+'</h3>';
+    sub.items.forEach(function(item,i){html+='<div class="flex gap-3">'+stepBadge(String.fromCharCode(65+i))+'<div class="text-sm text-gray-700">'+item+'</div></div>';});
+  });
+  if(s.cards){html+='<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">';s.cards.forEach(function(c){html+='<div class="border border-gray-100 rounded-lg p-3 bg-gray-50"><p class="text-xs font-semibold text-gkin-green mb-1">'+c.icon+' '+c.title+'</p><p class="text-xs text-gray-600">'+c.text+'</p></div>';});html+='</div>';}
+  if(s.faqs) s.faqs.forEach(function(faq,i){var bdr=i<s.faqs.length-1?'border-b border-gray-100 pb-4':'';html+='<div class="'+bdr+'"><p class="text-sm font-semibold text-gray-800 mb-1">'+faq.q+'</p><p class="text-sm text-gray-600">'+faq.a+'</p></div>';});
+  if(s.notes) s.notes.forEach(function(n){var cls=n.type==='amber'?'bg-amber-50 border-amber-200 text-amber-800':'bg-blue-50 border-blue-200 text-blue-800';html+='<div class="'+cls+' border rounded-lg p-3 text-xs">'+n.text+'</div>';});
+  if(s.screenshot) html+=ssBox(s.screenshot);
+  html+='</div></section>';
+  return html;
+}
 
-                <div class="flex gap-3">
-                    <div class="step-badge rounded-full bg-green-100 text-gkin-green text-xs font-bold flex items-center justify-center shrink-0">1</div>
-                    <p class="text-sm text-gray-700">Ga naar de app-URL (bijv. <code class="bg-gray-100 px-1 rounded text-xs">https://gkin-amstelveen.up.railway.app</code>)</p>
-                </div>
-                <div class="flex gap-3">
-                    <div class="step-badge rounded-full bg-green-100 text-gkin-green text-xs font-bold flex items-center justify-center shrink-0">2</div>
-                    <p class="text-sm text-gray-700">Je wordt automatisch doorgestuurd naar de <strong>inlogpagina</strong>. Vul je gebruikersnaam en wachtwoord in.</p>
-                </div>
-                <div class="flex gap-3">
-                    <div class="step-badge rounded-full bg-green-100 text-gkin-green text-xs font-bold flex items-center justify-center shrink-0">3</div>
-                    <p class="text-sm text-gray-700">Klik op <strong>Inloggen</strong>. Je wordt doorgestuurd naar de homepagina.</p>
-                </div>
+function renderHelp(lang){
+  var d=HELP[lang]||HELP.nl;
+  document.getElementById('hdr-sub').textContent=d.subtitle;
+  document.getElementById('back-lbl').textContent=d.back;
+  document.getElementById('footer-lbl').textContent=d.footer;
+  document.getElementById('toc-title').textContent='\uD83D\uDCCB '+d.toc;
+  document.getElementById('toc-list').innerHTML=d.sections.map(function(s){return '<li><a href="#'+s.id+'" class="hover:underline">'+s.num+'. '+s.title+'</a></li>';}).join('');
+  document.getElementById('help-content').innerHTML=d.sections.map(renderSection).join('');
+  document.querySelectorAll('.lang-btn').forEach(function(btn){
+    var active=btn.dataset.lang===lang;
+    btn.className='lang-btn text-xs px-2 py-1 rounded '+(active?'bg-white text-gkin-green font-semibold':'text-white');
+  });
+}
 
-                <div class="screenshot-box border border-dashed border-gray-300 rounded-lg h-36 flex items-center justify-center text-xs text-gray-400">
-                    📸 Screenshot: inlogpagina
-                </div>
-
-                <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800">
-                    💡 De sessie blijft actief zolang je browser open is. Bij het sluiten moet je opnieuw inloggen.
-                </div>
-            </div>
-        </section>
-
-        <!-- ══════════════════════════════════════════ -->
-        <!-- 2. HOME -->
-        <!-- ══════════════════════════════════════════ -->
-        <section id="home" class="mb-10">
-            <div class="flex items-center gap-3 mb-4">
-                <div class="w-8 h-8 rounded-full bg-gkin-green text-white flex items-center justify-center text-sm font-bold shrink-0">2</div>
-                <h2 class="text-xl font-bold text-gray-800">Home – Overzicht tools</h2>
-            </div>
-            <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-5 space-y-4">
-                <p class="text-sm text-gray-600">Na het inloggen zie je de homepagina met alle beschikbare tools en het takenrooster.</p>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div class="border border-gray-100 rounded-lg p-3 bg-gray-50">
-                        <p class="text-xs font-semibold text-gkin-green mb-1">📅 Takenrooster</p>
-                        <p class="text-xs text-gray-600">Bekijk het wekelijkse rooster: wie is predikant, OvD, beamer, muziek, enz. Kies een datum uit het dropdown-menu.</p>
-                    </div>
-                    <div class="border border-gray-100 rounded-lg p-3 bg-gray-50">
-                        <p class="text-xs font-semibold text-gkin-green mb-1">📖 Liturgie</p>
-                        <p class="text-xs text-gray-600">Genereer liturgiedocumenten (gemeente, muziekteam) en beamer PPT voor de zondagsdienst.</p>
-                    </div>
-                    <div class="border border-gray-100 rounded-lg p-3 bg-gray-50">
-                        <p class="text-xs font-semibold text-gkin-green mb-1">📄 Mededelingen</p>
-                        <p class="text-xs text-gray-600">Genereer het wekelijkse mededelingen-bulletin als Word-document.</p>
-                    </div>
-                    <div class="border border-gray-100 rounded-lg p-3 bg-gray-50">
-                        <p class="text-xs font-semibold text-gkin-green mb-1">✉️ Preekbevestiging</p>
-                        <p class="text-xs text-gray-600">Stuur een bevestigings-e-mail naar de predikant met dienst-details.</p>
-                    </div>
-                    <div class="border border-gray-100 rounded-lg p-3 bg-gray-50">
-                        <p class="text-xs font-semibold text-gkin-green mb-1">📧 Mailing List</p>
-                        <p class="text-xs text-gray-600">Maak en verstuur een e-mailcampagne via Sender.net met liturgie-bestanden als bijlage.</p>
-                    </div>
-                </div>
-
-                <div class="screenshot-box border border-dashed border-gray-300 rounded-lg h-40 flex items-center justify-center text-xs text-gray-400">
-                    📸 Screenshot: homepagina met tools
-                </div>
-            </div>
-        </section>
-
-        <!-- ══════════════════════════════════════════ -->
-        <!-- 3. LITURGIE -->
-        <!-- ══════════════════════════════════════════ -->
-        <section id="liturgie" class="mb-10">
-            <div class="flex items-center gap-3 mb-4">
-                <div class="w-8 h-8 rounded-full bg-gkin-green text-white flex items-center justify-center text-sm font-bold shrink-0">3</div>
-                <h2 class="text-xl font-bold text-gray-800">Liturgie Generator</h2>
-            </div>
-            <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-5 space-y-5">
-                <p class="text-sm text-gray-600">Hiermee genereer je de liturgiedocumenten voor de zondagsdienst op basis van een Excel-bestand en optioneel een Preek.docx.</p>
-
-                <h3 class="text-sm font-semibold text-gray-700 border-b border-gray-100 pb-1">Stap 1 – Excel-bestand kiezen</h3>
-                <div class="space-y-3">
-                    <div class="flex gap-3">
-                        <div class="step-badge rounded-full bg-green-100 text-gkin-green text-xs font-bold flex items-center justify-center shrink-0">A</div>
-                        <div class="text-sm text-gray-700">
-                            <strong>Gebruik huidige week bestand</strong> — klik op deze optie om automatisch het <code class="bg-gray-100 px-1 rounded text-xs">Main Liturgy file.xlsx</code> uit de werkomap (Dropbox) te laden. Geen upload nodig.
-                        </div>
-                    </div>
-                    <div class="flex gap-3">
-                        <div class="step-badge rounded-full bg-green-100 text-gkin-green text-xs font-bold flex items-center justify-center shrink-0">B</div>
-                        <div class="text-sm text-gray-700">
-                            <strong>Upload eigen bestand</strong> — sleep een <code class="bg-gray-100 px-1 rounded text-xs">.xlsx</code> bestand naar het vak, of klik om te bladeren. Het bestandsnaam verschijnt met een groen vinkje als het geselecteerd is.
-                        </div>
-                    </div>
-                </div>
-
-                <h3 class="text-sm font-semibold text-gray-700 border-b border-gray-100 pb-1">Stap 2 – Automatisch bijwerken (optioneel)</h3>
-                <div class="flex gap-3">
-                    <div class="step-badge rounded-full bg-blue-100 text-blue-700 text-xs font-bold flex items-center justify-center shrink-0">✓</div>
-                    <p class="text-sm text-gray-700">Zet het vinkje <strong>"Automatisch bijwerken"</strong> aan om de liturgie te vullen met de meest recente gegevens: takenrooster, Tikkie QR, dankoffer-vers, enz. Klik daarna op <strong>"Wijzigingen bekijken"</strong> om de voorgestelde wijzigingen te controleren voor ze worden toegepast.</p>
-                </div>
-
-                <div class="screenshot-box border border-dashed border-gray-300 rounded-lg h-36 flex items-center justify-center text-xs text-gray-400">
-                    📸 Screenshot: Excel sectie met auto-update vinkje
-                </div>
-
-                <h3 class="text-sm font-semibold text-gray-700 border-b border-gray-100 pb-1">Stap 3 – Preek.docx kiezen (optioneel)</h3>
-                <div class="space-y-3">
-                    <div class="flex gap-3">
-                        <div class="step-badge rounded-full bg-green-100 text-gkin-green text-xs font-bold flex items-center justify-center shrink-0">A</div>
-                        <p class="text-sm text-gray-700"><strong>Gebruik huidige week bestand</strong> — laad automatisch <code class="bg-gray-100 px-1 rounded text-xs">Preek.docx</code> uit Dropbox.</p>
-                    </div>
-                    <div class="flex gap-3">
-                        <div class="step-badge rounded-full bg-green-100 text-gkin-green text-xs font-bold flex items-center justify-center shrink-0">B</div>
-                        <p class="text-sm text-gray-700"><strong>Upload eigen bestand</strong> — sleep of selecteer een <code class="bg-gray-100 px-1 rounded text-xs">.docx</code> of <code class="bg-gray-100 px-1 rounded text-xs">.doc</code> bestand.</p>
-                    </div>
-                </div>
-
-                <h3 class="text-sm font-semibold text-gray-700 border-b border-gray-100 pb-1">Stap 4 – Te genereren bestanden kiezen</h3>
-                <div class="space-y-2">
-                    <div class="flex gap-3 items-start">
-                        <div class="step-badge rounded-full bg-green-100 text-gkin-green text-xs font-bold flex items-center justify-center shrink-0">☑</div>
-                        <p class="text-sm text-gray-700"><strong>Liturgie A</strong> — liturgiedocument voor de gemeente</p>
-                    </div>
-                    <div class="flex gap-3 items-start">
-                        <div class="step-badge rounded-full bg-green-100 text-gkin-green text-xs font-bold flex items-center justify-center shrink-0">☑</div>
-                        <p class="text-sm text-gray-700"><strong>Liturgie B</strong> — document voor het muziekteam</p>
-                    </div>
-                    <div class="flex gap-3 items-start">
-                        <div class="step-badge rounded-full bg-green-100 text-gkin-green text-xs font-bold flex items-center justify-center shrink-0">☑</div>
-                        <p class="text-sm text-gray-700"><strong>Beamer PPT</strong> — PowerPoint presentatie voor de beamer</p>
-                    </div>
-                </div>
-
-                <h3 class="text-sm font-semibold text-gray-700 border-b border-gray-100 pb-1">Stap 5 – Genereren</h3>
-                <div class="flex gap-3">
-                    <div class="step-badge rounded-full bg-green-100 text-gkin-green text-xs font-bold flex items-center justify-center shrink-0">▶</div>
-                    <p class="text-sm text-gray-700">Klik op de groene <strong>"Genereer"</strong> knop. De geselecteerde bestanden worden automatisch gedownload naar je computer. Een groene melding bevestigt hoeveel bestanden zijn gegenereerd.</p>
-                </div>
-
-                <div class="screenshot-box border border-dashed border-gray-300 rounded-lg h-36 flex items-center justify-center text-xs text-gray-400">
-                    📸 Screenshot: uitvoer-sectie met Genereer knop
-                </div>
-            </div>
-        </section>
-
-        <!-- ══════════════════════════════════════════ -->
-        <!-- 3a. PREEK VERTALING -->
-        <!-- ══════════════════════════════════════════ -->
-        <section id="preek-vertaling" class="mb-10">
-            <div class="flex items-center gap-3 mb-4">
-                <div class="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-bold shrink-0">3a</div>
-                <h2 class="text-xl font-bold text-gray-800">Preek vertalen (NL ↔ ID)</h2>
-            </div>
-            <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-5 space-y-4">
-                <p class="text-sm text-gray-600">Na het uploaden van een preek-bestand verschijnt automatisch een <strong>blauw paneel</strong> met de vraag of je de preek wilt vertalen. Dit werkt voor zowel <code class="bg-gray-100 px-1 rounded text-xs">.docx</code> als <code class="bg-gray-100 px-1 rounded text-xs">.doc</code> bestanden.</p>
-
-                <div class="flex gap-3">
-                    <div class="step-badge rounded-full bg-blue-100 text-blue-700 text-xs font-bold flex items-center justify-center shrink-0">1</div>
-                    <p class="text-sm text-gray-700">Upload een preek-bestand (drag &amp; drop of klik om te selecteren). Het blauwe paneel verschijnt direct.</p>
-                </div>
-                <div class="flex gap-3">
-                    <div class="step-badge rounded-full bg-blue-100 text-blue-700 text-xs font-bold flex items-center justify-center shrink-0">2</div>
-                    <div class="text-sm text-gray-700">
-                        Kies een optie:
-                        <ul class="mt-1 ml-3 space-y-1 list-disc text-gray-600">
-                            <li><strong>Ja, vertaal preek (NL↔ID)</strong> — stuurt de tekst naar AI voor vertaling. Nederlands wordt Indonesisch en andersom.</li>
-                            <li><strong>Nee, preek is al vertaald</strong> — sla de vertaalstap over en gebruik het bestand direct.</li>
-                        </ul>
-                    </div>
-                </div>
-                <div class="flex gap-3">
-                    <div class="step-badge rounded-full bg-blue-100 text-blue-700 text-xs font-bold flex items-center justify-center shrink-0">3</div>
-                    <p class="text-sm text-gray-700">Wacht op de vertaling (kan tot een minuut duren bij lange preken). Een spinner geeft de voortgang aan.</p>
-                </div>
-                <div class="flex gap-3">
-                    <div class="step-badge rounded-full bg-blue-100 text-blue-700 text-xs font-bold flex items-center justify-center shrink-0">4</div>
-                    <div class="text-sm text-gray-700">
-                        Na de vertaling verschijnen twee knoppen:
-                        <ul class="mt-1 ml-3 space-y-1 list-disc text-gray-600">
-                            <li><strong>Download vertaling</strong> — sla de vertaalde preek op als <code class="bg-gray-100 px-1 rounded text-xs">Preek.docx</code></li>
-                            <li><strong>Gebruik vertaling voor liturgie</strong> — gebruik de vertaalde versie direct in de liturgie-generator</li>
-                        </ul>
-                    </div>
-                </div>
-
-                <div class="screenshot-box border border-dashed border-gray-300 rounded-lg h-40 flex items-center justify-center text-xs text-gray-400">
-                    📸 Screenshot: blauw vertaalpaneel met opties
-                </div>
-
-                <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-800">
-                    💡 De vertaling gebruikt Google Gemini AI. Vereist een <strong>GEMINI_API_KEY</strong> in de server-omgeving. Neem contact op met de beheerder als de vertaling niet werkt.
-                </div>
-            </div>
-        </section>
-
-        <!-- ══════════════════════════════════════════ -->
-        <!-- 4. MEDEDELINGEN -->
-        <!-- ══════════════════════════════════════════ -->
-        <section id="mededelingen" class="mb-10">
-            <div class="flex items-center gap-3 mb-4">
-                <div class="w-8 h-8 rounded-full bg-gkin-green text-white flex items-center justify-center text-sm font-bold shrink-0">4</div>
-                <h2 class="text-xl font-bold text-gray-800">Mededelingen Bulletin</h2>
-            </div>
-            <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-5 space-y-4">
-                <p class="text-sm text-gray-600">Genereer het wekelijkse mededelingen-bulletin als Word-document, gevuld met automatisch opgehaalde content.</p>
-
-                <div class="flex gap-3">
-                    <div class="step-badge rounded-full bg-green-100 text-gkin-green text-xs font-bold flex items-center justify-center shrink-0">1</div>
-                    <p class="text-sm text-gray-700">Ga naar <strong>Mededelingen</strong> via de home. De pagina laadt automatisch de inhoud voor de komende week.</p>
-                </div>
-                <div class="flex gap-3">
-                    <div class="step-badge rounded-full bg-green-100 text-gkin-green text-xs font-bold flex items-center justify-center shrink-0">2</div>
-                    <p class="text-sm text-gray-700">Controleer en pas de tekstvelden aan waar nodig (bijdragen, aankondigingen, enz.).</p>
-                </div>
-                <div class="flex gap-3">
-                    <div class="step-badge rounded-full bg-green-100 text-gkin-green text-xs font-bold flex items-center justify-center shrink-0">3</div>
-                    <p class="text-sm text-gray-700">Klik op <strong>Genereer</strong>. Het bulletin wordt gedownload als <code class="bg-gray-100 px-1 rounded text-xs">.docx</code> bestand.</p>
-                </div>
-
-                <div class="screenshot-box border border-dashed border-gray-300 rounded-lg h-36 flex items-center justify-center text-xs text-gray-400">
-                    📸 Screenshot: mededelingen-pagina
-                </div>
-            </div>
-        </section>
-
-        <!-- ══════════════════════════════════════════ -->
-        <!-- 5. PREEKBEVESTIGING -->
-        <!-- ══════════════════════════════════════════ -->
-        <section id="preekbevestiging" class="mb-10">
-            <div class="flex items-center gap-3 mb-4">
-                <div class="w-8 h-8 rounded-full bg-gkin-green text-white flex items-center justify-center text-sm font-bold shrink-0">5</div>
-                <h2 class="text-xl font-bold text-gray-800">Preekbevestiging</h2>
-            </div>
-            <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-5 space-y-4">
-                <p class="text-sm text-gray-600">Stuur een bevestigings-e-mail naar de predikant met alle dienst-gegevens.</p>
-
-                <div class="flex gap-3">
-                    <div class="step-badge rounded-full bg-green-100 text-gkin-green text-xs font-bold flex items-center justify-center shrink-0">1</div>
-                    <p class="text-sm text-gray-700">Ga naar <strong>Preekbevestiging</strong>. Selecteer de datum van de dienst.</p>
-                </div>
-                <div class="flex gap-3">
-                    <div class="step-badge rounded-full bg-green-100 text-gkin-green text-xs font-bold flex items-center justify-center shrink-0">2</div>
-                    <p class="text-sm text-gray-700">Controleer de vooraf ingevulde gegevens (predikant, thema, schriftlezing, enz.) en pas aan indien nodig.</p>
-                </div>
-                <div class="flex gap-3">
-                    <div class="step-badge rounded-full bg-green-100 text-gkin-green text-xs font-bold flex items-center justify-center shrink-0">3</div>
-                    <p class="text-sm text-gray-700">Klik op <strong>Verstuur bevestiging</strong>. De e-mail wordt verzonden naar het e-mailadres van de predikant.</p>
-                </div>
-
-                <div class="screenshot-box border border-dashed border-gray-300 rounded-lg h-36 flex items-center justify-center text-xs text-gray-400">
-                    📸 Screenshot: preekbevestiging formulier
-                </div>
-            </div>
-        </section>
-
-        <!-- ══════════════════════════════════════════ -->
-        <!-- 6. MAILING LIST -->
-        <!-- ══════════════════════════════════════════ -->
-        <section id="mailing" class="mb-10">
-            <div class="flex items-center gap-3 mb-4">
-                <div class="w-8 h-8 rounded-full bg-gkin-green text-white flex items-center justify-center text-sm font-bold shrink-0">6</div>
-                <h2 class="text-xl font-bold text-gray-800">Mailing List / E-mailcampagne</h2>
-            </div>
-            <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-5 space-y-4">
-                <p class="text-sm text-gray-600">Verstuur de weeklyse liturgie-e-mail naar de mailinglijst via Sender.net.</p>
-
-                <div class="flex gap-3">
-                    <div class="step-badge rounded-full bg-green-100 text-gkin-green text-xs font-bold flex items-center justify-center shrink-0">1</div>
-                    <p class="text-sm text-gray-700">Ga naar <strong>Mailing List</strong>. Kies een bestaande campagne of maak een nieuwe aan.</p>
-                </div>
-                <div class="flex gap-3">
-                    <div class="step-badge rounded-full bg-green-100 text-gkin-green text-xs font-bold flex items-center justify-center shrink-0">2</div>
-                    <p class="text-sm text-gray-700">Upload de liturgie-bestanden (optioneel). Vul het onderwerp en de e-mailtekst in.</p>
-                </div>
-                <div class="flex gap-3">
-                    <div class="step-badge rounded-full bg-green-100 text-gkin-green text-xs font-bold flex items-center justify-center shrink-0">3</div>
-                    <p class="text-sm text-gray-700">Klik op <strong>Verstuur campagne</strong>. De e-mail wordt via Sender.net verstuurd naar alle ontvangers in de lijst.</p>
-                </div>
-
-                <div class="screenshot-box border border-dashed border-gray-300 rounded-lg h-36 flex items-center justify-center text-xs text-gray-400">
-                    📸 Screenshot: campagne-pagina
-                </div>
-            </div>
-        </section>
-
-        <!-- ══════════════════════════════════════════ -->
-        <!-- 7. TAAL WISSELEN -->
-        <!-- ══════════════════════════════════════════ -->
-        <section id="taal" class="mb-10">
-            <div class="flex items-center gap-3 mb-4">
-                <div class="w-8 h-8 rounded-full bg-gkin-green text-white flex items-center justify-center text-sm font-bold shrink-0">7</div>
-                <h2 class="text-xl font-bold text-gray-800">Taal wisselen</h2>
-            </div>
-            <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-5 space-y-4">
-                <p class="text-sm text-gray-600">De app ondersteunt drie talen: <strong>Nederlands (NL)</strong>, <strong>Indonesisch (ID)</strong> en <strong>Engels (EN)</strong>.</p>
-                <div class="flex gap-3">
-                    <div class="step-badge rounded-full bg-green-100 text-gkin-green text-xs font-bold flex items-center justify-center shrink-0">▶</div>
-                    <p class="text-sm text-gray-700">Klik rechtsboven op <code class="bg-gray-100 px-1 rounded text-xs font-mono">NL</code>, <code class="bg-gray-100 px-1 rounded text-xs font-mono">ID</code> of <code class="bg-gray-100 px-1 rounded text-xs font-mono">EN</code> om de taal te wisselen. De voorkeur wordt opgeslagen in de browser.</p>
-                </div>
-                <div class="flex items-center gap-2 bg-gkin-dark rounded-lg p-2 w-fit">
-                    <span class="text-xs px-2 py-1 rounded bg-white text-gkin-green font-semibold">NL</span>
-                    <span class="text-xs px-2 py-1 rounded text-white">ID</span>
-                    <span class="text-xs px-2 py-1 rounded text-white">EN</span>
-                </div>
-                <p class="text-xs text-gray-500">↑ Voorbeeld van de taalknop rechtsboven in de header</p>
-            </div>
-        </section>
-
-        <!-- ══════════════════════════════════════════ -->
-        <!-- 8. TIPS -->
-        <!-- ══════════════════════════════════════════ -->
-        <section id="tips" class="mb-10">
-            <div class="flex items-center gap-3 mb-4">
-                <div class="w-8 h-8 rounded-full bg-gkin-green text-white flex items-center justify-center text-sm font-bold shrink-0">8</div>
-                <h2 class="text-xl font-bold text-gray-800">Tips &amp; Veelgestelde vragen</h2>
-            </div>
-            <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-5 space-y-4">
-
-                <div class="border-b border-gray-100 pb-4">
-                    <p class="text-sm font-semibold text-gray-800 mb-1">❓ De vertaling werkt niet / geeft een foutmelding</p>
-                    <p class="text-sm text-gray-600">Controleer of de <code class="bg-gray-100 px-1 rounded text-xs">GEMINI_API_KEY</code> is ingesteld op de server. Neem contact op met de beheerder. Zorg ook dat je Google Gemini-account voldoende tegoed heeft.</p>
-                </div>
-
-                <div class="border-b border-gray-100 pb-4">
-                    <p class="text-sm font-semibold text-gray-800 mb-1">❓ Mijn .doc bestand wordt niet herkend</p>
-                    <p class="text-sm text-gray-600">De app ondersteunt zowel <code class="bg-gray-100 px-1 rounded text-xs">.docx</code> als <code class="bg-gray-100 px-1 rounded text-xs">.doc</code> bestanden. Als een .doc bestand niet werkt, sla het dan eerst op als .docx in Microsoft Word via <em>Opslaan als → Word-document (.docx)</em>.</p>
-                </div>
-
-                <div class="border-b border-gray-100 pb-4">
-                    <p class="text-sm font-semibold text-gray-800 mb-1">❓ Het blauwe vertaalpaneel verschijnt niet</p>
-                    <p class="text-sm text-gray-600">Het paneel verschijnt pas nadat je een bestand hebt geselecteerd via drag &amp; drop of klikken. Zorg dat je het bestand loslaat <em>in</em> het upload-vak (groen gearceerde zone).</p>
-                </div>
-
-                <div class="border-b border-gray-100 pb-4">
-                    <p class="text-sm font-semibold text-gray-800 mb-1">❓ Hoe weet ik welk bestand in Dropbox staat?</p>
-                    <p class="text-sm text-gray-600">Bij "Gebruik huidige week bestand" haalt de app automatisch het meest recente bestand op uit de geconfigureerde Dropbox-werkomap. Controleer bij twijfel in Dropbox zelf.</p>
-                </div>
-
-                <div>
-                    <p class="text-sm font-semibold text-gray-800 mb-1">❓ De gegenereerde bestanden worden niet gedownload</p>
-                    <p class="text-sm text-gray-600">Controleer of je browser pop-ups en automatische downloads toestaat voor deze site. In Chrome: klik op het slotje in de adresbalk → <em>Site-instellingen → Downloads toestaan</em>.</p>
-                </div>
-
-            </div>
-        </section>
-
-        <!-- Footer -->
-        <div class="text-center text-xs text-gray-400 mt-4 mb-8">
-            GKIN Amstelveen App &mdash; Gebruikershandleiding &mdash; Versie mei 2026
-        </div>
-
-    </main>
-
-    <script>
-    (function() {
-        // Language switcher (same pattern as other pages)
-        const LANG_KEY = 'gkin_lang';
-        function getLang() { return localStorage.getItem(LANG_KEY) || 'nl'; }
-        function setLang(lang) {
-            localStorage.setItem(LANG_KEY, lang);
-            document.querySelectorAll('.lang-btn').forEach(btn => {
-                btn.classList.toggle('bg-white', btn.dataset.lang === lang);
-                btn.classList.toggle('text-gkin-green', btn.dataset.lang === lang);
-                btn.classList.toggle('font-semibold', btn.dataset.lang === lang);
-                btn.classList.toggle('text-white', btn.dataset.lang !== lang);
-            });
-            if (window.GKIN_I18N && window.GKIN_I18N[lang]) {
-                document.querySelectorAll('[data-i18n]').forEach(el => {
-                    const key = el.getAttribute('data-i18n');
-                    if (window.GKIN_I18N[lang][key]) el.textContent = window.GKIN_I18N[lang][key];
-                });
-            }
-        }
-        document.querySelectorAll('.lang-btn').forEach(btn => {
-            btn.addEventListener('click', () => setLang(btn.dataset.lang));
-        });
-        setLang(getLang());
-    })();
-    </script>
-
+(function(){
+  var LANG_KEY='gkin_lang';
+  var cur=localStorage.getItem(LANG_KEY)||'nl';
+  renderHelp(cur);
+  document.querySelectorAll('.lang-btn').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      cur=btn.dataset.lang;
+      localStorage.setItem(LANG_KEY,cur);
+      renderHelp(cur);
+    });
+  });
+})();
+</script>
 </body>
 </html>
