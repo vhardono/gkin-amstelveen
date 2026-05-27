@@ -3059,22 +3059,22 @@ def _read_doc_paragraphs(file_bytes, filename=''):
 
 @app.route('/liturgie/translate-preek', methods=['POST'])
 def translate_preek():
-    """Translate an uploaded DOCX preek file using OpenAI (NL↔ID) and return translated DOCX."""
+    """Translate an uploaded DOCX preek file using Gemini (NL↔ID) and return translated DOCX."""
     import os, io
     from docx import Document as DocxDocument
-    from docx.oxml.ns import qn
 
-    api_key = os.environ.get('OPENAI_API_KEY', '')
+    api_key = os.environ.get('GEMINI_API_KEY', '')
     if not api_key:
-        return jsonify({'error': 'OpenAI API key niet geconfigureerd (OPENAI_API_KEY).'}), 500
+        return jsonify({'error': 'Gemini API key niet geconfigureerd (GEMINI_API_KEY).'}), 500
 
     file = request.files.get('preek_file')
     if not file:
         return jsonify({'error': 'Geen bestand geüpload.'}), 400
 
     try:
-        from openai import OpenAI
-        client = OpenAI(api_key=api_key)
+        import google.generativeai as genai
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel('gemini-1.5-flash')
 
         file_bytes = file.read()
         paragraphs, orig_doc = _read_doc_paragraphs(file_bytes, file.filename or '')
@@ -3096,17 +3096,8 @@ def translate_preek():
         )
 
         source_text = '\n|||'.join(paragraphs)
-
-        response = client.chat.completions.create(
-            model='gpt-4o',
-            messages=[
-                {'role': 'system', 'content': SYSTEM_PROMPT},
-                {'role': 'user', 'content': source_text}
-            ],
-            temperature=0.2
-        )
-
-        translated_text = response.choices[0].message.content.strip()
+        response = model.generate_content(SYSTEM_PROMPT + '\n\n' + source_text)
+        translated_text = response.text.strip()
         translated_paragraphs = translated_text.split('|||')
 
         # Build new DOCX with translated paragraphs, preserving styles where possible
@@ -3149,21 +3140,22 @@ def translate_preek():
 
 @app.route('/liturgie/translate-preek-inline', methods=['POST'])
 def translate_preek_inline():
-    """Translate an uploaded DOCX and return translated text for use in liturgie generator."""
+    """Translate an uploaded DOCX using Gemini and return base64 DOCX for use in liturgie generator."""
     import os, io
     from docx import Document as DocxDocument
 
-    api_key = os.environ.get('OPENAI_API_KEY', '')
+    api_key = os.environ.get('GEMINI_API_KEY', '')
     if not api_key:
-        return jsonify({'error': 'OpenAI API key niet geconfigureerd (OPENAI_API_KEY).'}), 500
+        return jsonify({'error': 'Gemini API key niet geconfigureerd (GEMINI_API_KEY).'}), 500
 
     file = request.files.get('preek_file')
     if not file:
         return jsonify({'error': 'Geen bestand geüpload.'}), 400
 
     try:
-        from openai import OpenAI
-        client = OpenAI(api_key=api_key)
+        import google.generativeai as genai
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel('gemini-1.5-flash')
 
         file_bytes = file.read()
         paragraphs, orig_doc = _read_doc_paragraphs(file_bytes, file.filename or '')
@@ -3185,17 +3177,8 @@ def translate_preek_inline():
         )
 
         source_text = '\n|||'.join(paragraphs)
-
-        response = client.chat.completions.create(
-            model='gpt-4o',
-            messages=[
-                {'role': 'system', 'content': SYSTEM_PROMPT},
-                {'role': 'user', 'content': source_text}
-            ],
-            temperature=0.2
-        )
-
-        translated_text = response.choices[0].message.content.strip()
+        response = model.generate_content(SYSTEM_PROMPT + '\n\n' + source_text)
+        translated_text = response.text.strip()
         translated_paragraphs = translated_text.split('|||')
 
         # Build translated DOCX preserving original styles where possible
