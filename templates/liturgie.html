@@ -386,7 +386,7 @@
 
     <script>
         // --- Drop zone helper ---
-        function setupDropZone(dropId, inputId, nameId, nameTextId, clearId, accept) {
+        function setupDropZone(dropId, inputId, nameId, nameTextId, clearId, accept, onFileSelected) {
             const drop = document.getElementById(dropId);
             const input = document.getElementById(inputId);
             const nameBox = document.getElementById(nameId);
@@ -405,11 +405,15 @@
                     dt.items.add(e.dataTransfer.files[0]);
                     input.files = dt.files;
                     showName(e.dataTransfer.files[0].name);
+                    if (onFileSelected) onFileSelected(e.dataTransfer.files[0]);
                 }
             });
 
             input.addEventListener('change', () => {
-                if (input.files.length) showName(input.files[0].name);
+                if (input.files.length) {
+                    showName(input.files[0].name);
+                    if (onFileSelected) onFileSelected(input.files[0]);
+                }
             });
 
             clearBtn.addEventListener('click', (e) => {
@@ -417,6 +421,7 @@
                 input.value = '';
                 nameBox.classList.add('hidden');
                 drop.classList.remove('hidden');
+                if (onFileSelected) onFileSelected(null);
                 // Also clear auto-fill alerts if this is the Excel file
                 if (input.id === 'excelFile') {
                     hideAutoFillAlerts();
@@ -451,18 +456,14 @@
             });
         });
 
-        setupDropZone('excelDrop', 'excelFile', 'excelName', 'excelNameText', 'excelClear');
-        setupDropZone('preekDrop', 'preekFile', 'preekName', 'preekNameText', 'preekClear');
-
-        // --- Preek translation panel ---
+        // Translation state (declared here so the preekDrop callback below can reference them)
         let _translatedDocxB64 = null;
         let _translatedFilename = null;
 
-        // Show translation panel when a preek file is selected
-        document.getElementById('preekFile').addEventListener('change', () => {
-            const hasFile = document.getElementById('preekFile').files.length > 0;
+        setupDropZone('excelDrop', 'excelFile', 'excelName', 'excelNameText', 'excelClear');
+        setupDropZone('preekDrop', 'preekFile', 'preekName', 'preekNameText', 'preekClear', '.docx', (file) => {
             const panel = document.getElementById('preekTranslatePanel');
-            if (hasFile) {
+            if (file) {
                 panel.classList.remove('hidden');
                 document.getElementById('translateResult').classList.add('hidden');
                 document.getElementById('translateError').classList.add('hidden');
@@ -474,9 +475,10 @@
             }
         });
 
-        // Also hide panel when preekClear is clicked
+        // --- Preek translation panel ---
+        // Panel visibility is now handled via the setupDropZone callback above.
+        // Also reset state when clear is clicked (supplement the callback).
         document.getElementById('preekClear').addEventListener('click', () => {
-            document.getElementById('preekTranslatePanel').classList.add('hidden');
             _translatedDocxB64 = null;
             _translatedFilename = null;
         });
