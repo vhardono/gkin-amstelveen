@@ -3036,6 +3036,189 @@ def campaign_pm_create():
 # Health Check
 # =============================================================================
 
+@app.route('/liturgie/translate-preek', methods=['POST'])
+def translate_preek():
+    """Translate an uploaded DOCX preek file using OpenAI (NL↔ID) and return translated DOCX."""
+    import os, io
+    from docx import Document as DocxDocument
+    from docx.oxml.ns import qn
+
+    api_key = os.environ.get('OPENAI_API_KEY', '')
+    if not api_key:
+        return jsonify({'error': 'OpenAI API key niet geconfigureerd (OPENAI_API_KEY).'}), 500
+
+    file = request.files.get('preek_file')
+    if not file:
+        return jsonify({'error': 'Geen bestand geüpload.'}), 400
+
+    try:
+        from openai import OpenAI
+        client = OpenAI(api_key=api_key)
+
+        file_bytes = file.read()
+        doc = DocxDocument(io.BytesIO(file_bytes))
+
+        SYSTEM_PROMPT = (
+            "Je bent een zorgvuldige kerkelijke vertaalassistent.\n\n"
+            "Ik upload een document met een preek in het Indonesisch of Nederlands.\n\n"
+            "Als de tekst Indonesisch is, vertaal je naar het Nederlands.\n"
+            "Als de tekst Nederlands is, vertaal je naar het Indonesisch.\n\n"
+            "Vertaal de volledige tekst, paragraaf voor paragraaf.\n\n"
+            "Neem alle inhoud mee: niets samenvatten, niets weglaten.\n\n"
+            "Behoud alle structuur exact zoals in het origineel:\n"
+            "kopjes\nalinea's\nnummering\nopsommingen\nwitregels\n\n"
+            "Gebruik passende kerkelijke en liturgische terminologie in de doeltaal.\n\n"
+            "Houd de toon respectvol en inhoudelijk trouw aan de brontekst.\n\n"
+            "Lever de vertaling terug als platte tekst met dezelfde structuur, "
+            "gebruik '|||' als scheidingsteken tussen paragrafen.\n\n"
+            "Voeg geen toelichting, samenvatting of commentaar toe — alleen de volledige vertaalde tekst."
+        )
+
+        # Extract paragraphs preserving structure
+        paragraphs = [p.text for p in doc.paragraphs]
+        source_text = '\n|||'.join(paragraphs)
+
+        response = client.chat.completions.create(
+            model='gpt-4o',
+            messages=[
+                {'role': 'system', 'content': SYSTEM_PROMPT},
+                {'role': 'user', 'content': source_text}
+            ],
+            temperature=0.2
+        )
+
+        translated_text = response.choices[0].message.content.strip()
+        translated_paragraphs = translated_text.split('|||')
+
+        # Build new DOCX with translated paragraphs, preserving styles
+        orig_doc = DocxDocument(io.BytesIO(file_bytes))
+        new_doc = DocxDocument()
+        for i, para in enumerate(orig_doc.paragraphs):
+            new_para = new_doc.add_paragraph()
+            new_para.style = para.style
+            # Copy paragraph formatting
+            new_para.paragraph_format.alignment = para.paragraph_format.alignment
+            translated = translated_paragraphs[i].strip() if i < len(translated_paragraphs) else ''
+            run = new_para.add_run(translated)
+            # Copy run formatting from first run if available
+            if para.runs:
+                orig_run = para.runs[0]
+                run.bold = orig_run.bold
+                run.italic = orig_run.italic
+                run.font.size = orig_run.font.size
+                run.font.name = orig_run.font.name
+
+        out = io.BytesIO()
+        new_doc.save(out)
+        out.seek(0)
+
+        orig_name = file.filename or 'preek.docx'
+        base = orig_name.rsplit('.', 1)[0]
+        translated_filename = f'{base}_vertaald.docx'
+
+        return send_file(
+            out,
+            mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            as_attachment=True,
+            download_name=translated_filename
+        )
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': f'Vertaling mislukt: {str(e)}'}), 500
+
+
+@app.route('/liturgie/translate-preek-inline', methods=['POST'])
+def translate_preek_inline():
+    """Translate an uploaded DOCX and return translated text for use in liturgie generator."""
+    import os, io
+    from docx import Document as DocxDocument
+
+    api_key = os.environ.get('OPENAI_API_KEY', '')
+    if not api_key:
+        return jsonify({'error': 'OpenAI API key niet geconfigureerd (OPENAI_API_KEY).'}), 500
+
+    file = request.files.get('preek_file')
+    if not file:
+        return jsonify({'error': 'Geen bestand geüpload.'}), 400
+
+    try:
+        from openai import OpenAI
+        client = OpenAI(api_key=api_key)
+
+        file_bytes = file.read()
+        doc = DocxDocument(io.BytesIO(file_bytes))
+
+        SYSTEM_PROMPT = (
+            "Je bent een zorgvuldige kerkelijke vertaalassistent.\n\n"
+            "Ik upload een document met een preek in het Indonesisch of Nederlands.\n\n"
+            "Als de tekst Indonesisch is, vertaal je naar het Nederlands.\n"
+            "Als de tekst Nederlands is, vertaal je naar het Indonesisch.\n\n"
+            "Vertaal de volledige tekst, paragraaf voor paragraaf.\n\n"
+            "Neem alle inhoud mee: niets samenvatten, niets weglaten.\n\n"
+            "Behoud alle structuur exact zoals in het origineel:\n"
+            "kopjes\nalinea's\nnummering\nopsommingen\nwitregels\n\n"
+            "Gebruik passende kerkelijke en liturgische terminologie in de doeltaal.\n\n"
+            "Houd de toon respectvol en inhoudelijk trouw aan de brontekst.\n\n"
+            "Lever de vertaling terug als platte tekst met dezelfde structuur, "
+            "gebruik '|||' als scheidingsteken tussen paragrafen.\n\n"
+            "Voeg geen toelichting, samenvatting of commentaar toe — alleen de volledige vertaalde tekst."
+        )
+
+        paragraphs = [p.text for p in doc.paragraphs]
+        source_text = '\n|||'.join(paragraphs)
+
+        response = client.chat.completions.create(
+            model='gpt-4o',
+            messages=[
+                {'role': 'system', 'content': SYSTEM_PROMPT},
+                {'role': 'user', 'content': source_text}
+            ],
+            temperature=0.2
+        )
+
+        translated_text = response.choices[0].message.content.strip()
+        translated_paragraphs = translated_text.split('|||')
+
+        # Build translated DOCX preserving original styles
+        orig_doc = DocxDocument(io.BytesIO(file_bytes))
+        new_doc = DocxDocument()
+        for i, para in enumerate(orig_doc.paragraphs):
+            new_para = new_doc.add_paragraph()
+            new_para.style = para.style
+            new_para.paragraph_format.alignment = para.paragraph_format.alignment
+            translated = translated_paragraphs[i].strip() if i < len(translated_paragraphs) else ''
+            run = new_para.add_run(translated)
+            if para.runs:
+                orig_run = para.runs[0]
+                run.bold = orig_run.bold
+                run.italic = orig_run.italic
+                run.font.size = orig_run.font.size
+                run.font.name = orig_run.font.name
+
+        out = io.BytesIO()
+        new_doc.save(out)
+        out.seek(0)
+
+        import base64
+        docx_b64 = base64.b64encode(out.getvalue()).decode('utf-8')
+
+        orig_name = file.filename or 'preek.docx'
+        base_name = orig_name.rsplit('.', 1)[0]
+
+        return jsonify({
+            'success': True,
+            'translated_filename': f'{base_name}_vertaald.docx',
+            'docx_b64': docx_b64
+        })
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': f'Vertaling mislukt: {str(e)}'}), 500
+
+
 @app.route('/health')
 def health_check():
     return jsonify({'status': 'ok', 'timestamp': datetime.now().isoformat()})
