@@ -3072,9 +3072,8 @@ def translate_preek():
         return jsonify({'error': 'Geen bestand geüpload.'}), 400
 
     try:
-        import google.generativeai as genai
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-1.5-flash-latest')
+        from google import genai
+        client = genai.Client(api_key=api_key)
 
         file_bytes = file.read()
         paragraphs, orig_doc = _read_doc_paragraphs(file_bytes, file.filename or '')
@@ -3096,7 +3095,7 @@ def translate_preek():
         )
 
         source_text = '\n|||'.join(paragraphs)
-        response = model.generate_content(SYSTEM_PROMPT + '\n\n' + source_text)
+        response = client.models.generate_content(model='gemini-2.5-flash-lite', contents=SYSTEM_PROMPT + '\n\n' + source_text)
         translated_text = response.text.strip()
         translated_paragraphs = translated_text.split('|||')
 
@@ -3153,9 +3152,8 @@ def translate_preek_inline():
         return jsonify({'error': 'Geen bestand geüpload.'}), 400
 
     try:
-        import google.generativeai as genai
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-1.5-flash-latest')
+        from google import genai
+        client = genai.Client(api_key=api_key)
 
         file_bytes = file.read()
         paragraphs, orig_doc = _read_doc_paragraphs(file_bytes, file.filename or '')
@@ -3177,7 +3175,7 @@ def translate_preek_inline():
         )
 
         source_text = '\n|||'.join(paragraphs)
-        response = model.generate_content(SYSTEM_PROMPT + '\n\n' + source_text)
+        response = client.models.generate_content(model='gemini-2.5-flash-lite', contents=SYSTEM_PROMPT + '\n\n' + source_text)
         translated_text = response.text.strip()
         translated_paragraphs = translated_text.split('|||')
 
