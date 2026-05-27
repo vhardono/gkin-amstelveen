@@ -48,9 +48,11 @@ var HELP = {
     sections:[
       {id:'login',num:'1',title:'Inloggen',color:'bg-gkin-green',
        intro:'De app is gedeeltelijk beveiligd. De Liturgie Generator is vrij toegankelijk voor iedereen. Preekbevestiging, Mededelingen en Mailing List zijn beveiligd met een wachtwoord.',
-       steps:['Ga naar <a href="https://gkin-amstelveen.top" class="text-gkin-green underline">https://gkin-amstelveen.top</a> (backup: <code class="bg-gray-100 px-1 rounded text-xs">https://railway.gkin-amstelveen.top</code> — alleen gebruiken als de hoofdURL niet bereikbaar is)',
-              'Je wordt automatisch doorgestuurd naar de <strong>inlogpagina</strong> als je een beveiligde pagina opent. Vul het wachtwoord in van de beheerder.',
-              'Klik op <strong>Inloggen</strong>. Je wordt doorgestuurd naar de homepagina.'],
+       steps:[
+         {text:'Ga naar <a href="https://gkin-amstelveen.top" class="text-gkin-green underline">https://gkin-amstelveen.top</a> (backup: <code class="bg-gray-100 px-1 rounded text-xs">https://railway.gkin-amstelveen.top</code> — alleen gebruiken als de hoofdURL niet bereikbaar is)'},
+         {text:'Je wordt automatisch doorgestuurd naar de <strong>inlogpagina</strong> als je een beveiligde pagina opent. Vul het wachtwoord in van de beheerder.'},
+         {text:'Klik op <strong>Inloggen</strong>. Je wordt doorgestuurd naar de homepagina.'}
+       ],
        notes:[{type:'amber',text:'💡 De sessie blijft actief zolang je browser open is. Bij het sluiten moet je opnieuw inloggen.'},
               {type:'blue',text:'🔓 Liturgie Generator: vrij toegankelijk — geen login nodig.<br>🔒 Preekbevestiging, Mededelingen, Mailing List: wachtwoord vereist.'}],
 },
@@ -144,9 +146,11 @@ var HELP = {
     sections:[
       {id:'login',num:'1',title:'Masuk (Login)',color:'bg-gkin-green',
        intro:'Aplikasi ini sebagian dilindungi. Generator Liturgi dapat diakses oleh semua orang. Konfirmasi Khotbah, Pengumuman, dan Mailing List dilindungi kata sandi.',
-       steps:['Buka <a href="https://gkin-amstelveen.top" class="text-gkin-green underline">https://gkin-amstelveen.top</a> (cadangan: <code class="bg-gray-100 px-1 rounded text-xs">https://railway.gkin-amstelveen.top</code> — hanya digunakan jika URL utama tidak dapat diakses)',
-              'Kamu akan otomatis diarahkan ke <strong>halaman login</strong> jika membuka halaman yang dilindungi. Masukkan kata sandi dari administrator.',
-              'Klik <strong>Login</strong>. Kamu akan diarahkan ke halaman beranda.'],
+       steps:[
+         {text:'Buka <a href="https://gkin-amstelveen.top" class="text-gkin-green underline">https://gkin-amstelveen.top</a> (cadangan: <code class="bg-gray-100 px-1 rounded text-xs">https://railway.gkin-amstelveen.top</code> — hanya digunakan jika URL utama tidak dapat diakses)'},
+         {text:'Kamu akan otomatis diarahkan ke <strong>halaman login</strong> jika membuka halaman yang dilindungi. Masukkan kata sandi dari administrator.'},
+         {text:'Klik <strong>Login</strong>. Kamu akan diarahkan ke halaman beranda.'}
+       ],
        notes:[{type:'amber',text:'💡 Sesi tetap aktif selama browser terbuka. Jika ditutup, kamu perlu login kembali.'},
               {type:'blue',text:'🔓 Generator Liturgi: dapat diakses bebas — tidak perlu login.<br>🔒 Konfirmasi Khotbah, Pengumuman, Mailing List: membutuhkan kata sandi.'}],
 },
@@ -240,9 +244,11 @@ var HELP = {
     sections:[
       {id:'login',num:'1',title:'Login',color:'bg-gkin-green',
        intro:'The app is partially protected. The Liturgy Generator is freely accessible to everyone. Sermon Confirmation, Announcements and Mailing List are password-protected.',
-       steps:['Go to <a href="https://gkin-amstelveen.top" class="text-gkin-green underline">https://gkin-amstelveen.top</a> (backup: <code class="bg-gray-100 px-1 rounded text-xs">https://railway.gkin-amstelveen.top</code> — only use this if the main URL is unreachable)',
-              'You will be automatically redirected to the <strong>login page</strong> when opening a protected page. Enter the password from the administrator.',
-              'Click <strong>Login</strong>. You will be redirected to the home page.'],
+       steps:[
+         {text:'Go to <a href="https://gkin-amstelveen.top" class="text-gkin-green underline">https://gkin-amstelveen.top</a> (backup: <code class="bg-gray-100 px-1 rounded text-xs">https://railway.gkin-amstelveen.top</code> — only use this if the main URL is unreachable)'},
+         {text:'You will be automatically redirected to the <strong>login page</strong> when opening a protected page. Enter the password from the administrator.'},
+         {text:'Click <strong>Login</strong>. You will be redirected to the home page.'}
+       ],
        notes:[{type:'amber',text:'💡 The session stays active while your browser is open. When closed, you need to log in again.'},
               {type:'blue',text:'🔓 Liturgy Generator: freely accessible \u2014 no login required.<br>🔒 Sermon Confirmation, Announcements, Mailing List: password required.'}],
 },
@@ -340,7 +346,7 @@ function renderSection(s){
   if(s.intro) html+='<p class="text-sm text-gray-600">'+s.intro+'</p>';
   if(s.steps) s.steps.forEach(function(step,i){
     html+='<div class="flex gap-3 items-start">'+stepBadge(i+1)+'<div class="text-sm text-gray-700">'+step.text+'</div></div>';
-    if(step.sources) html+='<div class="ml-10 grid grid-cols-1 gap-1.5">'+step.sources.map(function(src){return '<div class="flex gap-2 items-start bg-gray-50 border border-gray-100 rounded-lg px-3 py-2"><span class="text-gkin-green font-bold text-xs shrink-0 mt-0.5">▸</span><div class="text-xs text-gray-700">'+src+'</div></div>';}).join('')+'</div>';
+    if(step.sources) html+='<ul class="ml-10 space-y-1 list-disc list-outside text-sm text-gray-700 pl-4">'+step.sources.map(function(src){return '<li>'+src+'</li>';}).join('')+'</ul>';
   });
   if(s.substeps) s.substeps.forEach(function(sub){
     html+='<h3 class="text-sm font-semibold text-gray-700 border-b border-gray-100 pb-1">'+sub.heading+'</h3>';
