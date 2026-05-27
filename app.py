@@ -3132,9 +3132,7 @@ def translate_preek():
         new_doc.save(out)
         out.seek(0)
 
-        orig_name = file.filename or 'preek.docx'
-        base = orig_name.rsplit('.', 1)[0]
-        translated_filename = f'{base}_vertaald.docx'
+        translated_filename = 'Preek.docx'
 
         return send_file(
             out,
@@ -3226,12 +3224,9 @@ def translate_preek_inline():
         import base64
         docx_b64 = base64.b64encode(out.getvalue()).decode('utf-8')
 
-        orig_name = file.filename or 'preek.docx'
-        base_name = orig_name.rsplit('.', 1)[0]
-
         return jsonify({
             'success': True,
-            'translated_filename': f'{base_name}_vertaald.docx',
+            'translated_filename': 'Preek.docx',
             'docx_b64': docx_b64
         })
 
