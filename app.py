@@ -3176,6 +3176,12 @@ def translate_preek_inline():
         return jsonify({'error': f'Vertaling mislukt: {str(e)}'}), 500
 
 
+@app.route('/help')
+@login_required
+def help_page():
+    return render_template('help.html')
+
+
 @app.route('/health')
 def health_check():
     return jsonify({'status': 'ok', 'timestamp': datetime.now().isoformat()})
