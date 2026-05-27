@@ -3195,7 +3195,6 @@ def translate_preek_inline():
 
 
 @app.route('/help')
-@login_required
 def help_page():
     return render_template('help.html')
 
