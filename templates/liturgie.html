@@ -172,18 +172,18 @@
 
                     <!-- Translation options (shown after file selected) -->
                     <div id="preekTranslatePanel" class="hidden mt-3 border border-blue-200 rounded-lg bg-blue-50 p-3">
-                        <p class="text-sm font-medium text-blue-800 mb-2">📄 Wil je de preek eerst vertalen?</p>
+                        <p class="text-sm font-medium text-blue-800 mb-2">📄 <span data-i18n="lit.translate_ask">Wil je de preek eerst vertalen?</span></p>
                         <div class="flex gap-2 flex-wrap">
                             <button type="button" id="btnTranslatePreek"
                                 class="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-1.5">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.128"/>
                                 </svg>
-                                Ja, vertaal preek (NL↔ID)
+                                <span data-i18n="lit.translate_yes">Ja, vertaal preek (NL↔ID)</span>
                             </button>
                             <button type="button" id="btnSkipTranslate"
                                 class="px-3 py-1.5 text-sm bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">
-                                Nee, preek is al vertaald
+                                <span data-i18n="lit.translate_no">Nee, preek is al vertaald</span>
                             </button>
                         </div>
 
@@ -193,26 +193,26 @@
                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
                             </svg>
-                            Bezig met vertalen… Dit kan een minuut duren.
+                            <span data-i18n="lit.translate_busy">Bezig met vertalen… Dit kan een minuut duren.</span>
                         </div>
 
                         <!-- Translation result options -->
                         <div id="translateResult" class="hidden mt-3 border-t border-blue-200 pt-3">
-                            <p class="text-sm font-medium text-green-700 mb-2">✓ Vertaling gereed: <span id="translatedFileName" class="font-normal"></span></p>
+                            <p class="text-sm font-medium text-green-700 mb-2"><span data-i18n="lit.translate_done">✓ Vertaling gereed:</span> <span id="translatedFileName" class="font-normal"></span></p>
                             <div class="flex gap-2 flex-wrap">
                                 <button type="button" id="btnDownloadTranslation"
                                     class="px-3 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition flex items-center gap-1.5">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
                                     </svg>
-                                    Download vertaling
+                                    <span data-i18n="lit.translate_download">Download vertaling</span>
                                 </button>
                                 <button type="button" id="btnUseTranslation"
                                     class="px-3 py-1.5 text-sm bg-gkin-green text-white rounded-lg hover:bg-green-700 transition flex items-center gap-1.5">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                                     </svg>
-                                    Gebruik vertaling voor liturgie
+                                    <span data-i18n="lit.translate_use">Gebruik vertaling voor liturgie</span>
                                 </button>
                             </div>
                         </div>
