@@ -3037,23 +3037,41 @@ def campaign_pm_create():
 # =============================================================================
 
 def _read_doc_paragraphs(file_bytes, filename=''):
-    """Extract paragraph texts from .doc or .docx bytes. Returns list of strings."""
-    import io
+    """Extract paragraph texts from .doc or .docx bytes. Returns list of strings.
+    Strips any existing translation section so only the source language is returned."""
+    import io, re
     from docx import Document as DocxDocument
+
+    # Markers that indicate an existing translation section starts here
+    TRANSLATION_MARKERS = [
+        'terjemahan ke dalam bahasa indonesia',
+        'terjemahan ke dalam bahasa belanda',
+        'terjemahan ke dalam bahasa',
+        'vertaling naar het indonesisch',
+        'vertaling naar het nederlands',
+        'indonesian translation',
+        'dutch translation',
+    ]
+
+    def _trim_to_source(paragraphs):
+        """Remove everything from the first translation-marker paragraph onwards."""
+        for i, text in enumerate(paragraphs):
+            clean = text.strip().lower().lstrip('*_ ')
+            if any(marker in clean for marker in TRANSLATION_MARKERS):
+                return paragraphs[:i]
+        return paragraphs
+
     ext = (filename or '').lower().rsplit('.', 1)[-1]
     try:
         doc = DocxDocument(io.BytesIO(file_bytes))
-        return [p.text for p in doc.paragraphs], doc
+        all_paras = [p.text for p in doc.paragraphs]
+        return _trim_to_source(all_paras), doc
     except Exception:
         if ext == 'doc':
-            # Try extracting raw text from legacy .doc via zipfile fallback
-            # .doc is OLE, not zip — extract plain text by stripping binary
-            import re
             text = file_bytes.decode('latin-1', errors='ignore')
-            # Extract readable ASCII/latin text runs
             runs = re.findall(r'[\x20-\x7e\x80-\xff]{4,}', text)
             paragraphs = [r.strip() for r in runs if r.strip()]
-            return paragraphs, None
+            return _trim_to_source(paragraphs), None
         raise
 
 
