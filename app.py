@@ -3074,7 +3074,7 @@ def translate_preek():
     try:
         import google.generativeai as genai
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-2.0-flash')
 
         file_bytes = file.read()
         paragraphs, orig_doc = _read_doc_paragraphs(file_bytes, file.filename or '')
@@ -3155,7 +3155,7 @@ def translate_preek_inline():
     try:
         import google.generativeai as genai
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-2.0-flash')
 
         file_bytes = file.read()
         paragraphs, orig_doc = _read_doc_paragraphs(file_bytes, file.filename or '')
