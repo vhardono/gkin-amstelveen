@@ -256,6 +256,22 @@ const GKIN_I18N = {
     'lit.litB_hint':          'Muziekteam',
     'lit.litP_hint':          'Beamer presentatie',
     'lit.generate':           'Genereer',
+
+    /* --- Checklist --- */
+    'cl.btn':                 'Checklist',
+    'cl.reset':               'Reset alles',
+    'cl.done':                'Klaar',
+    'cl.sun1':                'Stuur {link} naar de dienstdoende medewerkers',
+    'cl.mon1':                'Stuur vorige week Preek &amp; Mededelingen naar de gemeente via {link}',
+    'cl.thu1':                'Update {link} in Dropbox',
+    'cl.fri1':                'Stuur e-mail naar Scriba voor OLE informatie',
+    'cl.fri2':                'Stuur OLE informatie naar de gemeente via {link}',
+    'cl.fri3':                'Stuur OLE info + OLE Liturgie naar kerkenraad via {link}',
+    'cl.fri4':                'Voeg naam in van overledenen in de {link}',
+    'cl.fri5':                'Voeg Heilig Avondmaal mededeling en extra dia&#39;s in 1 week van tevoren',
+    'cl.sat1':                'Stuur liturgie informatie naar de gemeente via {link}',
+    'cl.sat2':                'Stuur mededelingen naar kerkenraad &amp; beamerteam per {link}',
+    'cl.sat3':                'Stuur mededelingen voorlezen &amp; vertaling naar 1eO en beamer per {link}',
   },
 
   id: {
@@ -515,6 +531,22 @@ const GKIN_I18N = {
     'lit.litB_hint':          'Tim musik',
     'lit.litP_hint':          'Presentasi beamer',
     'lit.generate':           'Buat',
+
+    /* --- Checklist --- */
+    'cl.btn':                 'Daftar Tugas',
+    'cl.reset':               'Reset semua',
+    'cl.done':                'Selesai',
+    'cl.sun1':                'Kirim {link} ke petugas yang bertugas',
+    'cl.mon1':                'Kirim Khotbah &amp; Pengumuman minggu lalu ke jemaat via {link}',
+    'cl.thu1':                'Perbarui {link} di Dropbox',
+    'cl.fri1':                'Kirim email ke Scriba untuk informasi OLE',
+    'cl.fri2':                'Kirim informasi OLE ke jemaat via {link}',
+    'cl.fri3':                'Kirim info OLE + Liturgi OLE ke majelis via {link}',
+    'cl.fri4':                'Masukkan nama almarhum ke dalam {link}',
+    'cl.fri5':                'Masukkan Pengumuman Perjamuan Kudus dan slide tambahan 1 minggu sebelumnya',
+    'cl.sat1':                'Kirim informasi liturgi ke jemaat via {link}',
+    'cl.sat2':                'Kirim pengumuman ke majelis &amp; tim beamer per {link}',
+    'cl.sat3':                'Kirim teks bacaan pengumuman &amp; terjemahan ke 1eO dan beamer per {link}',
   },
 
   en: {
@@ -774,6 +806,22 @@ const GKIN_I18N = {
     'lit.litB_hint':          'Music team',
     'lit.litP_hint':          'Beamer presentation',
     'lit.generate':           'Generate',
+
+    /* --- Checklist --- */
+    'cl.btn':                 'Checklist',
+    'cl.reset':               'Reset all',
+    'cl.done':                'Done',
+    'cl.sun1':                'Send {link} to people on duty',
+    'cl.mon1':                'Send previous week Preek &amp; Mededelingen to congregation via {link}',
+    'cl.thu1':                'Update {link} in Dropbox',
+    'cl.fri1':                'Send email to Scriba for OLE information',
+    'cl.fri2':                'Send OLE Info to congregation via {link}',
+    'cl.fri3':                'Send OLE info + OLE Liturgie to kerkenraad via {link}',
+    'cl.fri4':                'Insert name of people who just passed away in {link}',
+    'cl.fri5':                'Insert Heilig Avondmaal Mededeling and additional slides 1 week before',
+    'cl.sat1':                'Send liturgie information to gemeente via {link}',
+    'cl.sat2':                'Send mededelingen to kerkenraad &amp; beamer team by {link}',
+    'cl.sat3':                'Send mededelingen voorlezen &amp; translation to 1eO and beamer by {link}',
   },
 };
 
@@ -816,7 +864,8 @@ window.GKIN_I18N = GKIN_I18N;
       const suffix = opt.dataset.suffix || '';
       // For campaign page the suffix may contain "(afgelopen)" — replace with translated version
       let translatedSuffix = suffix.replace('(afgelopen)', pastLbl).replace('(lalu)', pastLbl).replace('(past)', pastLbl);
-      opt.textContent = `${days[di]} ${dn} ${months[mi]} ${yr}${translatedSuffix}`;
+      const dienst = opt.dataset.dienst || '';
+      opt.textContent = `${days[di]} ${dn} ${months[mi]} ${yr}${translatedSuffix}${dienst ? ' \u2014 '+dienst : ''}`;
     });
 
     // Re-apply outlook login button text based on connected state

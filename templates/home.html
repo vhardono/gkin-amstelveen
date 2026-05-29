@@ -89,8 +89,8 @@
     </div>
     <div id="checklistBody" class="overflow-y-auto px-5 py-4 space-y-4 flex-1"></div>
     <div class="px-5 py-3 border-t border-gray-100 flex justify-between items-center">
-      <button onclick="resetChecklist()" class="text-xs text-gray-400 hover:text-red-500 transition">Reset all</button>
-      <button onclick="closeChecklistModal()" class="text-sm font-medium text-white bg-gkin-green rounded-lg px-4 py-2 hover:bg-gkin-dark transition">Done</button>
+      <button onclick="resetChecklist()" class="text-xs text-gray-400 hover:text-red-500 transition" data-i18n="cl.reset">Reset all</button>
+      <button onclick="closeChecklistModal()" class="text-sm font-medium text-white bg-gkin-green rounded-lg px-4 py-2 hover:bg-gkin-dark transition" data-i18n="cl.done">Done</button>
     </div>
   </div>
 </div>
@@ -201,6 +201,12 @@
     const _L = 'text-gkin-green underline hover:text-gkin-dark cursor-pointer';
     const _DBX1 = 'https://view.officeapps.live.com/op/view.aspx?src='+encodeURIComponent('https://www.dropbox.com/scl/fi/51nfkxqdaciu51yd1ba9l/Overzicht-Kerkbezoekers-2026-AM.xlsx?rlkey=btpeg8qjoauew7tcelkai0z37&dl=1');
     const _DBX2 = 'https://view.officeapps.live.com/op/view.aspx?src='+encodeURIComponent('https://www.dropbox.com/scl/fi/4umk664eaq3tzlj1b9poe/20260114_Dienst-ter-Nagedachtenis-2026_Namenlijst_v1.xlsx?rlkey=28rl2ntjujy13i2vzdl4sq6ch&dl=1');
+    function _t(key, link) {
+      const lang = (window.localStorage && localStorage.getItem('gkin_lang')) || 'nl';
+      const dict = (window.GKIN_I18N && (window.GKIN_I18N[lang] || window.GKIN_I18N['nl'])) || {};
+      const str = dict[key] || key;
+      return link ? str.replace('{link}', link) : str;
+    }
     let _serviceDate = '';
     function _dbx(url,label){return '<a class="'+_L+'" onclick="gateDropbox(\''+url+'\')">'+label+'</a>';}
     function _int(url,label){const u=_serviceDate?url+'?date='+_serviceDate:url;return '<a href="'+u+'" class="'+_L+'" target="_blank" rel="noopener">'+label+'</a>';}
@@ -211,25 +217,25 @@
     // dayOffset: -14 means 2 Sundays before (H-14); -7+day means the week before the service.
     // text is a function so links are built at render time with current _serviceDate
       { day: 0, label: 'Sunday',    dayOffset: -14, items: [
-        { id:'sun1', def:false, text:function(){ return 'Send '+_int('/preekbevestiging','Preekbevestiging')+' to people on duty'; } },
+        { id:'sun1', def:false, text:function(){ return _t('cl.sun1', _int('/preekbevestiging','Preekbevestiging')); } },
       ]},
       { day: 1, label: 'Monday',    dayOffset: -7, items: [
-        { id:'mon1', def:false, text:function(){ return 'Send previous week Preek &amp; Mededelingen to congregation via '+_intPrev('/campaign/pm','Mailing List'); } },
+        { id:'mon1', def:false, text:function(){ return _t('cl.mon1', _intPrev('/campaign/pm','Mailing List')); } },
       ]},
       { day: 4, label: 'Thursday',  dayOffset: -7, items: [
-        { id:'thu1', def:false, text:function(){ return 'Update '+_dbx(_DBX1,'Overzicht kerkbezoekers')+' in Dropbox'; } },
+        { id:'thu1', def:false, text:function(){ return _t('cl.thu1', _dbx(_DBX1,'Overzicht kerkbezoekers')); } },
       ]},
       { day: 5, label: 'Friday',    dayOffset: -7, items: [
-        { id:'fri1', def:false, oleOnly:true, text:'Send email to Scriba for OLE information' },
-        { id:'fri2', def:false, text:function(){ return 'Send OLE Info to congregation via '+_int('/campaign/ole','Mailing List'); } },
-        { id:'fri3', def:false, text:function(){ return 'Send OLE info + OLE Liturgie to kerkenraad via '+_wa('WhatsApp'); } },
-        { id:'fri4', def:false, text:function(){ return 'Insert name of people who just passed away in '+_dbx(_DBX2,'Remembrance list'); } },
-        { id:'fri5', def:false, haOnly:true, text:'Insert Heiling Avondmal Mededeling and additional slides 1 week before' },
+        { id:'fri1', def:false, oleOnly:true, text:function(){ return _t('cl.fri1'); } },
+        { id:'fri2', def:false, text:function(){ return _t('cl.fri2', _int('/campaign/ole','Mailing List')); } },
+        { id:'fri3', def:false, text:function(){ return _t('cl.fri3', _wa('WhatsApp')); } },
+        { id:'fri4', def:false, text:function(){ return _t('cl.fri4', _dbx(_DBX2,'Remembrance list')); } },
+        { id:'fri5', def:false, haOnly:true, text:function(){ return _t('cl.fri5'); } },
       ]},
       { day: 6, label: 'Saturday',  dayOffset: -7, items: [
-        { id:'sat1', def:false, text:function(){ return 'Send liturgie information to gemeente via '+_wa('WhatsApp'); } },
-        { id:'sat2', def:false, text:function(){ return 'Send mededelingen to kerkenraad &amp; beamer team by '+_wa('email'); } },
-        { id:'sat3', def:false, text:function(){ return 'Send mededelingen voorlezen &amp; translation to 1eO and beamer by '+_wa('email'); } },
+        { id:'sat1', def:false, text:function(){ return _t('cl.sat1', _wa('WhatsApp')); } },
+        { id:'sat2', def:false, text:function(){ return _t('cl.sat2', _wa('email')); } },
+        { id:'sat3', def:false, text:function(){ return _t('cl.sat3', _wa('email')); } },
       ]},
     ];
 
@@ -424,6 +430,7 @@
             opt.dataset.suffix = '';
             const dateLabel = `${DAYS[d.day_idx]} ${d.day_num} ${MONTHS[d.month_idx]} ${d.year}`;
             const dienst = _dienstShort(d.opmerking);
+            opt.dataset.dienst = dienst;
             opt.textContent = dienst ? `${dateLabel} — ${dienst}` : dateLabel;
             sel.appendChild(opt);
         });
