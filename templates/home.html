@@ -206,6 +206,7 @@
     function _dbx(url,label){return '<a class="'+_L+'" onclick="gateDropbox(\''+url+'\')">'+label+'</a>';}
     function _int(url,label){const u=_serviceDate?url+'?date='+_serviceDate:url;return '<a href="'+u+'" class="'+_L+'" target="_blank" rel="noopener">'+label+'</a>';}
     function _wa(label){const u='/mededelingen'+(_serviceDate?'?date='+_serviceDate:'')+'#wa-section';return '<a href="'+u+'" class="'+_L+'" target="_blank" rel="noopener">'+label+'</a>';}
+    function _intPrev(url,label){const prev=_serviceDate?_addDays(_serviceDate,-7):'';const u=prev?url+'?date='+prev:url;return '<a href="'+u+'" class="'+_L+'" target="_blank" rel="noopener">'+label+'</a>';}
     const CHECKLIST = [
     // All days are relative to the selected service Sunday.
     // dayOffset: -14 means 2 Sundays before (H-14); -7+day means the week before the service.
@@ -214,7 +215,7 @@
         { id:'sun1', def:false, text:function(){ return 'Send '+_int('/preekbevestiging','Preekbevestiging')+' to people on duty'; } },
       ]},
       { day: 1, label: 'Monday',    dayOffset: -7, items: [
-        { id:'mon1', def:false, text:function(){ return 'Send Preek &amp; Mededelingen to congregation via '+_int('/campaign/pm','Mailing List'); } },
+        { id:'mon1', def:false, text:function(){ return 'Send previous week Preek &amp; Mededelingen to congregation via '+_intPrev('/campaign/pm','Mailing List'); } },
       ]},
       { day: 4, label: 'Thursday',  dayOffset: -7, items: [
         { id:'thu1', def:false, text:function(){ return 'Update '+_dbx(_DBX1,'Overzicht kerkbezoekers')+' in Dropbox'; } },
