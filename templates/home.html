@@ -60,6 +60,8 @@
             </div>
         </div>
 
+<span id="_checklistTitle" class="hidden"></span>
+
 <!-- Dropbox password gate modal -->
 <div id="dbxPwModal" class="fixed inset-0 z-[60] hidden flex items-center justify-center p-4" style="background:rgba(0,0,0,0.5)">
   <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
@@ -203,23 +205,25 @@
     function _dbx(url,label){return '<a class="'+_L+'" onclick="gateDropbox(\''+url+'\')">'+label+'</a>';}
     function _int(url,label){return '<a href="'+url+'" class="'+_L+'" target="_blank" rel="noopener">'+label+'</a>';}
     const CHECKLIST = [
-      { day: 0, label: 'Sunday', dayOffset: -14, items: [
+    // All days are relative to the selected service Sunday.
+    // dayOffset: -14 means 2 Sundays before (H-14); -7+day means the week before the service.
+      { day: 0, label: 'Sunday',    dayOffset: -14, items: [
         { id:'sun1', def:false, text:'Send '+_int('/preekbevestiging','Preekbevestiging')+' to people on duty' },
       ]},
-      { day: 1, label: 'Monday', items: [
+      { day: 1, label: 'Monday',    dayOffset: -7, items: [
         { id:'mon1', def:false, text:'Send Preek &amp; Mededelingen to congregation via '+_int('/campaign/pm','Mailing List') },
       ]},
-      { day: 4, label: 'Thursday', items: [
+      { day: 4, label: 'Thursday',  dayOffset: -7, items: [
         { id:'thu1', def:false, text:'Update '+_dbx(_DBX1,'Overzicht kerkbezoekers')+' in Dropbox' },
       ]},
-      { day: 5, label: 'Friday', items: [
+      { day: 5, label: 'Friday',    dayOffset: -7, items: [
         { id:'fri1', def:false, text:'Send email to Scriba for OLE information' },
         { id:'fri2', def:false, text:'Send OLE Info to congregation via '+_int('/campaign/ole','Mailing List') },
         { id:'fri3', def:false, text:'Send OLE info + OLE Liturgie to kerkenraad via '+_int('/mededelingen','WhatsApp') },
         { id:'fri4', def:false, text:'Insert name of people who just passed away in '+_dbx(_DBX2,'Remembrance list') },
         { id:'fri5', def:false, text:'Insert Heiling Avondmal Mededeling and additional slides 1 week before' },
       ]},
-      { day: 6, label: 'Saturday', items: [
+      { day: 6, label: 'Saturday',  dayOffset: -7, items: [
         { id:'sat1', def:false, text:'Send liturgie information to gemeente via '+_int('/mededelingen','WhatsApp') },
         { id:'sat2', def:false, text:'Send mededelingen to kerkenraad &amp; beamer team by '+_int('/mededelingen','email') },
         { id:'sat3', def:false, text:'Send mededelingen voorlezen &amp; translation to 1eO and beamer by '+_int('/mededelingen','email') },
@@ -271,11 +275,11 @@
       const saved = JSON.parse(localStorage.getItem(_checklistKey) || '{}');
       const body = document.getElementById('checklistBody');
       const subtitle = document.getElementById('checklistSubtitle');
-      subtitle.textContent = 'Week of ' + _fmtDate(_checklistKey.replace('checklist_',''));
+      subtitle.textContent = document.getElementById('_checklistTitle').dataset.title || '';
       let html = '';
       CHECKLIST.forEach(function(dayObj) {
         if (!dayObj.items.length) return;
-        // date for this day = sunday (H-7) + dayObj.day
+        // date for this day = service Sunday + dayOffset + day
         const sundayStr = _checklistKey.replace('checklist_','');
         const baseOffset = (dayObj.dayOffset !== undefined) ? dayObj.dayOffset : 0;
         const dayDate = _addDays(sundayStr, baseOffset + dayObj.day);
@@ -443,13 +447,15 @@
             detail.innerHTML = html;
             detail.classList.remove('hidden');
 
-            // Show checklist button and set storage key to Sunday H-7
+            // Show checklist button — key is the service Sunday itself
             const sundayStr = entry.value;
             if (sundayStr) {
-                const prevSunday = _addDays(sundayStr, -7);
-                _checklistKey = _storageKey(prevSunday);
+                _checklistKey = _storageKey(sundayStr);
+                // Store title for modal header
+                const titleEl = document.getElementById('_checklistTitle');
+                titleEl.dataset.title = 'Checklist – ' + dienstLabel + ' ' + _fmtDate(sundayStr);
                 document.getElementById('checklistBtnWrap').classList.remove('hidden');
-                _updateOverdueAlert(prevSunday);
+                _updateOverdueAlert(sundayStr);
             }
         });
     })();
