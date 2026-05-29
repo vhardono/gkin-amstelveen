@@ -290,9 +290,11 @@
         html += '<span class="text-xs text-gray-400">' + _fmtDate(dayDate) + '</span>';
         html += '</div>';
         html += '<div class="space-y-2">';
+        const today = new Date(); today.setHours(0,0,0,0);
+        const dayDateObj = new Date(dayDate + 'T00:00:00');
         dayObj.items.forEach(function(item) {
           const checked = (item.id in saved) ? saved[item.id] : item.def;
-          const overdue = !checked && dayDate < new Date(new Date().setHours(0,0,0,0));
+          const overdue = !checked && dayDateObj < today;
           const textCls = checked ? 'line-through text-gray-400' : (overdue ? 'text-red-600 font-medium' : 'text-gray-700');
           html += '<label class="flex items-start gap-3 cursor-pointer'+(overdue?' bg-red-50 -mx-2 px-2 py-1 rounded-lg':'')+'">';
           html += '<input type="checkbox" class="mt-0.5 w-4 h-4 rounded accent-gkin-green shrink-0" '+(checked?'checked':'')+' onchange="toggleItem(\''+item.id+'\',this.checked)" />';
