@@ -436,7 +436,6 @@
     <script>
         const dateData = {{ dates | tojson }};
         const dateSelect = document.getElementById('date');
-        (function(){ const p=new URLSearchParams(location.search).get('date'); if(p&&dateSelect.querySelector('option[value="'+p+'"]')){dateSelect.value=p;dateSelect.dispatchEvent(new Event('change'));}})();
         const infoCard = document.getElementById('infoCard');
         const infoPred = document.getElementById('infoPred');
         const infoOvd = document.getElementById('infoOvd');
@@ -1429,6 +1428,8 @@ Dankoffer Amstelveen: ${tikkieUrl || '(nog niet ingevuld)'}`;
                 if (errors.length) _showAttStatus(errors.join(' | '), true);
             });
         })();
+        // Auto-select date from ?date= URL param
+        (function(){ const p=new URLSearchParams(location.search).get('date'); if(p&&dateSelect.querySelector('option[value="'+p+'"]')){dateSelect.value=p;dateSelect.dispatchEvent(new Event('change'));}})();
     </script>
 </body>
 </html>

@@ -198,7 +198,6 @@
 
     <script>
         const dateSelect      = document.getElementById('dateSelect');
-        (function(){ const p=new URLSearchParams(location.search).get('date'); if(p&&dateSelect.querySelector('option[value="'+p+'"]')){dateSelect.value=p;dateSelect.dispatchEvent(new Event('change'));}})();
         const pmSection       = document.getElementById('pmSection');
         const campaignDetails = document.getElementById('campaignDetails');
         const previewBtn      = document.getElementById('previewBtn');
@@ -452,6 +451,8 @@
                 createBtn.innerHTML = `<span data-i18n="camp.create">${t('camp.create')}</span>`;
             }
         });
+        // Auto-select date from ?date= URL param
+        (function(){ const p=new URLSearchParams(location.search).get('date'); if(p&&dateSelect.querySelector('option[value="'+p+'"]')){dateSelect.value=p;dateSelect.dispatchEvent(new Event('change'));}})();
     </script>
 </body>
 </html>
