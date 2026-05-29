@@ -417,7 +417,7 @@
             return other || '';
         }
 
-        console.log('[dropdown] first entry opmerking=', scheduleData[0] && scheduleData[0].opmerking);
+        console.log('[dropdown] all opmerking values:', scheduleData.slice(0,10).map(d=>d.value+': '+d.opmerking));
         scheduleData.forEach((d, idx) => {
             const opt = document.createElement('option');
             opt.value = idx;
