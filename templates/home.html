@@ -180,8 +180,8 @@
     <script>
     // ── Checklist data ──────────────────────────────────────────────────────
     const CHECKLIST = [
-      { day: 0, label: 'Sunday',    items: [
-        { id:'sun1', def:true,  text:'Send preekbevestiging 2 weeks in advance to people on duty' },
+      { day: 0, label: 'Sunday',    dayOffset: -14, items: [
+        { id:'sun1', def:true,  text:'Send <a href="/preekbevestiging" class="text-gkin-green underline hover:text-gkin-dark">Preekbevestiging</a> to people on duty' },
       ]},
       { day: 1, label: 'Monday',   items: [
         { id:'mon1', def:true,  text:'Mailing list: previous week Preek and mededeling to AM gemeente' },
@@ -252,7 +252,8 @@
         if (!dayObj.items.length) return;
         // date for this day = sunday (H-7) + dayObj.day
         const sundayStr = _checklistKey.replace('checklist_','');
-        const dayDate = _addDays(sundayStr, dayObj.day);
+        const baseOffset = (dayObj.dayOffset !== undefined) ? dayObj.dayOffset : 0;
+        const dayDate = _addDays(sundayStr, baseOffset + dayObj.day);
         html += '<div>';
         html += '<div class="flex items-center gap-2 mb-2">';
         html += '<span class="text-xs font-bold text-gkin-green uppercase tracking-wide">' + dayObj.label + '</span>';
