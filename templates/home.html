@@ -246,16 +246,25 @@
       return d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
     }
 
+    let _scrollY = 0;
     function openChecklistModal() {
+      _scrollY = window.scrollY;
+      document.body.style.position = 'fixed';
+      document.body.style.top = '-' + _scrollY + 'px';
+      document.body.style.width = '100%';
+      document.body.style.overflow = 'hidden';
       const modal = document.getElementById('checklistModal');
       modal.classList.remove('hidden');
-      document.body.style.overflow = 'hidden';
       renderChecklist();
     }
 
     function closeChecklistModal() {
       document.getElementById('checklistModal').classList.add('hidden');
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.width = '';
       document.body.style.overflow = '';
+      window.scrollTo(0, _scrollY);
     }
 
     function renderChecklist() {
