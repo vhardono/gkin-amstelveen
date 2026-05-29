@@ -48,11 +48,15 @@
             <div id="scheduleDetail" class="hidden mt-4 rounded-lg bg-gray-50 border border-gray-100 p-4">
                 <!-- Filled by JS -->
             </div>
-            <div id="checklistBtnWrap" class="hidden mt-3">
+            <div id="checklistBtnWrap" class="hidden mt-3 flex items-center gap-2">
                 <button id="openChecklist" onclick="openChecklistModal()" class="inline-flex items-center gap-2 text-sm font-medium text-gkin-green border border-gkin-green rounded-lg px-4 py-2 hover:bg-green-50 transition">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
                     Checklist
                 </button>
+                <span id="overdueAlert" class="hidden inline-flex items-center gap-1 text-xs font-semibold text-red-600 bg-red-50 border border-red-200 rounded-full px-2.5 py-1">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+                    <span id="overdueAlertText"></span> overdue
+                </span>
             </div>
         </div>
 
@@ -179,36 +183,28 @@
 
     <script>
     // ── Checklist data ──────────────────────────────────────────────────────
+    const _L = 'text-gkin-green underline hover:text-gkin-dark';
     const CHECKLIST = [
-      { day: 0, label: 'Sunday',    dayOffset: -14, items: [
-        { id:'sun1', def:true,  text:'Send <a href="/preekbevestiging" class="text-gkin-green underline hover:text-gkin-dark">Preekbevestiging</a> to people on duty' },
+      { day: 0, label: 'Sunday', dayOffset: -14, items: [
+        { id:'sun1', def:true,  text:'Send <a href="/preekbevestiging" class="'+_L+'">Preekbevestiging</a> to people on duty' },
       ]},
-      { day: 1, label: 'Monday',   items: [
-        { id:'mon1', def:true,  text:'Mailing list: previous week Preek and mededeling to AM gemeente' },
-        { id:'mon2', def:true,  text:'Start mededeling template for next Sunday' },
-      ]},
-      { day: 2, label: 'Tuesday',  items: [] },
-      { day: 3, label: 'Wednesday',items: [
-        { id:'wed1', def:true,  text:'OLE link from Gloria to be included into mededelingen' },
+      { day: 1, label: 'Monday', items: [
+        { id:'mon1', def:true,  text:'Send Preek &amp; Mededelingen to congregation via <a href="/campaign/pm" class="'+_L+'">Mailing List</a>' },
       ]},
       { day: 4, label: 'Thursday', items: [
-        { id:'thu1', def:true,  text:'Update overzicht kerkbezoekers → from 05.regionale kerkenraad → secretariaat' },
-        { id:'thu2', def:true,  text:'Tikkie link from Fokke to be included into Main Liturgy File' },
-        { id:'thu3', def:true,  text:'Tikkie link from Fokke to be included into mededelingen' },
+        { id:'thu1', def:true,  text:'Update <a href="https://www.dropbox.com/scl/fi/51nfkxqdaciu51yd1ba9l/Overzicht-Kerkbezoekers-2026-AM.xlsx?rlkey=btpeg8qjoauew7tcelkai0z37&dl=0" class="'+_L+'" target="_blank" rel="noopener">Overzicht kerkbezoekers</a> in Dropbox' },
       ]},
-      { day: 5, label: 'Friday',   items: [
-        { id:'fri1', def:false, text:'Insert Overdenking from Monica into Mededelingen' },
-        { id:'fri2', def:false, text:'If doing OLE: send email to scriba → Friday refer to template: Gegevens: GKIN OLE zo 15 februari 2026 plus preek+translation and liturgie' },
-        { id:'fri3', def:true,  text:'Mailing list: OLE info to AM gemeente – check Saturday 7AM' },
-        { id:'fri4', def:true,  text:'Send OLE info + OLE Liturgie every Friday to kerkenraad (via WA)' },
-        { id:'fri5', def:true,  text:'Insert name of people who just passed away in 20260114_Dienst ter Nagedachtenis 2026_Namenlijst_v1 – always fill in for remembrance' },
-        { id:'fri6', def:true,  text:'Heiling avondmal Mededeling and additional slides for perjamuan kudus dikirim seminggu sebelumnya' },
+      { day: 5, label: 'Friday', items: [
+        { id:'fri1', def:false, text:'Send email to Scriba for OLE information' },
+        { id:'fri2', def:true,  text:'Send OLE Info to congregation via <a href="/campaign/ole" class="'+_L+'">Mailing List</a>' },
+        { id:'fri3', def:true,  text:'Send OLE info + OLE Liturgie to kerkenraad via <a href="/mededelingen" class="'+_L+'">WhatsApp</a>' },
+        { id:'fri4', def:true,  text:'Insert name of people who just passed away in <a href="https://www.dropbox.com/scl/fi/4umk664eaq3tzlj1b9poe/20260114_Dienst-ter-Nagedachtenis-2026_Namenlijst_v1.xlsx?rlkey=28rl2ntjujy13i2vzdl4sq6ch&dl=0" class="'+_L+'" target="_blank" rel="noopener">Remembrance list</a>' },
+        { id:'fri5', def:true,  text:'Insert Heiling Avondmal Mededeling and additional slides 1 week before' },
       ]},
       { day: 6, label: 'Saturday', items: [
-        { id:'sat1', def:false, text:'Send to WA gemeente of liturgie (if OvD)' },
-        { id:'sat2', def:false, text:'Send Gebedspunten to WA KR' },
-        { id:'sat3', def:false, text:'Send mededeling with to kerkenraad & beamer team by email' },
-        { id:'sat4', def:false, text:'Create version of voorlezen & translation for mededelingen and send to 1eO and beamer' },
+        { id:'sat1', def:false, text:'Send liturgie information to gemeente via <a href="/mededelingen" class="'+_L+'">WhatsApp</a>' },
+        { id:'sat2', def:false, text:'Send mededelingen to kerkenraad &amp; beamer team by <a href="/mededelingen" class="'+_L+'">email</a>' },
+        { id:'sat3', def:false, text:'Send mededelingen voorlezen &amp; translation to 1eO and beamer by <a href="/mededelingen" class="'+_L+'">email</a>' },
       ]},
     ];
 
@@ -281,12 +277,37 @@
         if (checked) { span.classList.add('line-through','text-gray-400'); span.classList.remove('text-gray-700'); }
         else { span.classList.remove('line-through','text-gray-400'); span.classList.add('text-gray-700'); }
       }
+      _updateOverdueAlert(_checklistKey.replace('checklist_',''));
     }
 
     function resetChecklist() {
       if (!confirm('Reset all checkboxes for this week?')) return;
       localStorage.removeItem(_checklistKey);
       renderChecklist();
+    }
+
+    function _updateOverdueAlert(weekSundayStr) {
+      // weekSundayStr = YYYY-MM-DD of the H-7 Sunday (start of checklist week)
+      const saved = JSON.parse(localStorage.getItem('checklist_' + weekSundayStr) || '{}');
+      const today = new Date(); today.setHours(0,0,0,0);
+      let overdueCount = 0;
+      CHECKLIST.forEach(function(dayObj) {
+        dayObj.items.forEach(function(item) {
+          const baseOffset = (dayObj.dayOffset !== undefined) ? dayObj.dayOffset : 0;
+          const itemDate = new Date(weekSundayStr + 'T00:00:00');
+          itemDate.setDate(itemDate.getDate() + baseOffset + dayObj.day);
+          const checked = (item.id in saved) ? saved[item.id] : item.def;
+          if (!checked && itemDate < today) overdueCount++;
+        });
+      });
+      const badge = document.getElementById('overdueAlert');
+      const badgeText = document.getElementById('overdueAlertText');
+      if (overdueCount > 0) {
+        badgeText.textContent = overdueCount;
+        badge.classList.remove('hidden');
+      } else {
+        badge.classList.add('hidden');
+      }
     }
 
     // close on backdrop click
@@ -366,12 +387,12 @@
             detail.classList.remove('hidden');
 
             // Show checklist button and set storage key to Sunday H-7
-            // entry.date_str is 'YYYY-MM-DD' of the selected Sunday
             const sundayStr = entry.value;
             if (sundayStr) {
                 const prevSunday = _addDays(sundayStr, -7);
                 _checklistKey = _storageKey(prevSunday);
                 document.getElementById('checklistBtnWrap').classList.remove('hidden');
+                _updateOverdueAlert(prevSunday);
             }
         });
     })();
