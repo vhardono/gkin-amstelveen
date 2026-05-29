@@ -204,20 +204,20 @@
     function _int(url,label){return '<a href="'+url+'" class="'+_L+'" target="_blank" rel="noopener">'+label+'</a>';}
     const CHECKLIST = [
       { day: 0, label: 'Sunday', dayOffset: -14, items: [
-        { id:'sun1', def:true,  text:'Send '+_int('/preekbevestiging','Preekbevestiging')+' to people on duty' },
+        { id:'sun1', def:false, text:'Send '+_int('/preekbevestiging','Preekbevestiging')+' to people on duty' },
       ]},
       { day: 1, label: 'Monday', items: [
-        { id:'mon1', def:true,  text:'Send Preek &amp; Mededelingen to congregation via '+_int('/campaign/pm','Mailing List') },
+        { id:'mon1', def:false, text:'Send Preek &amp; Mededelingen to congregation via '+_int('/campaign/pm','Mailing List') },
       ]},
       { day: 4, label: 'Thursday', items: [
-        { id:'thu1', def:true,  text:'Update '+_dbx(_DBX1,'Overzicht kerkbezoekers')+' in Dropbox' },
+        { id:'thu1', def:false, text:'Update '+_dbx(_DBX1,'Overzicht kerkbezoekers')+' in Dropbox' },
       ]},
       { day: 5, label: 'Friday', items: [
         { id:'fri1', def:false, text:'Send email to Scriba for OLE information' },
-        { id:'fri2', def:true,  text:'Send OLE Info to congregation via '+_int('/campaign/ole','Mailing List') },
-        { id:'fri3', def:true,  text:'Send OLE info + OLE Liturgie to kerkenraad via '+_int('/mededelingen','WhatsApp') },
-        { id:'fri4', def:true,  text:'Insert name of people who just passed away in '+_dbx(_DBX2,'Remembrance list') },
-        { id:'fri5', def:true,  text:'Insert Heiling Avondmal Mededeling and additional slides 1 week before' },
+        { id:'fri2', def:false, text:'Send OLE Info to congregation via '+_int('/campaign/ole','Mailing List') },
+        { id:'fri3', def:false, text:'Send OLE info + OLE Liturgie to kerkenraad via '+_int('/mededelingen','WhatsApp') },
+        { id:'fri4', def:false, text:'Insert name of people who just passed away in '+_dbx(_DBX2,'Remembrance list') },
+        { id:'fri5', def:false, text:'Insert Heiling Avondmal Mededeling and additional slides 1 week before' },
       ]},
       { day: 6, label: 'Saturday', items: [
         { id:'sat1', def:false, text:'Send liturgie information to gemeente via '+_int('/mededelingen','WhatsApp') },
@@ -249,11 +249,13 @@
     function openChecklistModal() {
       const modal = document.getElementById('checklistModal');
       modal.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
       renderChecklist();
     }
 
     function closeChecklistModal() {
       document.getElementById('checklistModal').classList.add('hidden');
+      document.body.style.overflow = '';
     }
 
     function renderChecklist() {
@@ -276,9 +278,11 @@
         html += '<div class="space-y-2">';
         dayObj.items.forEach(function(item) {
           const checked = (item.id in saved) ? saved[item.id] : item.def;
-          html += '<label class="flex items-start gap-3 cursor-pointer group">';
+          const overdue = !checked && dayDate < new Date(new Date().setHours(0,0,0,0));
+          const textCls = checked ? 'line-through text-gray-400' : (overdue ? 'text-red-600 font-medium' : 'text-gray-700');
+          html += '<label class="flex items-start gap-3 cursor-pointer'+(overdue?' bg-red-50 -mx-2 px-2 py-1 rounded-lg':'')+'">';
           html += '<input type="checkbox" class="mt-0.5 w-4 h-4 rounded accent-gkin-green shrink-0" '+(checked?'checked':'')+' onchange="toggleItem(\''+item.id+'\',this.checked)" />';
-          html += '<span class="text-sm text-gray-700 leading-snug '+(checked?'line-through text-gray-400':'')+' group-has-[:checked]:line-through" id="cl_'+item.id+'">'+item.text+'</span>';
+          html += '<span class="text-sm leading-snug '+textCls+'" id="cl_'+item.id+'">'+item.text+'</span>';
           html += '</label>';
         });
         html += '</div></div>';
