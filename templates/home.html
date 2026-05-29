@@ -224,7 +224,7 @@
         { id:'fri2', def:false, text:function(){ return 'Send OLE Info to congregation via '+_int('/campaign/ole','Mailing List'); } },
         { id:'fri3', def:false, text:function(){ return 'Send OLE info + OLE Liturgie to kerkenraad via '+_wa('WhatsApp'); } },
         { id:'fri4', def:false, text:function(){ return 'Insert name of people who just passed away in '+_dbx(_DBX2,'Remembrance list'); } },
-        { id:'fri5', def:false, text:'Insert Heiling Avondmal Mededeling and additional slides 1 week before' },
+        { id:'fri5', def:false, haOnly:true, text:'Insert Heiling Avondmal Mededeling and additional slides 1 week before' },
       ]},
       { day: 6, label: 'Saturday',  dayOffset: -7, items: [
         { id:'sat1', def:false, text:function(){ return 'Send liturgie information to gemeente via '+_wa('WhatsApp'); } },
@@ -235,6 +235,7 @@
 
     let _checklistKey = '';
     let _hasOLE = false;
+    let _hasHA = false;
 
     function _storageKey(sundayDateStr) { return 'checklist_' + sundayDateStr; }
 
@@ -297,6 +298,7 @@
         const dayDateObj = new Date(dayDate + 'T00:00:00');
         dayObj.items.forEach(function(item) {
           if (item.oleOnly && !_hasOLE) return;
+          if (item.haOnly && !_hasHA) return;
           const checked = (item.id in saved) ? saved[item.id] : item.def;
           const overdue = !checked && dayDateObj < today;
           const textCls = checked ? 'line-through text-gray-400' : (overdue ? 'text-red-600 font-medium' : 'text-gray-700');
@@ -409,10 +411,7 @@
             || ['maandag','dinsdag','woensdag','donderdag','vrijdag','zaterdag','zondag'];
 
         function _dienstShort(opm) {
-            let o = (opm || '').split(/\s*[:]\s*/)[0].replace(/https?:\/\/\S+/gi,'').trim();
-            // Strip purely ordinal entries like "5de zondag", "1e zondag" etc.
-            if (/^\d+(e|de|ste)?\s+zondag$/i.test(o)) return '';
-            return o;
+            return (opm || '').split(/\s*[:]\s*/)[0].replace(/https?:\/\/\S+/gi,'').trim();
         }
 
         scheduleData.forEach((d, idx) => {
@@ -468,6 +467,10 @@
                 _checklistKey = _storageKey(sundayStr);
                 _serviceDate = sundayStr;
                 _hasOLE = /\bOLE\b/i.test(entry.opmerking || '');
+                // Heilig Avondmaal: show fri5 if current or next week has HA
+                const _HA = /heilig\s*avondmaal/i;
+                const nextEntry = scheduleData.find(d => d.value === _addDays(sundayStr, 7));
+                _hasHA = _HA.test(entry.opmerking || '') || (nextEntry && _HA.test(nextEntry.opmerking || ''));
                 // Store title for modal header
                 const titleEl = document.getElementById('_checklistTitle');
                 titleEl.dataset.title = 'Checklist – ' + dienstLabel + ' ' + _fmtDate(sundayStr);
