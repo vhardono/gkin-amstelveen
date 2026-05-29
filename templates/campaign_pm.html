@@ -198,6 +198,7 @@
 
     <script>
         const dateSelect      = document.getElementById('dateSelect');
+        (function(){ const p=new URLSearchParams(location.search).get('date'); if(p&&dateSelect.querySelector('option[value="'+p+'"]')){dateSelect.value=p;dateSelect.dispatchEvent(new Event('change'));}})();
         const pmSection       = document.getElementById('pmSection');
         const campaignDetails = document.getElementById('campaignDetails');
         const previewBtn      = document.getElementById('previewBtn');

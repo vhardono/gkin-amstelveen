@@ -212,6 +212,7 @@
     <script>
         const dateData = {{ dates | tojson }};
         const dateSelect = document.getElementById('date');
+        (function(){ const p=new URLSearchParams(location.search).get('date'); if(p&&dateSelect.querySelector('option[value="'+p+'"]')){dateSelect.value=p;dateSelect.dispatchEvent(new Event('change'));}})();
 
         const DUTCH_MONTHS = ['januari','februari','maart','april','mei','juni',
                               'juli','augustus','september','oktober','november','december'];
