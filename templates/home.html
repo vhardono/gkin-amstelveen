@@ -48,7 +48,33 @@
             <div id="scheduleDetail" class="hidden mt-4 rounded-lg bg-gray-50 border border-gray-100 p-4">
                 <!-- Filled by JS -->
             </div>
+            <div id="checklistBtnWrap" class="hidden mt-3">
+                <button id="openChecklist" onclick="openChecklistModal()" class="inline-flex items-center gap-2 text-sm font-medium text-gkin-green border border-gkin-green rounded-lg px-4 py-2 hover:bg-green-50 transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                    Checklist
+                </button>
+            </div>
         </div>
+
+<!-- Checklist Modal -->
+<div id="checklistModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4" style="background:rgba(0,0,0,0.45)">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
+    <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+      <div>
+        <h2 class="text-base font-bold text-gray-800">Weekly Checklist</h2>
+        <p id="checklistSubtitle" class="text-xs text-gray-400 mt-0.5"></p>
+      </div>
+      <button onclick="closeChecklistModal()" class="text-gray-400 hover:text-gray-600 transition">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div id="checklistBody" class="overflow-y-auto px-5 py-4 space-y-4 flex-1"></div>
+    <div class="px-5 py-3 border-t border-gray-100 flex justify-between items-center">
+      <button onclick="resetChecklist()" class="text-xs text-gray-400 hover:text-red-500 transition">Reset all</button>
+      <button onclick="closeChecklistModal()" class="text-sm font-medium text-white bg-gkin-green rounded-lg px-4 py-2 hover:bg-gkin-dark transition">Done</button>
+    </div>
+  </div>
+</div>
 
         <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
 
@@ -152,6 +178,122 @@
     </main>
 
     <script>
+    // ── Checklist data ──────────────────────────────────────────────────────
+    const CHECKLIST = [
+      { day: 0, label: 'Sunday',    items: [
+        { id:'sun1', def:true,  text:'Send preekbevestiging 2 weeks in advance to people on duty' },
+      ]},
+      { day: 1, label: 'Monday',   items: [
+        { id:'mon1', def:true,  text:'Mailing list: previous week Preek and mededeling to AM gemeente' },
+        { id:'mon2', def:true,  text:'Start mededeling template for next Sunday' },
+      ]},
+      { day: 2, label: 'Tuesday',  items: [] },
+      { day: 3, label: 'Wednesday',items: [
+        { id:'wed1', def:true,  text:'OLE link from Gloria to be included into mededelingen' },
+      ]},
+      { day: 4, label: 'Thursday', items: [
+        { id:'thu1', def:true,  text:'Update overzicht kerkbezoekers → from 05.regionale kerkenraad → secretariaat' },
+        { id:'thu2', def:true,  text:'Tikkie link from Fokke to be included into Main Liturgy File' },
+        { id:'thu3', def:true,  text:'Tikkie link from Fokke to be included into mededelingen' },
+      ]},
+      { day: 5, label: 'Friday',   items: [
+        { id:'fri1', def:false, text:'Insert Overdenking from Monica into Mededelingen' },
+        { id:'fri2', def:false, text:'If doing OLE: send email to scriba → Friday refer to template: Gegevens: GKIN OLE zo 15 februari 2026 plus preek+translation and liturgie' },
+        { id:'fri3', def:true,  text:'Mailing list: OLE info to AM gemeente – check Saturday 7AM' },
+        { id:'fri4', def:true,  text:'Send OLE info + OLE Liturgie every Friday to kerkenraad (via WA)' },
+        { id:'fri5', def:true,  text:'Insert name of people who just passed away in 20260114_Dienst ter Nagedachtenis 2026_Namenlijst_v1 – always fill in for remembrance' },
+        { id:'fri6', def:true,  text:'Heiling avondmal Mededeling and additional slides for perjamuan kudus dikirim seminggu sebelumnya' },
+      ]},
+      { day: 6, label: 'Saturday', items: [
+        { id:'sat1', def:false, text:'Send to WA gemeente of liturgie (if OvD)' },
+        { id:'sat2', def:false, text:'Send Gebedspunten to WA KR' },
+        { id:'sat3', def:false, text:'Send mededeling with to kerkenraad & beamer team by email' },
+        { id:'sat4', def:false, text:'Create version of voorlezen & translation for mededelingen and send to 1eO and beamer' },
+      ]},
+    ];
+
+    let _checklistKey = '';
+
+    function _storageKey(sundayDateStr) { return 'checklist_' + sundayDateStr; }
+
+    function _addDays(dateStr, n) {
+      // dateStr = 'YYYY-MM-DD'
+      const d = new Date(dateStr + 'T00:00:00');
+      d.setDate(d.getDate() + n);
+      const y = d.getFullYear();
+      const m = String(d.getMonth()+1).padStart(2,'0');
+      const dd = String(d.getDate()).padStart(2,'0');
+      return y+'-'+m+'-'+dd;
+    }
+
+    function _fmtDate(dateStr) {
+      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      const d = new Date(dateStr + 'T00:00:00');
+      return d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
+    }
+
+    function openChecklistModal() {
+      const modal = document.getElementById('checklistModal');
+      modal.classList.remove('hidden');
+      renderChecklist();
+    }
+
+    function closeChecklistModal() {
+      document.getElementById('checklistModal').classList.add('hidden');
+    }
+
+    function renderChecklist() {
+      const saved = JSON.parse(localStorage.getItem(_checklistKey) || '{}');
+      const body = document.getElementById('checklistBody');
+      const subtitle = document.getElementById('checklistSubtitle');
+      subtitle.textContent = 'Week of ' + _fmtDate(_checklistKey.replace('checklist_',''));
+      let html = '';
+      CHECKLIST.forEach(function(dayObj) {
+        if (!dayObj.items.length) return;
+        // date for this day = sunday (H-7) + dayObj.day
+        const sundayStr = _checklistKey.replace('checklist_','');
+        const dayDate = _addDays(sundayStr, dayObj.day);
+        html += '<div>';
+        html += '<div class="flex items-center gap-2 mb-2">';
+        html += '<span class="text-xs font-bold text-gkin-green uppercase tracking-wide">' + dayObj.label + '</span>';
+        html += '<span class="text-xs text-gray-400">' + _fmtDate(dayDate) + '</span>';
+        html += '</div>';
+        html += '<div class="space-y-2">';
+        dayObj.items.forEach(function(item) {
+          const checked = (item.id in saved) ? saved[item.id] : item.def;
+          html += '<label class="flex items-start gap-3 cursor-pointer group">';
+          html += '<input type="checkbox" class="mt-0.5 w-4 h-4 rounded accent-gkin-green shrink-0" '+(checked?'checked':'')+' onchange="toggleItem(\''+item.id+'\',this.checked)" />';
+          html += '<span class="text-sm text-gray-700 leading-snug '+(checked?'line-through text-gray-400':'')+' group-has-[:checked]:line-through" id="cl_'+item.id+'">'+item.text+'</span>';
+          html += '</label>';
+        });
+        html += '</div></div>';
+      });
+      body.innerHTML = html;
+    }
+
+    function toggleItem(id, checked) {
+      const saved = JSON.parse(localStorage.getItem(_checklistKey) || '{}');
+      saved[id] = checked;
+      localStorage.setItem(_checklistKey, JSON.stringify(saved));
+      const span = document.getElementById('cl_'+id);
+      if (span) {
+        if (checked) { span.classList.add('line-through','text-gray-400'); span.classList.remove('text-gray-700'); }
+        else { span.classList.remove('line-through','text-gray-400'); span.classList.add('text-gray-700'); }
+      }
+    }
+
+    function resetChecklist() {
+      if (!confirm('Reset all checkboxes for this week?')) return;
+      localStorage.removeItem(_checklistKey);
+      renderChecklist();
+    }
+
+    // close on backdrop click
+    document.getElementById('checklistModal').addEventListener('click', function(e) {
+      if (e.target === this) closeChecklistModal();
+    });
+    // ── End checklist ────────────────────────────────────────────────────────
+
     (function() {
         const scheduleData = {{ schedule_dates | tojson }};
         const sel = document.getElementById('scheduleDate');
@@ -221,6 +363,15 @@
             html += '</div>';
             detail.innerHTML = html;
             detail.classList.remove('hidden');
+
+            // Show checklist button and set storage key to Sunday H-7
+            // entry.date_str is 'YYYY-MM-DD' of the selected Sunday
+            const sundayStr = entry.value;
+            if (sundayStr) {
+                const prevSunday = _addDays(sundayStr, -7);
+                _checklistKey = _storageKey(prevSunday);
+                document.getElementById('checklistBtnWrap').classList.remove('hidden');
+            }
         });
     })();
     </script>
