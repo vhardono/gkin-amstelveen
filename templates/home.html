@@ -200,11 +200,12 @@
     <script>
     // ── Checklist data ──────────────────────────────────────────────────────
     const _L = 'text-gkin-green underline hover:text-gkin-dark cursor-pointer';
-    const _DBX1 = 'https://www.dropbox.com/scl/fi/51nfkxqdaciu51yd1ba9l/Overzicht-Kerkbezoekers-2026-AM.xlsx?rlkey=btpeg8qjoauew7tcelkai0z37&dl=0';
-    const _DBX2 = 'https://www.dropbox.com/scl/fi/4umk664eaq3tzlj1b9poe/20260114_Dienst-ter-Nagedachtenis-2026_Namenlijst_v1.xlsx?rlkey=28rl2ntjujy13i2vzdl4sq6ch&dl=0';
+    const _DBX1 = 'https://view.officeapps.live.com/op/view.aspx?src='+encodeURIComponent('https://www.dropbox.com/scl/fi/51nfkxqdaciu51yd1ba9l/Overzicht-Kerkbezoekers-2026-AM.xlsx?rlkey=btpeg8qjoauew7tcelkai0z37&dl=1');
+    const _DBX2 = 'https://view.officeapps.live.com/op/view.aspx?src='+encodeURIComponent('https://www.dropbox.com/scl/fi/4umk664eaq3tzlj1b9poe/20260114_Dienst-ter-Nagedachtenis-2026_Namenlijst_v1.xlsx?rlkey=28rl2ntjujy13i2vzdl4sq6ch&dl=1');
     let _serviceDate = '';
     function _dbx(url,label){return '<a class="'+_L+'" onclick="gateDropbox(\''+url+'\')">'+label+'</a>';}
     function _int(url,label){const u=_serviceDate?url+'?date='+_serviceDate:url;return '<a href="'+u+'" class="'+_L+'" target="_blank" rel="noopener">'+label+'</a>';}
+    function _wa(label){const u='/mededelingen'+(_serviceDate?'?date='+_serviceDate:'')+'#wa-section';return '<a href="'+u+'" class="'+_L+'" target="_blank" rel="noopener">'+label+'</a>';}
     const CHECKLIST = [
     // All days are relative to the selected service Sunday.
     // dayOffset: -14 means 2 Sundays before (H-14); -7+day means the week before the service.
@@ -220,14 +221,14 @@
       { day: 5, label: 'Friday',    dayOffset: -7, items: [
         { id:'fri1', def:false, text:'Send email to Scriba for OLE information' },
         { id:'fri2', def:false, text:'Send OLE Info to congregation via '+_int('/campaign/ole','Mailing List') },
-        { id:'fri3', def:false, text:'Send OLE info + OLE Liturgie to kerkenraad via '+_int('/mededelingen','WhatsApp') },
+        { id:'fri3', def:false, text:'Send OLE info + OLE Liturgie to kerkenraad via '+_wa('WhatsApp') },
         { id:'fri4', def:false, text:'Insert name of people who just passed away in '+_dbx(_DBX2,'Remembrance list') },
         { id:'fri5', def:false, text:'Insert Heiling Avondmal Mededeling and additional slides 1 week before' },
       ]},
       { day: 6, label: 'Saturday',  dayOffset: -7, items: [
-        { id:'sat1', def:false, text:'Send liturgie information to gemeente via '+_int('/mededelingen','WhatsApp') },
-        { id:'sat2', def:false, text:'Send mededelingen to kerkenraad &amp; beamer team by '+_int('/mededelingen','email') },
-        { id:'sat3', def:false, text:'Send mededelingen voorlezen &amp; translation to 1eO and beamer by '+_int('/mededelingen','email') },
+        { id:'sat1', def:false, text:'Send liturgie information to gemeente via '+_wa('WhatsApp') },
+        { id:'sat2', def:false, text:'Send mededelingen to kerkenraad &amp; beamer team by '+_wa('email') },
+        { id:'sat3', def:false, text:'Send mededelingen voorlezen &amp; translation to 1eO and beamer by '+_wa('email') },
       ]},
     ];
 

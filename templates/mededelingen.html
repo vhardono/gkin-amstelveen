@@ -328,7 +328,7 @@
         </form>
 
         <!-- WhatsApp berichten subsection -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-5">
+        <div id="wa-section" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-5">
             <h2 class="text-base font-semibold text-gkin-green flex items-center gap-2 mb-4">
                 <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
                 <span data-i18n="wa.section_heading">WhatsApp berichten</span>
@@ -1428,8 +1428,20 @@ Dankoffer Amstelveen: ${tikkieUrl || '(nog niet ingevuld)'}`;
                 if (errors.length) _showAttStatus(errors.join(' | '), true);
             });
         })();
-        // Auto-select date from ?date= URL param
-        (function(){ const p=new URLSearchParams(location.search).get('date'); if(p&&dateSelect.querySelector('option[value="'+p+'"]')){dateSelect.value=p;dateSelect.dispatchEvent(new Event('change'));}})();
+        // Auto-select date from ?date= URL param, then scroll to anchor if present
+        (function(){
+          const p=new URLSearchParams(location.search).get('date');
+          if(p&&dateSelect.querySelector('option[value="'+p+'"]')){
+            dateSelect.value=p;
+            dateSelect.dispatchEvent(new Event('change'));
+          }
+          if(location.hash){
+            setTimeout(function(){
+              const el=document.querySelector(location.hash);
+              if(el) el.scrollIntoView({behavior:'smooth',block:'start'});
+            }, 300);
+          }
+        })();
     </script>
 </body>
 </html>
