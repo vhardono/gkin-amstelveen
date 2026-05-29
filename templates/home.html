@@ -221,7 +221,7 @@
         { id:'thu1', def:false, text:function(){ return 'Update '+_dbx(_DBX1,'Overzicht kerkbezoekers')+' in Dropbox'; } },
       ]},
       { day: 5, label: 'Friday',    dayOffset: -7, items: [
-        { id:'fri1', def:false, text:'Send email to Scriba for OLE information' },
+        { id:'fri1', def:false, oleOnly:true, text:'Send email to Scriba for OLE information' },
         { id:'fri2', def:false, text:function(){ return 'Send OLE Info to congregation via '+_int('/campaign/ole','Mailing List'); } },
         { id:'fri3', def:false, text:function(){ return 'Send OLE info + OLE Liturgie to kerkenraad via '+_wa('WhatsApp'); } },
         { id:'fri4', def:false, text:function(){ return 'Insert name of people who just passed away in '+_dbx(_DBX2,'Remembrance list'); } },
@@ -235,6 +235,7 @@
     ];
 
     let _checklistKey = '';
+    let _hasOLE = false;
 
     function _storageKey(sundayDateStr) { return 'checklist_' + sundayDateStr; }
 
@@ -296,6 +297,7 @@
         const today = new Date(); today.setHours(0,0,0,0);
         const dayDateObj = new Date(dayDate + 'T00:00:00');
         dayObj.items.forEach(function(item) {
+          if (item.oleOnly && !_hasOLE) return;
           const checked = (item.id in saved) ? saved[item.id] : item.def;
           const overdue = !checked && dayDateObj < today;
           const textCls = checked ? 'line-through text-gray-400' : (overdue ? 'text-red-600 font-medium' : 'text-gray-700');
@@ -407,6 +409,15 @@
         const DAYS = (window._i18n && window._i18n[window._currentLang || 'nl'] || {})['days']
             || ['maandag','dinsdag','woensdag','donderdag','vrijdag','zaterdag','zondag'];
 
+        function _dienstShort(opm) {
+            let o = (opm || '').split(/\s*[:]\s*/)[0].replace(/https?:\/\/\S+/gi,'').trim();
+            const hasOLE = /\bOLE\b/i.test(o);
+            let other = o.replace(/\bOLE\b/gi,'').replace(/[,]+/g,' ').trim();
+            if (hasOLE && other) return 'OLE ' + other;
+            if (hasOLE) return 'OLE';
+            return other || '';
+        }
+
         scheduleData.forEach((d, idx) => {
             const opt = document.createElement('option');
             opt.value = idx;
@@ -415,8 +426,9 @@
             opt.dataset.dayNum = d.day_num;
             opt.dataset.year = d.year;
             opt.dataset.suffix = '';
-            const label = `${DAYS[d.day_idx]} ${d.day_num} ${MONTHS[d.month_idx]} ${d.year}`;
-            opt.textContent = label;
+            const dateLabel = `${DAYS[d.day_idx]} ${d.day_num} ${MONTHS[d.month_idx]} ${d.year}`;
+            const dienst = _dienstShort(d.opmerking);
+            opt.textContent = dienst ? `${dateLabel} — ${dienst}` : dateLabel;
             sel.appendChild(opt);
         });
 
@@ -458,7 +470,8 @@
             if (sundayStr) {
                 _checklistKey = _storageKey(sundayStr);
                 _serviceDate = sundayStr;
-                console.log('[home] _serviceDate set to', _serviceDate);
+                _hasOLE = /\bOLE\b/i.test(entry.opmerking || '');
+                console.log('[home] _serviceDate set to', _serviceDate, 'hasOLE=', _hasOLE);
                 // Store title for modal header
                 const titleEl = document.getElementById('_checklistTitle');
                 titleEl.dataset.title = 'Checklist – ' + dienstLabel + ' ' + _fmtDate(sundayStr);
