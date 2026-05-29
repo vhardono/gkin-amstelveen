@@ -662,7 +662,17 @@ Namens de kerkenraad GKIN regio Amstelveen,`;
             document.getElementById('namesWarning').classList.add('hidden');
         });
         // Auto-select date from ?date= URL param
-        (function(){ const p=new URLSearchParams(location.search).get('date'); if(p&&dateSelect.querySelector('option[value="'+p+'"]')){dateSelect.value=p;dateSelect.dispatchEvent(new Event('change'));}})();
+        (function(){
+          const p=new URLSearchParams(location.search).get('date');
+          console.log('[auto-date] URL param date=', p);
+          console.log('[auto-date] dateSelect options count=', dateSelect.options.length);
+          if(p){
+            const opt=dateSelect.querySelector('option[value="'+p+'"]');
+            console.log('[auto-date] matching option=', opt);
+            if(opt){ dateSelect.value=p; dateSelect.dispatchEvent(new Event('change')); console.log('[auto-date] dispatched change for', p); }
+            else { console.warn('[auto-date] no matching option found for', p, '— available values:', Array.from(dateSelect.options).map(o=>o.value)); }
+          }
+        })();
     </script>
 </body>
 </html>
