@@ -891,6 +891,7 @@ window.GKIN_I18N = GKIN_I18N;
     });
     localStorage.setItem(STORAGE_KEY, lang);
     window.GKIN_APPLY_LANG = applyLang;
+    document.dispatchEvent(new CustomEvent('gkin:langchange', { detail: { lang } }));
 
     // Global translation function for inline JS use
     window.t = function(key) {

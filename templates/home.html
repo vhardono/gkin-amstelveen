@@ -202,9 +202,7 @@
     const _DBX1 = 'https://view.officeapps.live.com/op/view.aspx?src='+encodeURIComponent('https://www.dropbox.com/scl/fi/51nfkxqdaciu51yd1ba9l/Overzicht-Kerkbezoekers-2026-AM.xlsx?rlkey=btpeg8qjoauew7tcelkai0z37&dl=1');
     const _DBX2 = 'https://view.officeapps.live.com/op/view.aspx?src='+encodeURIComponent('https://www.dropbox.com/scl/fi/4umk664eaq3tzlj1b9poe/20260114_Dienst-ter-Nagedachtenis-2026_Namenlijst_v1.xlsx?rlkey=28rl2ntjujy13i2vzdl4sq6ch&dl=1');
     function _t(key, link) {
-      const lang = (window.localStorage && localStorage.getItem('gkin_lang')) || 'nl';
-      const dict = (window.GKIN_I18N && (window.GKIN_I18N[lang] || window.GKIN_I18N['nl'])) || {};
-      const str = dict[key] || key;
+      const str = (window.t ? window.t(key) : key);
       return link ? str.replace('{link}', link) : str;
     }
     let _serviceDate = '';
@@ -473,6 +471,13 @@
                 titleEl.dataset.title = 'Checklist – ' + dienstLabel + ' ' + _fmtDate(sundayStr);
                 document.getElementById('checklistBtnWrap').classList.remove('hidden');
                 _updateOverdueAlert(sundayStr);
+            }
+        });
+
+        // Re-render checklist when language changes
+        document.addEventListener('gkin:langchange', function() {
+            if (_checklistKey && !document.getElementById('checklistModal').classList.contains('hidden')) {
+                renderChecklist();
             }
         });
     })();
