@@ -297,10 +297,10 @@
           const checked = (item.id in saved) ? saved[item.id] : item.def;
           const overdue = !checked && dayDateObj < today;
           const textCls = checked ? 'line-through text-gray-400' : (overdue ? 'text-red-600 font-medium' : 'text-gray-700');
-          html += '<label class="flex items-start gap-3 cursor-pointer'+(overdue?' bg-red-50 -mx-2 px-2 py-1 rounded-lg':'')+'">';
-          html += '<input type="checkbox" class="mt-0.5 w-4 h-4 rounded accent-gkin-green shrink-0" '+(checked?'checked':'')+' onchange="toggleItem(\''+item.id+'\',this.checked)" />';
+          html += '<div class="flex items-start gap-3'+(overdue?' bg-red-50 -mx-2 px-2 py-1 rounded-lg':'')+'">';
+          html += '<input type="checkbox" class="mt-0.5 w-4 h-4 rounded accent-gkin-green shrink-0 cursor-pointer" '+(checked?'checked':'')+' onchange="toggleItem(\''+item.id+'\',this.checked)" />';
           html += '<span class="text-sm leading-snug '+textCls+'" id="cl_'+item.id+'">'+item.text+'</span>';
-          html += '</label>';
+          html += '</div>';
         });
         html += '</div></div>';
       });
