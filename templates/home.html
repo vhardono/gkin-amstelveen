@@ -253,10 +253,21 @@
       return y+'-'+m+'-'+dd;
     }
 
+    function _i18nArr(key) {
+      const lang = localStorage.getItem('gkin_lang') || 'nl';
+      const dict = window.GKIN_I18N && (window.GKIN_I18N[lang] || window.GKIN_I18N['nl']);
+      return (dict && dict[key]) || window.GKIN_I18N['nl'][key];
+    }
     function _fmtDate(dateStr) {
-      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      const months = _i18nArr('months');
       const d = new Date(dateStr + 'T00:00:00');
       return d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
+    }
+    // dayOfWeek: 0=Sun,1=Mon,...,6=Sat. i18n days array is [Mon,Tue,...,Sun] (0=Mon,6=Sun)
+    function _tDay(dayOfWeek) {
+      const days = _i18nArr('days');
+      const idx = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+      return days[idx];
     }
 
     let _scrollY = 0;
@@ -294,7 +305,7 @@
         const dayDate = _addDays(sundayStr, baseOffset + dayObj.day);
         html += '<div>';
         html += '<div class="flex items-center gap-2 mb-2">';
-        html += '<span class="text-xs font-bold text-gkin-green uppercase tracking-wide">' + dayObj.label + '</span>';
+        html += '<span class="text-xs font-bold text-gkin-green uppercase tracking-wide">' + _tDay(dayObj.day) + '</span>';
         html += '<span class="text-xs text-gray-400">' + _fmtDate(dayDate) + '</span>';
         html += '</div>';
         html += '<div class="space-y-2">';
