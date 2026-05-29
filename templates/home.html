@@ -457,6 +457,7 @@
             if (sundayStr) {
                 _checklistKey = _storageKey(sundayStr);
                 _serviceDate = sundayStr;
+                console.log('[home] _serviceDate set to', _serviceDate);
                 // Store title for modal header
                 const titleEl = document.getElementById('_checklistTitle');
                 titleEl.dataset.title = 'Checklist – ' + dienstLabel + ' ' + _fmtDate(sundayStr);
