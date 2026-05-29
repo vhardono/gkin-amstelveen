@@ -209,26 +209,27 @@
     const CHECKLIST = [
     // All days are relative to the selected service Sunday.
     // dayOffset: -14 means 2 Sundays before (H-14); -7+day means the week before the service.
+    // text is a function so links are built at render time with current _serviceDate
       { day: 0, label: 'Sunday',    dayOffset: -14, items: [
-        { id:'sun1', def:false, text:'Send '+_int('/preekbevestiging','Preekbevestiging')+' to people on duty' },
+        { id:'sun1', def:false, text:function(){ return 'Send '+_int('/preekbevestiging','Preekbevestiging')+' to people on duty'; } },
       ]},
       { day: 1, label: 'Monday',    dayOffset: -7, items: [
-        { id:'mon1', def:false, text:'Send Preek &amp; Mededelingen to congregation via '+_int('/campaign/pm','Mailing List') },
+        { id:'mon1', def:false, text:function(){ return 'Send Preek &amp; Mededelingen to congregation via '+_int('/campaign/pm','Mailing List'); } },
       ]},
       { day: 4, label: 'Thursday',  dayOffset: -7, items: [
-        { id:'thu1', def:false, text:'Update '+_dbx(_DBX1,'Overzicht kerkbezoekers')+' in Dropbox' },
+        { id:'thu1', def:false, text:function(){ return 'Update '+_dbx(_DBX1,'Overzicht kerkbezoekers')+' in Dropbox'; } },
       ]},
       { day: 5, label: 'Friday',    dayOffset: -7, items: [
         { id:'fri1', def:false, text:'Send email to Scriba for OLE information' },
-        { id:'fri2', def:false, text:'Send OLE Info to congregation via '+_int('/campaign/ole','Mailing List') },
-        { id:'fri3', def:false, text:'Send OLE info + OLE Liturgie to kerkenraad via '+_wa('WhatsApp') },
-        { id:'fri4', def:false, text:'Insert name of people who just passed away in '+_dbx(_DBX2,'Remembrance list') },
+        { id:'fri2', def:false, text:function(){ return 'Send OLE Info to congregation via '+_int('/campaign/ole','Mailing List'); } },
+        { id:'fri3', def:false, text:function(){ return 'Send OLE info + OLE Liturgie to kerkenraad via '+_wa('WhatsApp'); } },
+        { id:'fri4', def:false, text:function(){ return 'Insert name of people who just passed away in '+_dbx(_DBX2,'Remembrance list'); } },
         { id:'fri5', def:false, text:'Insert Heiling Avondmal Mededeling and additional slides 1 week before' },
       ]},
       { day: 6, label: 'Saturday',  dayOffset: -7, items: [
-        { id:'sat1', def:false, text:'Send liturgie information to gemeente via '+_wa('WhatsApp') },
-        { id:'sat2', def:false, text:'Send mededelingen to kerkenraad &amp; beamer team by '+_wa('email') },
-        { id:'sat3', def:false, text:'Send mededelingen voorlezen &amp; translation to 1eO and beamer by '+_wa('email') },
+        { id:'sat1', def:false, text:function(){ return 'Send liturgie information to gemeente via '+_wa('WhatsApp'); } },
+        { id:'sat2', def:false, text:function(){ return 'Send mededelingen to kerkenraad &amp; beamer team by '+_wa('email'); } },
+        { id:'sat3', def:false, text:function(){ return 'Send mededelingen voorlezen &amp; translation to 1eO and beamer by '+_wa('email'); } },
       ]},
     ];
 
@@ -299,7 +300,7 @@
           const textCls = checked ? 'line-through text-gray-400' : (overdue ? 'text-red-600 font-medium' : 'text-gray-700');
           html += '<div class="flex items-start gap-3'+(overdue?' bg-red-50 -mx-2 px-2 py-1 rounded-lg':'')+'">';
           html += '<input type="checkbox" class="mt-0.5 w-4 h-4 rounded accent-gkin-green shrink-0 cursor-pointer" '+(checked?'checked':'')+' onchange="toggleItem(\''+item.id+'\',this.checked)" />';
-          html += '<span class="text-sm leading-snug '+textCls+'" id="cl_'+item.id+'">'+item.text+'</span>';
+          html += '<span class="text-sm leading-snug '+textCls+'" id="cl_'+item.id+'">'+(typeof item.text==='function'?item.text():item.text)+'</span>';
           html += '</div>';
         });
         html += '</div></div>';
