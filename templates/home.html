@@ -410,14 +410,11 @@
 
         function _dienstShort(opm) {
             let o = (opm || '').split(/\s*[:]\s*/)[0].replace(/https?:\/\/\S+/gi,'').trim();
-            const hasOLE = /\bOLE\b/i.test(o);
-            let other = o.replace(/\bOLE\b/gi,'').replace(/[,]+/g,' ').trim();
-            if (hasOLE && other) return 'OLE ' + other;
-            if (hasOLE) return 'OLE';
-            return other || '';
+            // Strip purely ordinal entries like "5de zondag", "1e zondag" etc.
+            if (/^\d+(e|de|ste)?\s+zondag$/i.test(o)) return '';
+            return o;
         }
 
-        console.log('[dropdown] all opmerking values:', scheduleData.slice(0,10).map(d=>d.value+': '+d.opmerking));
         scheduleData.forEach((d, idx) => {
             const opt = document.createElement('option');
             opt.value = idx;
@@ -471,7 +468,6 @@
                 _checklistKey = _storageKey(sundayStr);
                 _serviceDate = sundayStr;
                 _hasOLE = /\bOLE\b/i.test(entry.opmerking || '');
-                console.log('[home] _serviceDate set to', _serviceDate, 'hasOLE=', _hasOLE);
                 // Store title for modal header
                 const titleEl = document.getElementById('_checklistTitle');
                 titleEl.dataset.title = 'Checklist – ' + dienstLabel + ' ' + _fmtDate(sundayStr);
