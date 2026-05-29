@@ -60,6 +60,20 @@
             </div>
         </div>
 
+<!-- Dropbox password gate modal -->
+<div id="dbxPwModal" class="fixed inset-0 z-[60] hidden flex items-center justify-center p-4" style="background:rgba(0,0,0,0.5)">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+    <h3 class="text-base font-bold text-gray-800 mb-1">Password required</h3>
+    <p class="text-xs text-gray-500 mb-4">Enter your app password to open this file in Dropbox.</p>
+    <input id="dbxPwInput" type="password" placeholder="Password" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green/30 focus:border-gkin-green mb-2" />
+    <p id="dbxPwError" class="hidden text-xs text-red-500 mb-2">Incorrect password. Try again.</p>
+    <div class="flex gap-2 justify-end">
+      <button onclick="document.getElementById('dbxPwModal').classList.add('hidden')" class="text-sm text-gray-500 px-4 py-2 rounded-lg hover:bg-gray-100 transition">Cancel</button>
+      <button onclick="submitDbxPassword()" class="text-sm font-medium text-white bg-gkin-green rounded-lg px-4 py-2 hover:bg-gkin-dark transition">Open</button>
+    </div>
+  </div>
+</div>
+
 <!-- Checklist Modal -->
 <div id="checklistModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4" style="background:rgba(0,0,0,0.45)">
   <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
@@ -183,28 +197,32 @@
 
     <script>
     // ── Checklist data ──────────────────────────────────────────────────────
-    const _L = 'text-gkin-green underline hover:text-gkin-dark';
+    const _L = 'text-gkin-green underline hover:text-gkin-dark cursor-pointer';
+    const _DBX1 = 'https://www.dropbox.com/scl/fi/51nfkxqdaciu51yd1ba9l/Overzicht-Kerkbezoekers-2026-AM.xlsx?rlkey=btpeg8qjoauew7tcelkai0z37&dl=0';
+    const _DBX2 = 'https://www.dropbox.com/scl/fi/4umk664eaq3tzlj1b9poe/20260114_Dienst-ter-Nagedachtenis-2026_Namenlijst_v1.xlsx?rlkey=28rl2ntjujy13i2vzdl4sq6ch&dl=0';
+    function _dbx(url,label){return '<a class="'+_L+'" onclick="gateDropbox(\''+url+'\')">'+label+'</a>';}
+    function _int(url,label){return '<a href="'+url+'" class="'+_L+'" target="_blank" rel="noopener">'+label+'</a>';}
     const CHECKLIST = [
       { day: 0, label: 'Sunday', dayOffset: -14, items: [
-        { id:'sun1', def:true,  text:'Send <a href="/preekbevestiging" class="'+_L+'">Preekbevestiging</a> to people on duty' },
+        { id:'sun1', def:true,  text:'Send '+_int('/preekbevestiging','Preekbevestiging')+' to people on duty' },
       ]},
       { day: 1, label: 'Monday', items: [
-        { id:'mon1', def:true,  text:'Send Preek &amp; Mededelingen to congregation via <a href="/campaign/pm" class="'+_L+'">Mailing List</a>' },
+        { id:'mon1', def:true,  text:'Send Preek &amp; Mededelingen to congregation via '+_int('/campaign/pm','Mailing List') },
       ]},
       { day: 4, label: 'Thursday', items: [
-        { id:'thu1', def:true,  text:'Update <a href="https://www.dropbox.com/scl/fi/51nfkxqdaciu51yd1ba9l/Overzicht-Kerkbezoekers-2026-AM.xlsx?rlkey=btpeg8qjoauew7tcelkai0z37&dl=0" class="'+_L+'" target="_blank" rel="noopener">Overzicht kerkbezoekers</a> in Dropbox' },
+        { id:'thu1', def:true,  text:'Update '+_dbx(_DBX1,'Overzicht kerkbezoekers')+' in Dropbox' },
       ]},
       { day: 5, label: 'Friday', items: [
         { id:'fri1', def:false, text:'Send email to Scriba for OLE information' },
-        { id:'fri2', def:true,  text:'Send OLE Info to congregation via <a href="/campaign/ole" class="'+_L+'">Mailing List</a>' },
-        { id:'fri3', def:true,  text:'Send OLE info + OLE Liturgie to kerkenraad via <a href="/mededelingen" class="'+_L+'">WhatsApp</a>' },
-        { id:'fri4', def:true,  text:'Insert name of people who just passed away in <a href="https://www.dropbox.com/scl/fi/4umk664eaq3tzlj1b9poe/20260114_Dienst-ter-Nagedachtenis-2026_Namenlijst_v1.xlsx?rlkey=28rl2ntjujy13i2vzdl4sq6ch&dl=0" class="'+_L+'" target="_blank" rel="noopener">Remembrance list</a>' },
+        { id:'fri2', def:true,  text:'Send OLE Info to congregation via '+_int('/campaign/ole','Mailing List') },
+        { id:'fri3', def:true,  text:'Send OLE info + OLE Liturgie to kerkenraad via '+_int('/mededelingen','WhatsApp') },
+        { id:'fri4', def:true,  text:'Insert name of people who just passed away in '+_dbx(_DBX2,'Remembrance list') },
         { id:'fri5', def:true,  text:'Insert Heiling Avondmal Mededeling and additional slides 1 week before' },
       ]},
       { day: 6, label: 'Saturday', items: [
-        { id:'sat1', def:false, text:'Send liturgie information to gemeente via <a href="/mededelingen" class="'+_L+'">WhatsApp</a>' },
-        { id:'sat2', def:false, text:'Send mededelingen to kerkenraad &amp; beamer team by <a href="/mededelingen" class="'+_L+'">email</a>' },
-        { id:'sat3', def:false, text:'Send mededelingen voorlezen &amp; translation to 1eO and beamer by <a href="/mededelingen" class="'+_L+'">email</a>' },
+        { id:'sat1', def:false, text:'Send liturgie information to gemeente via '+_int('/mededelingen','WhatsApp') },
+        { id:'sat2', def:false, text:'Send mededelingen to kerkenraad &amp; beamer team by '+_int('/mededelingen','email') },
+        { id:'sat3', def:false, text:'Send mededelingen voorlezen &amp; translation to 1eO and beamer by '+_int('/mededelingen','email') },
       ]},
     ];
 
@@ -310,11 +328,37 @@
       }
     }
 
-    // close on backdrop click
+    // ── Dropbox password gate ─────────────────────────────────────────────
+    let _pendingUrl = '';
+    function gateDropbox(url) {
+      if ({{ 'true' if session.get('authenticated') else 'false' }}) {
+        window.open(url, '_blank', 'noopener');
+      } else {
+        _pendingUrl = url;
+        document.getElementById('dbxPwModal').classList.remove('hidden');
+        document.getElementById('dbxPwInput').value = '';
+        document.getElementById('dbxPwError').classList.add('hidden');
+        setTimeout(function(){ document.getElementById('dbxPwInput').focus(); }, 50);
+      }
+    }
+    async function submitDbxPassword() {
+      const pw = document.getElementById('dbxPwInput').value;
+      const res = await fetch('/verify-password', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({password:pw})});
+      if (res.ok) {
+        document.getElementById('dbxPwModal').classList.add('hidden');
+        window.open(_pendingUrl, '_blank', 'noopener');
+      } else {
+        document.getElementById('dbxPwError').classList.remove('hidden');
+        document.getElementById('dbxPwInput').select();
+      }
+    }
+    document.getElementById('dbxPwInput').addEventListener('keydown', function(e){ if(e.key==='Enter') submitDbxPassword(); });
+    document.getElementById('dbxPwModal').addEventListener('click', function(e){ if(e.target===this) this.classList.add('hidden'); });
+    // ── End checklist
+    // close checklist backdrop
     document.getElementById('checklistModal').addEventListener('click', function(e) {
       if (e.target === this) closeChecklistModal();
     });
-    // ── End checklist ────────────────────────────────────────────────────────
 
     (function() {
         const scheduleData = {{ schedule_dates | tojson }};

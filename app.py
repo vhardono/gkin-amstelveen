@@ -60,6 +60,15 @@ def logout():
     session.clear()
     return redirect('/')
 
+@app.route('/verify-password', methods=['POST'])
+def verify_password():
+    from flask import jsonify
+    pw = request.get_json(silent=True) or {}
+    if pw.get('password') == SITE_PASSWORD:
+        session['authenticated'] = True
+        return jsonify({'ok': True})
+    return jsonify({'ok': False}), 401
+
 UPLOAD_DIR = os.path.join(os.path.dirname(__file__), 'output', '_uploads')
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
