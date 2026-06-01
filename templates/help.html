@@ -132,7 +132,30 @@ var HELP = {
          {text:'Klik rechtsboven op <code class="bg-gray-100 px-1 rounded text-xs">NL</code>, <code class="bg-gray-100 px-1 rounded text-xs">ID</code> of <code class="bg-gray-100 px-1 rounded text-xs">EN</code> om de taal te wisselen. De voorkeur wordt opgeslagen in de browser.'},
          {text:'Op elke pagina is een <strong>?</strong> help-knop beschikbaar naast de taalknop om direct naar deze handleiding te gaan.'}
        ]},
-      {id:'faq',num:'8',title:'Tips & Veelgestelde vragen',color:'bg-gkin-green',
+      {id:'checklist',num:'8',title:'Wekelijkse Checklist',color:'bg-gkin-green',
+       intro:'De checklist helpt je om elke week alle taken rondom de dienst bij te houden. Taken zijn gegroepeerd per dag relatief aan de geselecteerde dienst-zondag.',
+       steps:[
+         {text:'Selecteer een datum in het <strong>Takenrooster</strong> dropdown. De knop <strong>Checklist</strong> verschijnt rechts naast het rooster.'},
+         {text:'Klik op <strong>Checklist</strong> om het overzicht te openen. De header toont bijv. <em>Checklist \u2013 OLE Doopdienst 14 Jun 2026</em>.'},
+         {text:'Vink een taak aan door op het <strong>selectievakje</strong> te klikken. Klikken op de tekst of link heeft geen effect op het vinkje.'},
+         {text:'Klikbare links openen automatisch de juiste pagina met datum voorgeselecteerd:',
+          sources:[
+            '<strong>Preekbevestiging</strong> \u2014 opent met dienst-datum',
+            '<strong>Mailing List (PM)</strong> \u2014 opent met <em>vorige week</em> datum (H\u22127)',
+            '<strong>Mailing List (OLE)</strong> \u2014 opent met dienst-datum',
+            '<strong>WhatsApp</strong> \u2014 opent Mededelingen en scrollt naar het WhatsApp-gedeelte',
+            '<strong>Dropbox-bestanden</strong> \u2014 openen via Microsoft Excel Online (wachtwoord vereist)'
+          ]},
+         {text:'Verlopen taken worden <span class="text-red-600 font-medium">rood gemarkeerd</span>. Een badge op de Checklist-knop toont het aantal openstaande verlopen taken.'},
+         {text:'Conditionele taken:',
+          sources:[
+            '<strong>OLE-taken</strong> \u2014 alleen zichtbaar als de dienst OLE in de opmerking heeft',
+            '<strong>Heilig Avondmaal dia\u2019s</strong> \u2014 alleen zichtbaar als huidige of volgende week Heilig Avondmaal heeft'
+          ]},
+         {text:'Klik op <strong>Reset alles</strong> om alle vinkjes voor deze datum te wissen.'}
+       ],
+       notes:[{type:'blue',text:'\uD83D\uDCA1 Checkliststatus wordt per datum opgeslagen in de browser (localStorage). Browserdata wissen verwijdert ook de vinkjes.'}]},
+      {id:'faq',num:'9',title:'Tips & Veelgestelde vragen',color:'bg-gkin-green',
        faqs:[
          {q:'❓ De vertaling werkt niet / geeft een foutmelding',a:'Controleer of de <code class="bg-gray-100 px-1 rounded text-xs">GEMINI_API_KEY</code> is ingesteld op de server. Zorg ook dat je Google Gemini-account voldoende tegoed heeft.'},
          {q:'❓ Mijn .doc bestand wordt niet herkend',a:'De app ondersteunt zowel .docx als .doc. Als .doc niet werkt, sla het op als .docx via <em>Opslaan als \u2192 Word-document (.docx)</em> in Microsoft Word.'},
@@ -230,7 +253,30 @@ var HELP = {
          {text:'Klik tombol <code class="bg-gray-100 px-1 rounded text-xs">NL</code>, <code class="bg-gray-100 px-1 rounded text-xs">ID</code>, atau <code class="bg-gray-100 px-1 rounded text-xs">EN</code> di kanan atas untuk mengganti bahasa. Preferensi disimpan di browser.'},
          {text:'Di setiap halaman tersedia tombol <strong>?</strong> di sebelah pilihan bahasa untuk langsung membuka panduan ini.'}
        ]},
-      {id:'faq',num:'8',title:'Tips & Pertanyaan Umum',color:'bg-gkin-green',
+      {id:'checklist',num:'8',title:'Daftar Tugas Mingguan',color:'bg-gkin-green',
+       intro:'Daftar tugas membantu kamu melacak semua tugas mingguan terkait kebaktian, dikelompokkan per hari relatif terhadap hari Minggu yang dipilih.',
+       steps:[
+         {text:'Pilih tanggal di dropdown <strong>Jadwal Tugas</strong>. Tombol <strong>Daftar Tugas</strong> akan muncul di sebelah kanan.'},
+         {text:'Klik <strong>Daftar Tugas</strong> untuk membuka daftar. Header menampilkan misalnya <em>Checklist \u2013 OLE Doopdienst 14 Jun 2026</em>.'},
+         {text:'Centang tugas dengan mengklik <strong>kotak centang</strong>. Mengklik teks atau tautan tidak akan mencentang kotak.'},
+         {text:'Tautan yang dapat diklik membuka halaman yang sesuai dengan tanggal sudah terisi otomatis:',
+          sources:[
+            '<strong>Konfirmasi Khotbah</strong> \u2014 membuka dengan tanggal ibadah',
+            '<strong>Mailing List (PM)</strong> \u2014 membuka dengan tanggal <em>minggu sebelumnya</em> (H\u22127)',
+            '<strong>Mailing List (OLE)</strong> \u2014 membuka dengan tanggal ibadah',
+            '<strong>WhatsApp</strong> \u2014 membuka Pengumuman dan otomatis scroll ke bagian WhatsApp',
+            '<strong>File Dropbox</strong> \u2014 dibuka via Microsoft Excel Online (membutuhkan kata sandi)'
+          ]},
+         {text:'Tugas yang terlambat ditampilkan <span class="text-red-600 font-medium">dengan warna merah</span>. Badge di tombol Daftar Tugas menunjukkan jumlah tugas terlambat yang belum diselesaikan.'},
+         {text:'Tugas kondisional:',
+          sources:[
+            '<strong>Tugas OLE</strong> \u2014 hanya tampil jika ibadah memiliki OLE di keterangannya',
+            '<strong>Slide Perjamuan Kudus</strong> \u2014 hanya tampil jika minggu ini atau minggu berikutnya ada Perjamuan Kudus'
+          ]},
+         {text:'Klik <strong>Reset semua</strong> untuk menghapus semua centang untuk tanggal ini.'}
+       ],
+       notes:[{type:'blue',text:'\uD83D\uDCA1 Status daftar tugas disimpan per tanggal di browser (localStorage). Menghapus data browser juga akan menghapus centang.'}]},
+      {id:'faq',num:'9',title:'Tips & Pertanyaan Umum',color:'bg-gkin-green',
        faqs:[
          {q:'❓ Terjemahan tidak berfungsi / menampilkan error',a:'Periksa apakah <code class="bg-gray-100 px-1 rounded text-xs">GEMINI_API_KEY</code> sudah diatur di server. Pastikan juga akun Google Gemini memiliki saldo yang cukup.'},
          {q:'❓ File .doc saya tidak dikenali',a:'Aplikasi mendukung .docx dan .doc. Jika .doc tidak berfungsi, simpan sebagai .docx melalui <em>Simpan Sebagai \u2192 Dokumen Word (.docx)</em> di Microsoft Word.'},
@@ -328,7 +374,30 @@ var HELP = {
          {text:'Click <code class="bg-gray-100 px-1 rounded text-xs">NL</code>, <code class="bg-gray-100 px-1 rounded text-xs">ID</code> or <code class="bg-gray-100 px-1 rounded text-xs">EN</code> in the top-right header. Your preference is saved in the browser.'},
          {text:'A <strong>?</strong> help button is available next to the language selector on every page.'}
        ]},
-      {id:'faq',num:'8',title:'Tips & FAQ',color:'bg-gkin-green',
+      {id:'checklist',num:'8',title:'Weekly Checklist',color:'bg-gkin-green',
+       intro:'The checklist helps you track all weekly tasks around the service, grouped by day relative to the selected service Sunday.',
+       steps:[
+         {text:'Select a date in the <strong>Duty Roster</strong> dropdown. The <strong>Checklist</strong> button will appear next to the roster.'},
+         {text:'Click <strong>Checklist</strong> to open the overview. The header shows e.g. <em>Checklist \u2013 OLE Doopdienst 14 Jun 2026</em>.'},
+         {text:'Tick a task by clicking the <strong>checkbox</strong>. Clicking the text or a link has no effect on the checkbox.'},
+         {text:'Clickable links automatically open the correct page with the date pre-filled:',
+          sources:[
+            '<strong>Preekbevestiging</strong> \u2014 opens with service date',
+            '<strong>Mailing List (PM)</strong> \u2014 opens with <em>previous week</em> date (H\u22127)',
+            '<strong>Mailing List (OLE)</strong> \u2014 opens with service date',
+            '<strong>WhatsApp</strong> \u2014 opens Mededelingen and auto-scrolls to the WhatsApp section',
+            '<strong>Dropbox files</strong> \u2014 open via Microsoft Excel Online (password required)'
+          ]},
+         {text:'Overdue tasks are highlighted <span class="text-red-600 font-medium">in red</span>. A badge on the Checklist button shows the number of outstanding overdue tasks.'},
+         {text:'Conditional tasks:',
+          sources:[
+            '<strong>OLE tasks</strong> \u2014 only shown when the service has OLE in its remarks',
+            '<strong>Heilig Avondmaal slides</strong> \u2014 only shown when the current or next week has Heilig Avondmaal'
+          ]},
+         {text:'Click <strong>Reset all</strong> to clear all ticks for this date.'}
+       ],
+       notes:[{type:'blue',text:'\uD83D\uDCA1 Checklist state is saved per date in the browser (localStorage). Clearing browser data will also remove the ticks.'}]},
+      {id:'faq',num:'9',title:'Tips & FAQ',color:'bg-gkin-green',
        faqs:[
          {q:'❓ Translation does not work / shows an error',a:'Check that <code class="bg-gray-100 px-1 rounded text-xs">GEMINI_API_KEY</code> is set on the server. Also ensure your Google Gemini account has sufficient credit.'},
          {q:'❓ My .doc file is not recognised',a:'The app supports both .docx and .doc. If .doc does not work, re-save as .docx via <em>Save As \u2192 Word Document (.docx)</em> in Microsoft Word.'},
