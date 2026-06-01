@@ -290,7 +290,7 @@ class ScipioScraper:
                 else:
                     display_name = fallback_name
 
-                # Format birth date as dd-mm
+                # Format birth date as dd-mm (NEVER include year for privacy)
                 dd_mm = birth_date_raw
                 try:
                     parts = birth_date_raw.split()
@@ -299,13 +299,43 @@ class ScipioScraper:
                         month_map = {
                             'januari': 1, 'februari': 2, 'maart': 3, 'april': 4,
                             'mei': 5, 'juni': 6, 'juli': 7, 'augustus': 8,
-                            'september': 9, 'oktober': 10, 'november': 11, 'december': 12
+                            'september': 9, 'oktober': 10, 'november': 11, 'december': 12,
+                            'jan': 1, 'feb': 2, 'mrt': 3, 'mar': 3, 'apr': 4,
+                            'mei': 5, 'jun': 6, 'jul': 7, 'aug': 8,
+                            'sep': 9, 'sept': 9, 'okt': 10, 'nov': 11, 'dec': 12
                         }
                         month_num = month_map.get(parts[1].lower(), 0)
                         if month_num:
                             dd_mm = f'{day:02d}-{month_num:02d}'
+                        else:
+                            # Try parsing as dd-mm-yyyy or dd/mm/yyyy format
+                            import re
+                            date_match = re.match(r'(\d{1,2})[/-](\d{1,2})', birth_date_raw)
+                            if date_match:
+                                dd_mm = f'{int(date_match.group(1)):02d}-{int(date_match.group(2)):02d}'
                 except Exception:
-                    pass
+                    # If all parsing fails, try regex to extract just day-month
+                    import re
+                    try:
+                        # Match patterns like "01 jun 1994" or "01-06-1994" or "01/06/1994"
+                        patterns = [
+                            r'(\d{1,2})\s+([a-z]{3,})',  # 01 jun
+                            r'(\d{1,2})[/-](\d{1,2})'    # 01-06 or 01/06
+                        ]
+                        for pattern in patterns:
+                            match = re.search(pattern, birth_date_raw, re.IGNORECASE)
+                            if match:
+                                day = int(match.group(1))
+                                month = match.group(2).lower()
+                                if month.isdigit():
+                                    month_num = int(month)
+                                else:
+                                    month_num = month_map.get(month, 0)
+                                if month_num:
+                                    dd_mm = f'{day:02d}-{month_num:02d}'
+                                    break
+                    except Exception:
+                        pass
 
                 birthdays.append({
                     'entry': f'{dd_mm}: {salutation} {display_name}',
