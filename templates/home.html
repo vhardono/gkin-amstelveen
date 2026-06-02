@@ -391,9 +391,6 @@
       keys.sort();
       keys.forEach(function(key) {
         const weekSundayStr = key.replace('checklist_', '');
-        // Only consider weeks whose service Sunday is today or in the past
-        const serviceSunday = new Date(weekSundayStr + 'T00:00:00');
-        if (serviceSunday > today) return;
         const saved = JSON.parse(localStorage.getItem(key) || '{}');
         const items = [];
         CHECKLIST.forEach(function(dayObj) {
@@ -403,7 +400,9 @@
             const baseOffset = (dayObj.dayOffset !== undefined) ? dayObj.dayOffset : 0;
             const itemDate = new Date(weekSundayStr + 'T00:00:00');
             itemDate.setDate(itemDate.getDate() + baseOffset + dayObj.day);
-            const checked = (item.id in saved) ? saved[item.id] : item.def;
+            // Only count as overdue if explicitly saved as false (not just never opened)
+            if (!(item.id in saved)) return;
+            const checked = saved[item.id];
             if (!checked && itemDate < today) {
               totalOverdue++;
               // Get plain text label via i18n, strip {link} placeholder and HTML tags
