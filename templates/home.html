@@ -485,6 +485,8 @@
             if (idx === '') {
                 detail.classList.add('hidden');
                 document.getElementById('checklistBtnWrap').classList.add('hidden');
+                const modal = document.getElementById('checklistModal');
+                if (!modal.classList.contains('hidden')) closeChecklistModal();
                 _checklistKey = '';
                 _showConsolidatedOverdue();
                 return;
