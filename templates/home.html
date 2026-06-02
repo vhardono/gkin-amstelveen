@@ -60,10 +60,12 @@
             </div>
             <!-- Consolidated overdue banner: shown when no date is selected -->
             <div id="consolidatedOverdue" class="hidden mt-3">
-                <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                <button onclick="toggleConsolidatedDetail()" class="w-full text-left inline-flex items-center gap-1.5 text-xs font-semibold text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 hover:bg-red-100 transition">
                     <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
-                    <span id="consolidatedOverdueText"></span>
-                </span>
+                    <span id="consolidatedOverdueText" class="flex-1"></span>
+                    <svg id="consolidatedChevron" class="w-3.5 h-3.5 shrink-0 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+                <div id="consolidatedDetail" class="hidden mt-2 border border-red-200 rounded-lg bg-white divide-y divide-red-50 text-xs"></div>
             </div>
         </div>
 
@@ -379,30 +381,68 @@
     function _showConsolidatedOverdue() {
       const today = new Date(); today.setHours(0,0,0,0);
       let totalOverdue = 0;
-      // Scan all localStorage keys that look like checklist_YYYY-MM-DD
+      // weekGroups: { sundayStr -> [ { dayLabel, dateStr, text } ] }
+      const weekGroups = {};
+      const keys = [];
       for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (!/^checklist_\d{4}-\d{2}-\d{2}$/.test(key)) continue;
+        const k = localStorage.key(i);
+        if (/^checklist_\d{4}-\d{2}-\d{2}$/.test(k)) keys.push(k);
+      }
+      keys.sort();
+      keys.forEach(function(key) {
         const weekSundayStr = key.replace('checklist_', '');
         const saved = JSON.parse(localStorage.getItem(key) || '{}');
+        const items = [];
         CHECKLIST.forEach(function(dayObj) {
           dayObj.items.forEach(function(item) {
             const baseOffset = (dayObj.dayOffset !== undefined) ? dayObj.dayOffset : 0;
             const itemDate = new Date(weekSundayStr + 'T00:00:00');
             itemDate.setDate(itemDate.getDate() + baseOffset + dayObj.day);
             const checked = (item.id in saved) ? saved[item.id] : item.def;
-            if (!checked && itemDate < today) totalOverdue++;
+            if (!checked && itemDate < today) {
+              totalOverdue++;
+              items.push({
+                dayLabel: _tDay(dayObj.day),
+                dateStr: itemDate.toISOString().slice(0,10),
+                text: typeof item.text === 'function' ? item.text() : item.text
+              });
+            }
           });
         });
-      }
+        if (items.length) weekGroups[weekSundayStr] = items;
+      });
       const banner = document.getElementById('consolidatedOverdue');
       const bannerText = document.getElementById('consolidatedOverdueText');
+      const detail = document.getElementById('consolidatedDetail');
       if (totalOverdue > 0) {
-        bannerText.textContent = totalOverdue + ' overdue ' + (totalOverdue === 1 ? 'taak' : 'taken') + ' over alle weken';
+        bannerText.textContent = totalOverdue + ' overdue ' + (totalOverdue === 1 ? 'taak' : 'taken') + ' — klik om te bekijken';
+        // Build detail HTML grouped by week
+        let html = '';
+        Object.keys(weekGroups).sort().forEach(function(sundayStr) {
+          html += '<div class="px-3 py-2">';
+          html += '<div class="font-semibold text-gray-500 mb-1">Week van ' + _fmtDate(sundayStr) + '</div>';
+          html += '<ul class="space-y-1">';
+          weekGroups[sundayStr].forEach(function(it) {
+            html += '<li class="flex items-start gap-2 text-red-700">';
+            html += '<span class="shrink-0 font-medium">' + it.dayLabel + ' ' + _fmtDate(it.dateStr) + ':</span>';
+            html += '<span>' + it.text + '</span>';
+            html += '</li>';
+          });
+          html += '</ul></div>';
+        });
+        detail.innerHTML = html;
         banner.classList.remove('hidden');
       } else {
         banner.classList.add('hidden');
+        detail.classList.add('hidden');
       }
+    }
+
+    function toggleConsolidatedDetail() {
+      const detail = document.getElementById('consolidatedDetail');
+      const chevron = document.getElementById('consolidatedChevron');
+      const hidden = detail.classList.toggle('hidden');
+      chevron.style.transform = hidden ? '' : 'rotate(180deg)';
     }
 
     // ── Dropbox password gate ─────────────────────────────────────────────
