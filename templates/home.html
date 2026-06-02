@@ -391,6 +391,9 @@
       keys.sort();
       keys.forEach(function(key) {
         const weekSundayStr = key.replace('checklist_', '');
+        // Only consider weeks whose service Sunday is today or in the past
+        const serviceSunday = new Date(weekSundayStr + 'T00:00:00');
+        if (serviceSunday > today) return;
         const saved = JSON.parse(localStorage.getItem(key) || '{}');
         const items = [];
         CHECKLIST.forEach(function(dayObj) {
@@ -403,9 +406,11 @@
             const checked = (item.id in saved) ? saved[item.id] : item.def;
             if (!checked && itemDate < today) {
               totalOverdue++;
-              // Get plain text label: use i18n key (strip {link} placeholder), strip HTML tags
-              const rawText = window.t ? window.t('cl.' + item.id) : item.id;
-              const plainText = rawText.replace(/\{link\}/g,'').replace(/<[^>]+>/g,'').trim();
+              // Get plain text label via i18n, strip {link} placeholder and HTML tags
+              const lang = localStorage.getItem('gkin_lang') || 'nl';
+              const dict = window.GKIN_I18N && (window.GKIN_I18N[lang] || window.GKIN_I18N['nl']);
+              const rawText = (dict && dict['cl.' + item.id]) || item.id;
+              const plainText = rawText.replace(/\{link\}/g,'').replace(/<[^>]+>/g,'').replace(/&amp;/g,'&').trim();
               items.push({
                 dayLabel: _tDay(dayObj.day),
                 dateStr: itemDate.toISOString().slice(0,10),
