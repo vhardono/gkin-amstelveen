@@ -590,10 +590,13 @@
         // Show consolidated overdue on page load (no date selected)
         _showConsolidatedOverdue();
 
-        // Re-render checklist when language changes
+        // Re-render checklist and consolidated overdue when language changes
         document.addEventListener('gkin:langchange', function() {
             if (_checklistKey && !document.getElementById('checklistModal').classList.contains('hidden')) {
                 renderChecklist();
+            }
+            if (!document.getElementById('consolidatedOverdue').classList.contains('hidden')) {
+                _showConsolidatedOverdue();
             }
         });
     })();
