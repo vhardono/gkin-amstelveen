@@ -395,16 +395,21 @@
         const items = [];
         CHECKLIST.forEach(function(dayObj) {
           dayObj.items.forEach(function(item) {
+            // Skip conditional items — no OLE/HA context available here
+            if (item.oleOnly || item.haOnly) return;
             const baseOffset = (dayObj.dayOffset !== undefined) ? dayObj.dayOffset : 0;
             const itemDate = new Date(weekSundayStr + 'T00:00:00');
             itemDate.setDate(itemDate.getDate() + baseOffset + dayObj.day);
             const checked = (item.id in saved) ? saved[item.id] : item.def;
             if (!checked && itemDate < today) {
               totalOverdue++;
+              // Get plain text label: use i18n key (strip {link} placeholder), strip HTML tags
+              const rawText = window.t ? window.t('cl.' + item.id) : item.id;
+              const plainText = rawText.replace(/\{link\}/g,'').replace(/<[^>]+>/g,'').trim();
               items.push({
                 dayLabel: _tDay(dayObj.day),
                 dateStr: itemDate.toISOString().slice(0,10),
-                text: typeof item.text === 'function' ? item.text() : item.text
+                text: plainText
               });
             }
           });
