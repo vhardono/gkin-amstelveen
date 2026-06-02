@@ -249,6 +249,7 @@
     let _checklistKey = '';
     let _hasOLE = false;
     let _hasHA = false;
+    let _validSundayDates = null; // populated from scheduleData once IIFE runs
 
     function _storageKey(sundayDateStr) { return 'checklist_' + sundayDateStr; }
 
@@ -391,6 +392,8 @@
       keys.sort();
       keys.forEach(function(key) {
         const weekSundayStr = key.replace('checklist_', '');
+        // Skip weeks not present in the current dropdown
+        if (_validSundayDates && !_validSundayDates.has(weekSundayStr)) return;
         const saved = JSON.parse(localStorage.getItem(key) || '{}');
         const items = [];
         CHECKLIST.forEach(function(dayObj) {
@@ -409,7 +412,10 @@
               const lang = localStorage.getItem('gkin_lang') || 'nl';
               const dict = window.GKIN_I18N && (window.GKIN_I18N[lang] || window.GKIN_I18N['nl']);
               const rawText = (dict && dict['cl.' + item.id]) || item.id;
-              const plainText = rawText.replace(/\{link\}/g,'').replace(/<[^>]+>/g,'').replace(/&amp;/g,'&').trim();
+              // Replace {link} with a readable label extracted from the item's default link text
+              const linkLabels = {'sun1':'Preekbevestiging','mon1':'Mailing List','thu1':'Overzicht kerkbezoekers','fri2':'Mailing List','fri3':'WhatsApp','fri4':'Remembrance list','sat1':'WhatsApp','sat2':'email','sat3':'email'};
+              const linkLabel = linkLabels[item.id] || '';
+              const plainText = rawText.replace(/\{link\}/g, linkLabel).replace(/<[^>]+>/g,'').replace(/&amp;/g,'&').trim();
               items.push({
                 dayLabel: _tDay(dayObj.day),
                 dateStr: itemDate.toISOString().slice(0,10),
@@ -579,6 +585,8 @@
             }
         });
 
+        // Build set of valid sunday dates from dropdown for consolidated filter
+        _validSundayDates = new Set(scheduleData.map(function(d){ return d.value; }));
         // Show consolidated overdue on page load (no date selected)
         _showConsolidatedOverdue();
 
