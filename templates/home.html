@@ -430,12 +430,16 @@
       const bannerText = document.getElementById('consolidatedOverdueText');
       const detail = document.getElementById('consolidatedDetail');
       if (totalOverdue > 0) {
-        bannerText.textContent = totalOverdue + ' overdue ' + (totalOverdue === 1 ? 'taak' : 'taken') + ' — klik om te bekijken';
+        const lang = localStorage.getItem('gkin_lang') || 'nl';
+        const dict = window.GKIN_I18N && (window.GKIN_I18N[lang] || window.GKIN_I18N['nl']);
+        const tOvd = function(k) { return (dict && dict[k]) || k; };
+        const taskWord = totalOverdue === 1 ? tOvd('cl.overdue.task') : tOvd('cl.overdue.tasks');
+        bannerText.textContent = totalOverdue + ' ' + taskWord + ' \u2014 ' + tOvd('cl.overdue.click');
         // Build detail HTML grouped by week
         let html = '';
         Object.keys(weekGroups).sort().forEach(function(sundayStr) {
           html += '<div class="px-3 py-2">';
-          html += '<div class="font-semibold text-gray-500 mb-1">Week van ' + _fmtDate(sundayStr) + '</div>';
+          html += '<div class="font-semibold text-gray-500 mb-1">' + tOvd('cl.overdue.weekof') + ' ' + _fmtDate(sundayStr) + '</div>';
           html += '<ul class="space-y-1">';
           weekGroups[sundayStr].forEach(function(it) {
             html += '<li class="flex items-start gap-2 text-red-700">';

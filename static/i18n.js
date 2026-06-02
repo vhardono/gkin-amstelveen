@@ -272,6 +272,10 @@ const GKIN_I18N = {
     'cl.sat1':                'Stuur liturgie informatie naar de gemeente via {link}',
     'cl.sat2':                'Stuur mededelingen naar kerkenraad &amp; beamerteam per {link}',
     'cl.sat3':                'Stuur mededelingen voorlezen &amp; vertaling naar 1eO en beamer per {link}',
+    'cl.overdue.task':         'vervallen taak',
+    'cl.overdue.tasks':        'vervallen taken',
+    'cl.overdue.click':        'klik om te bekijken',
+    'cl.overdue.weekof':       'Week van',
   },
 
   id: {
@@ -547,6 +551,10 @@ const GKIN_I18N = {
     'cl.sat1':                'Kirim informasi liturgi ke jemaat via {link}',
     'cl.sat2':                'Kirim pengumuman ke majelis &amp; tim beamer per {link}',
     'cl.sat3':                'Kirim teks bacaan pengumuman &amp; terjemahan ke 1eO dan beamer per {link}',
+    'cl.overdue.task':         'tugas terlambat',
+    'cl.overdue.tasks':        'tugas terlambat',
+    'cl.overdue.click':        'klik untuk melihat',
+    'cl.overdue.weekof':       'Minggu',
   },
 
   en: {
@@ -822,6 +830,10 @@ const GKIN_I18N = {
     'cl.sat1':                'Send liturgie information to gemeente via {link}',
     'cl.sat2':                'Send mededelingen to kerkenraad &amp; beamer team by {link}',
     'cl.sat3':                'Send mededelingen voorlezen &amp; translation to 1eO and beamer by {link}',
+    'cl.overdue.task':         'overdue task',
+    'cl.overdue.tasks':        'overdue tasks',
+    'cl.overdue.click':        'click to view',
+    'cl.overdue.weekof':       'Week of',
   },
 };
 
