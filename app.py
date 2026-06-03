@@ -3106,18 +3106,24 @@ def translate_preek():
         paragraphs, orig_doc = _read_doc_paragraphs(file_bytes, file.filename or '')
 
         source_text = '\n'.join(p for p in paragraphs if p.strip())
+        print(f"[translate-preek] Source text length: {len(source_text)} chars, first 200: {source_text[:200]}")
         PROMPT = (
-            "You are a careful church translation assistant.\n"
-            "Translate the following sermon text.\n"
-            "If the text is in Dutch (Nederlands), translate it ENTIRELY to Indonesian (Bahasa Indonesia).\n"
-            "If the text is in Indonesian (Bahasa Indonesia), translate it ENTIRELY to Dutch (Nederlands).\n"
-            "IMPORTANT: Output ONLY the translated text. Do NOT repeat or include the original. "
-            "Do NOT add explanations, notes, or commentary.\n"
-            "Preserve paragraph structure. Use appropriate church and liturgical terminology.\n\n"
+            "You are a professional church sermon translator.\n"
+            "Your task: Determine the language of the text below, then translate it to the OTHER language.\n"
+            "- If the text is in Indonesian (Bahasa Indonesia) → translate the ENTIRE text to Dutch (Nederlands).\n"
+            "- If the text is in Dutch (Nederlands) → translate the ENTIRE text to Indonesian (Bahasa Indonesia).\n\n"
+            "CRITICAL RULES:\n"
+            "1. Output ONLY the full translated text in the TARGET language.\n"
+            "2. Do NOT output any part of the original text.\n"
+            "3. Do NOT add titles like 'Vertaling' or 'Terjemahan' or any headers.\n"
+            "4. Do NOT add notes, explanations, or commentary.\n"
+            "5. Preserve the original paragraph structure exactly.\n"
+            "6. Use proper church and liturgical terminology in the target language.\n\n"
             "TEXT TO TRANSLATE:\n" + source_text
         )
-        response = client.models.generate_content(model='gemini-2.5-flash-lite', contents=PROMPT)
+        response = client.models.generate_content(model='gemini-2.5-flash', contents=PROMPT)
         translated_text = response.text.strip()
+        print(f"[translate-preek] Translated text length: {len(translated_text)} chars, first 200: {translated_text[:200]}")
 
         # Build new DOCX from translated text lines only
         new_doc = DocxDocument()
@@ -3165,19 +3171,25 @@ def translate_preek_inline():
         paragraphs, orig_doc = _read_doc_paragraphs(file_bytes, file.filename or '')
 
         source_text = '\n'.join(p for p in paragraphs if p.strip())
+        print(f"[translate-preek-inline] Source text length: {len(source_text)} chars, first 200: {source_text[:200]}")
         PROMPT = (
-            "You are a careful church translation assistant.\n"
-            "Translate the following sermon text.\n"
-            "If the text is in Dutch (Nederlands), translate it to Indonesian (Bahasa Indonesia).\n"
-            "If the text is in Indonesian (Bahasa Indonesia), translate it to Dutch (Nederlands).\n"
-            "IMPORTANT: Output ONLY the translated text. Do NOT include the original text. "
-            "Do NOT add explanations, notes, or commentary.\n"
-            "Preserve paragraph structure. Use appropriate church and liturgical terminology.\n\n"
+            "You are a professional church sermon translator.\n"
+            "Your task: Determine the language of the text below, then translate it to the OTHER language.\n"
+            "- If the text is in Indonesian (Bahasa Indonesia) → translate the ENTIRE text to Dutch (Nederlands).\n"
+            "- If the text is in Dutch (Nederlands) → translate the ENTIRE text to Indonesian (Bahasa Indonesia).\n\n"
+            "CRITICAL RULES:\n"
+            "1. Output ONLY the full translated text in the TARGET language.\n"
+            "2. Do NOT output any part of the original text.\n"
+            "3. Do NOT add titles like 'Vertaling' or 'Terjemahan' or any headers.\n"
+            "4. Do NOT add notes, explanations, or commentary.\n"
+            "5. Preserve the original paragraph structure exactly.\n"
+            "6. Use proper church and liturgical terminology in the target language.\n\n"
             "TEXT TO TRANSLATE:\n" + source_text
         )
 
-        response = client.models.generate_content(model='gemini-2.5-flash-lite', contents=PROMPT)
+        response = client.models.generate_content(model='gemini-2.5-flash', contents=PROMPT)
         translated_text = response.text.strip()
+        print(f"[translate-preek-inline] Translated text length: {len(translated_text)} chars, first 200: {translated_text[:200]}")
 
         # Build new DOCX from translated text lines only
         new_doc = DocxDocument()
