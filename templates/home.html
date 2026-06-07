@@ -250,8 +250,25 @@
     let _hasOLE = false;
     let _hasHA = false;
     let _validSundayDates = null; // populated from scheduleData once IIFE runs
+    let _serverState = {};  // cache: { week_date: { item_id: bool } }
 
-    function _storageKey(sundayDateStr) { return 'checklist_' + sundayDateStr; }
+    function _storageKey(sundayDateStr) { return sundayDateStr; }
+
+    async function _fetchWeekState(weekDate) {
+      if (_serverState[weekDate] !== undefined) return _serverState[weekDate];
+      try {
+        const r = await fetch('/api/checklist/' + weekDate);
+        _serverState[weekDate] = await r.json();
+      } catch(e) { _serverState[weekDate] = {}; }
+      return _serverState[weekDate];
+    }
+
+    async function _saveItem(weekDate, itemId, checked) {
+      if (!_serverState[weekDate]) _serverState[weekDate] = {};
+      _serverState[weekDate][itemId] = checked;
+      try { await fetch('/api/checklist/' + weekDate, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({[itemId]: checked}) }); }
+      catch(e) { console.warn('checklist save failed', e); }
+    }
 
     function _addDays(dateStr, n) {
       // dateStr = 'YYYY-MM-DD'
@@ -301,16 +318,15 @@
       window.scrollTo(0, _scrollY);
     }
 
-    function renderChecklist() {
-      const saved = JSON.parse(localStorage.getItem(_checklistKey) || '{}');
+    async function renderChecklist() {
+      const saved = await _fetchWeekState(_checklistKey);
       const body = document.getElementById('checklistBody');
       const titleText = document.getElementById('_checklistTitle').dataset.title || 'Checklist';
       document.getElementById('checklistTitle').textContent = titleText;
       let html = '';
       CHECKLIST.forEach(function(dayObj) {
         if (!dayObj.items.length) return;
-        // date for this day = service Sunday + dayOffset + day
-        const sundayStr = _checklistKey.replace('checklist_','');
+        const sundayStr = _checklistKey;
         const baseOffset = (dayObj.dayOffset !== undefined) ? dayObj.dayOffset : 0;
         const dayDate = _addDays(sundayStr, baseOffset + dayObj.day);
         html += '<div>';
@@ -338,26 +354,25 @@
     }
 
     function toggleItem(id, checked) {
-      const saved = JSON.parse(localStorage.getItem(_checklistKey) || '{}');
-      saved[id] = checked;
-      localStorage.setItem(_checklistKey, JSON.stringify(saved));
+      _saveItem(_checklistKey, id, checked);
       const span = document.getElementById('cl_'+id);
       if (span) {
-        if (checked) { span.classList.add('line-through','text-gray-400'); span.classList.remove('text-gray-700'); }
+        if (checked) { span.classList.add('line-through','text-gray-400'); span.classList.remove('text-gray-700','text-red-600','font-medium'); }
         else { span.classList.remove('line-through','text-gray-400'); span.classList.add('text-gray-700'); }
       }
-      _updateOverdueAlert(_checklistKey.replace('checklist_',''));
+      _updateOverdueAlert(_checklistKey);
     }
 
-    function resetChecklist() {
+    async function resetChecklist() {
       if (!confirm('Reset all checkboxes for this week?')) return;
-      localStorage.removeItem(_checklistKey);
+      _serverState[_checklistKey] = {};
+      try { await fetch('/api/checklist/' + _checklistKey, { method: 'POST', headers: {'Content-Type':'application/json'}, body: '{}' }); }
+      catch(e) {}
       renderChecklist();
     }
 
-    function _updateOverdueAlert(weekSundayStr) {
-      // weekSundayStr = YYYY-MM-DD of the H-7 Sunday (start of checklist week)
-      const saved = JSON.parse(localStorage.getItem('checklist_' + weekSundayStr) || '{}');
+    async function _updateOverdueAlert(weekSundayStr) {
+      const saved = await _fetchWeekState(weekSundayStr);
       const today = new Date(); today.setHours(0,0,0,0);
       let overdueCount = 0;
       CHECKLIST.forEach(function(dayObj) {
@@ -379,22 +394,22 @@
       }
     }
 
-    function _showConsolidatedOverdue() {
+    async function _showConsolidatedOverdue() {
       const today = new Date(); today.setHours(0,0,0,0);
       let totalOverdue = 0;
       // weekGroups: { sundayStr -> [ { dayLabel, dateStr, text } ] }
       const weekGroups = {};
-      const keys = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (/^checklist_\d{4}-\d{2}-\d{2}$/.test(k)) keys.push(k);
-      }
+      // Fetch all weeks from server
+      let allState = {};
+      try { const r = await fetch('/api/checklist'); allState = await r.json(); } catch(e) {}
+      // Merge into cache
+      Object.assign(_serverState, allState);
+      const keys = Object.keys(allState).filter(function(k) {
+        return /^\d{4}-\d{2}-\d{2}$/.test(k) && (!_validSundayDates || _validSundayDates.has(k));
+      });
       keys.sort();
-      keys.forEach(function(key) {
-        const weekSundayStr = key.replace('checklist_', '');
-        // Skip weeks not present in the current dropdown
-        if (_validSundayDates && !_validSundayDates.has(weekSundayStr)) return;
-        const saved = JSON.parse(localStorage.getItem(key) || '{}');
+      keys.forEach(function(weekSundayStr) {
+        const saved = allState[weekSundayStr] || {};
         const items = [];
         CHECKLIST.forEach(function(dayObj) {
           dayObj.items.forEach(function(item) {

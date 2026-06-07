@@ -34,6 +34,72 @@ app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10MB max upload
 app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'gkin-amstelveen-secret-2026')
 SITE_PASSWORD = os.environ.get('SITE_PASSWORD', '')
 
+# ── Checklist SQLite storage ──────────────────────────────────────────────────
+import sqlite3
+
+def _checklist_db_path():
+    """Use /data for Railway persistent volume, fallback to instance folder."""
+    data_dir = '/data' if os.path.isdir('/data') else os.path.join(os.path.dirname(__file__), 'instance')
+    os.makedirs(data_dir, exist_ok=True)
+    return os.path.join(data_dir, 'checklist.db')
+
+def _get_checklist_db():
+    db = sqlite3.connect(_checklist_db_path())
+    db.execute('''CREATE TABLE IF NOT EXISTS checklist_state (
+        week_date TEXT NOT NULL,
+        item_id   TEXT NOT NULL,
+        checked   INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY (week_date, item_id)
+    )''')
+    db.commit()
+    return db
+
+@app.route('/api/checklist/<week_date>', methods=['GET'])
+def checklist_get(week_date):
+    """Return all saved item states for a given week (YYYY-MM-DD)."""
+    try:
+        db = _get_checklist_db()
+        rows = db.execute('SELECT item_id, checked FROM checklist_state WHERE week_date = ?', (week_date,)).fetchall()
+        db.close()
+        return jsonify({row[0]: bool(row[1]) for row in rows})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/checklist/<week_date>', methods=['POST'])
+def checklist_save(week_date):
+    """Save item states for a given week. Body: { item_id: bool, ... }"""
+    try:
+        data = request.get_json(force=True)
+        if not isinstance(data, dict):
+            return jsonify({'error': 'Invalid payload'}), 400
+        db = _get_checklist_db()
+        for item_id, checked in data.items():
+            db.execute(
+                'INSERT OR REPLACE INTO checklist_state (week_date, item_id, checked) VALUES (?, ?, ?)',
+                (week_date, item_id, 1 if checked else 0)
+            )
+        db.commit()
+        db.close()
+        return jsonify({'ok': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/checklist', methods=['GET'])
+def checklist_get_all():
+    """Return all saved checklist states grouped by week_date."""
+    try:
+        db = _get_checklist_db()
+        rows = db.execute('SELECT week_date, item_id, checked FROM checklist_state ORDER BY week_date').fetchall()
+        db.close()
+        result = {}
+        for week_date, item_id, checked in rows:
+            if week_date not in result:
+                result[week_date] = {}
+            result[week_date][item_id] = bool(checked)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 def _password_required(f):
     from functools import wraps
     @wraps(f)
