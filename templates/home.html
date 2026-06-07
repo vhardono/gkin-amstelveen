@@ -377,6 +377,9 @@
       let overdueCount = 0;
       CHECKLIST.forEach(function(dayObj) {
         dayObj.items.forEach(function(item) {
+          // Skip conditional items like renderChecklist does
+          if (item.oleOnly && !_hasOLE) return;
+          if (item.haOnly && !_hasHA) return;
           const baseOffset = (dayObj.dayOffset !== undefined) ? dayObj.dayOffset : 0;
           const itemDate = new Date(weekSundayStr + 'T00:00:00');
           itemDate.setDate(itemDate.getDate() + baseOffset + dayObj.day);
