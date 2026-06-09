@@ -407,12 +407,18 @@
       try { const r = await fetch('/api/checklist'); allState = await r.json(); } catch(e) {}
       // Merge into cache
       Object.assign(_serverState, allState);
-      const keys = Object.keys(allState).filter(function(k) {
-        return /^\d{4}-\d{2}-\d{2}$/.test(k) && (!_validSundayDates || _validSundayDates.has(k));
+      // Build list of all valid weeks from dropdown (even if never opened/saved)
+      const keys = [];
+      if (_validSundayDates) {
+        _validSundayDates.forEach(function(d) { keys.push(d); });
+      }
+      // Also include any saved weeks not in dropdown (legacy)
+      Object.keys(allState).forEach(function(k) {
+        if (/^\d{4}-\d{2}-\d{2}$/.test(k) && keys.indexOf(k) === -1) keys.push(k);
       });
       keys.sort();
       keys.forEach(function(weekSundayStr) {
-        const saved = allState[weekSundayStr] || {};
+        const saved = allState[weekSundayStr] || {};  // empty if week never opened
         const items = [];
         CHECKLIST.forEach(function(dayObj) {
           dayObj.items.forEach(function(item) {
@@ -421,9 +427,8 @@
             const baseOffset = (dayObj.dayOffset !== undefined) ? dayObj.dayOffset : 0;
             const itemDate = new Date(weekSundayStr + 'T00:00:00');
             itemDate.setDate(itemDate.getDate() + baseOffset + dayObj.day);
-            // Only count as overdue if explicitly saved as false (not just never opened)
-            if (!(item.id in saved)) return;
-            const checked = saved[item.id];
+            // Treat items never saved as unchecked (default false)
+            const checked = (item.id in saved) ? saved[item.id] : false;
             if (!checked && itemDate < today) {
               totalOverdue++;
               // Get plain text label via i18n, strip {link} placeholder and HTML tags
