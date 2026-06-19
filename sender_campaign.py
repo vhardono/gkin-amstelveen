@@ -136,15 +136,21 @@ class SenderCampaignGenerator:
         date_str = f"{service_date.day} {months[service_date.month - 1]} {service_date.year}"
 
         LOCATION_MAP = {
-            'AM': 'Kerkgebouw in Amstelveen',
-            'DH': 'Kerkgebouw in Den Haag',
-            'TB': 'Pauluskerk te Tilburg'
+            'AM': 'vanuit de Marcuskerk in Amstelveen',
+            'DH': 'vanuit de Marcuskerk in Den Haag',
+            'TB': 'vanuit de Pauluskerk te Tilburg'
         }
-        # Reverse map: full name -> code
+        # Reverse map: full name -> code (handle both old and new formats)
         REVERSE_MAP = {
             'Kerkgebouw in Amstelveen': 'AM',
+            'vanuit de Marcuskerk in Amstelveen': 'AM',
+            'Amstelveen': 'AM',
             'Kerkgebouw in Den Haag': 'DH',
-            'Pauluskerk te Tilburg': 'TB'
+            'vanuit de Marcuskerk in Den Haag': 'DH',
+            'Den Haag': 'DH',
+            'Pauluskerk te Tilburg': 'TB',
+            'vanuit de Pauluskerk te Tilburg': 'TB',
+            'Tilburg': 'TB'
         }
         # Resolve location code (handle both code 'DH' and full name)
         location_code = REVERSE_MAP.get(ole_location, ole_location).upper() if ole_location else ''
@@ -335,11 +341,21 @@ class SenderCampaignGenerator:
         day_name = nl_days[service_date.weekday()]
 
         LOCATION_MAP = {
-            'AM': 'Kerkgebouw in Amstelveen',
-            'DH': 'Kerkgebouw in Den Haag',
-            'TB': 'Pauluskerk te Tilburg',
+            'AM': 'vanuit de Marcuskerk in Amstelveen',
+            'DH': 'vanuit de Marcuskerk in Den Haag',
+            'TB': 'vanuit de Pauluskerk te Tilburg',
         }
-        REVERSE_MAP = {v: k for k, v in LOCATION_MAP.items()}
+        REVERSE_MAP = {
+            'Kerkgebouw in Amstelveen': 'AM',
+            'vanuit de Marcuskerk in Amstelveen': 'AM',
+            'Amstelveen': 'AM',
+            'Kerkgebouw in Den Haag': 'DH',
+            'vanuit de Marcuskerk in Den Haag': 'DH',
+            'Den Haag': 'DH',
+            'Pauluskerk te Tilburg': 'TB',
+            'vanuit de Pauluskerk te Tilburg': 'TB',
+            'Tilburg': 'TB'
+        }
         loc_code = REVERSE_MAP.get(ole_location, ole_location).upper() if ole_location else 'AM'
         if loc_code not in LOCATION_MAP:
             loc_code = 'AM'
