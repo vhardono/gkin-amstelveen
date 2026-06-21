@@ -336,6 +336,18 @@ class DropboxExcelReader:
         person = self._people_map.get(short_name.lower())
         return person.get('email', '') if person else ''
 
+    def _resolve_email_list(self, raw_value: str) -> str:
+        """Resolve emails for comma-separated names like 'Bart, Samuel'."""
+        if not raw_value or raw_value == '-':
+            return ''
+        names = [n.strip() for n in raw_value.split(',') if n.strip() and n.strip() != '-']
+        emails = []
+        for n in names:
+            email = self._resolve_email(n)
+            if email:
+                emails.append(email)
+        return ', '.join(emails)
+
     def _parse_current_sheet(self, df: pd.DataFrame) -> List[Dict[str, Any]]:
         """Parse the CURRENT sheet into a list of service entries."""
         # Find the header row (contains 'DAG' and 'DATUM')
@@ -443,7 +455,8 @@ class DropboxExcelReader:
             # Resolve OVD/1EO/Beamer names (tracks unresolved)
             ovd_full    = self._resolve_name(ovd_short) or ovd_short
             eo1_full    = self._resolve_name(eo1_short) or eo1_short
-            beamer_full = self._resolve_name(beamer_short) or beamer_short
+            # BEAMER may contain comma-separated names like "Bart, Samuel"
+            beamer_full = _resolve_name_list(beamer_short) if beamer_short and beamer_short != '-' else ''
 
             # Get unique unresolved names
             unresolved = list(dict.fromkeys(self._unresolved_names))  # preserve order, remove duplicates
@@ -460,7 +473,7 @@ class DropboxExcelReader:
             pred_email  = self._predikant_email_map.get(predikant.lower(), '')
             ovd_email   = self._resolve_email(ovd_short)
             eo1_email   = self._resolve_email(eo1_short)
-            beamer_email = self._resolve_email(beamer_short)
+            beamer_email = self._resolve_email_list(beamer_short)
 
             entries.append({
                 'date':            date_obj,
