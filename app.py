@@ -154,12 +154,9 @@ def _load_knd_cache():
     if _knd_cache is not None:
         return _knd_cache
     try:
-        print(f'[KND] Fetching from bijbelbasics.nl...')
         r = _requests.get('https://www.bijbelbasics.nl/programma/', timeout=10)
-        print(f'[KND] Status: {r.status_code}, Content length: {len(r.text)}')
         soup = _BS(r.text, 'html.parser')
         lines = [l.strip() for l in soup.get_text(separator='\n').split('\n') if l.strip()]
-        print(f'[KND] Extracted {len(lines)} lines from page')
         date_pat = re.compile(
             r'^(?:zondag|zaterdag|vrijdag)\s+(\d+)\s+(\w+)\s+(\d{4})$', re.I)
         verse_start = re.compile(r'^([A-Z][a-zA-Zë]+)\s+(\d+:\d+)$')
@@ -185,11 +182,9 @@ def _load_knd_cache():
                     verse = f"{ms.group(1)} {ms.group(2)} - {me.group(1)}"
                 elif ms:
                     verse = f"{ms.group(1)} {ms.group(2)}"
-            print(f'[KND] Found entry: day={day}, month={month_num}, year={year}, title="{title}", verse="{verse}"')
             entries.append({'title': title, 'verse': verse,
                             'day': day, 'month': month_num, 'year': year})
         _knd_cache = entries
-        print(f'[KND] Cached {len(entries)} entries')
     except Exception as e:
         # Don't cache on error - allow retry on next request
         print(f'[KND] Error loading from bijbelbasics.nl: {e}')
@@ -505,7 +500,6 @@ def fetch_ole_preekroster():
 def fetch_knd_thema():
     data = request.get_json(force=True)
     date_str = data.get('date', '')
-    print(f'[KND] Request for date: {date_str}')
     if not date_str:
         return jsonify({'error': 'no date'}), 400
     try:
@@ -513,12 +507,9 @@ def fetch_knd_thema():
     except ValueError:
         return jsonify({'error': 'invalid date'}), 400
     entries = _load_knd_cache()
-    print(f'[KND] Looking for day={d.day}, month={d.month} in {len(entries)} cached entries')
     for entry in entries:
         if entry['day'] == d.day and entry['month'] == d.month:
-            print(f'[KND] Found match: title="{entry["title"]}", verse="{entry["verse"]}"')
             return jsonify({'title': entry['title'], 'verse': entry['verse']})
-    print(f'[KND] No match found for day={d.day}, month={d.month}')
     return jsonify({'title': '', 'verse': ''})
 
 

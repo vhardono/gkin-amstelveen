@@ -170,15 +170,12 @@ class DropboxExcelReader:
             print(f"Reading Activiteiten Kalender: {path}, sheet={sheet_name}")
             _, response = self.dbx.files_download(path)
             df = pd.read_excel(BytesIO(response.content), sheet_name=sheet_name, header=None)
-            print(f"Sheet has {len(df)} rows")
 
             activities = []
             for idx, row in df.iterrows():
                 # Filter by Type (col B = index 1): only 'Activity'
                 row_type = str(row.iloc[1]).strip() if len(row) > 1 and pd.notna(row.iloc[1]) else ''
-                print(f"Row {idx}: Type='{row_type}'")
                 if row_type.lower() != 'activity':
-                    print(f"  -> Skipped (not 'Activity')")
                     continue
 
                 # col C (index 2): Dutch details text
