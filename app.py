@@ -1434,14 +1434,15 @@ def _get_dankoffer_verse(dbx, service_date: datetime, mark_as_used: bool = True)
 
         # Parse verse text like "Psalmen 50:14-15" or "Psalmen 50:14" or "Deuteronomium 16:16b-17"
         import re
-        match = re.match(r'^(.+?)\s+(\d+)[a-z]?:(\d+)(?:-(\d+))?$', verse_text.strip())
+        match = re.match(r'^(.+?)\s+(\d+):(\d+[a-z]?)(?:-(\d+))?$', verse_text.strip())
         if not match:
             print(f'[Dankoffer] Failed to parse verse: "{verse_text}"')
             return None
 
         book = match.group(1).strip()
         chapter = int(match.group(2))
-        verse_start = int(match.group(3))
+        verse_start_str = match.group(3).rstrip('abcdefghijklmnopqrstuvwxyz')
+        verse_start = int(verse_start_str)
         verse_end = int(match.group(4)) if match.group(4) else None
         print(f'[Dankoffer] Parsed: book="{book}", chapter={chapter}, verse_start={verse_start}, verse_end={verse_end}')
 
