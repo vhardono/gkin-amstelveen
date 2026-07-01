@@ -1334,11 +1334,8 @@ def _get_dankoffer_verse(dbx, service_date: datetime, mark_as_used: bool = True)
     from io import BytesIO
 
     try:
-        print(f'[Dankoffer] Attempting to download from: {DANKOFFER_DROPBOX_PATH}')
         _, resp = dbx.files_download(DANKOFFER_DROPBOX_PATH)
-        print(f'[Dankoffer] Download successful, content length: {len(resp.content)}')
         df = pd.read_excel(BytesIO(resp.content), header=None)
-        print(f'[Dankoffer] Excel loaded, shape: {df.shape}')
 
         # Check if first row is a header
         first_cell = str(df.iloc[0, 0]).strip().lower() if pd.notna(df.iloc[0, 0]) else ''
@@ -1348,7 +1345,6 @@ def _get_dankoffer_verse(dbx, service_date: datetime, mark_as_used: bool = True)
         if has_header:
             # Skip header row
             df = df.iloc[1:].reset_index(drop=True)
-            print(f'[Dankoffer] Header detected. Data starts at row 1 (skipping header)')
 
         # Read verses and their used dates from Column C (index 2)
         # Column B (index 1) contains the verse text
@@ -1381,16 +1377,12 @@ def _get_dankoffer_verse(dbx, service_date: datetime, mark_as_used: bool = True)
 
         # Format the service date for comparison (YYYY-MM-DD)
         service_date_str = service_date.strftime('%Y-%m-%d')
-        print(f'[Dankoffer] Looking for service date: {service_date_str}')
-        print(f'[Dankoffer] Verses data: {len(verses_data)} verses loaded')
 
         # STEP 1: Check if this service date is already assigned to a verse
         existing_assignment = None
         for v in verses_data:
-            print(f'[Dankoffer] Checking verse row {v["row_idx"]}: date_used="{v["date_used"]}" vs service_date="{service_date_str}"')
             if v['date_used'] == service_date_str:
                 existing_assignment = v
-                print(f'[Dankoffer] ✓ Found existing assignment at row {v["row_idx"]}')
                 break
 
         if existing_assignment:
@@ -1398,12 +1390,10 @@ def _get_dankoffer_verse(dbx, service_date: datetime, mark_as_used: bool = True)
             selected = existing_assignment
             reset_needed = False
             already_assigned = True
-            print(f'[Dankoffer] Reusing existing verse: {selected["verse"]}')
         else:
             # STEP 2: Find the first unused verse (blank date)
             already_assigned = False
             unused_verses = [v for v in verses_data if not v['date_used']]
-            print(f'[Dankoffer] No existing assignment found. {len(unused_verses)} unused verses available')
 
             if unused_verses:
                 # Use the first unused verse
@@ -1433,13 +1423,11 @@ def _get_dankoffer_verse(dbx, service_date: datetime, mark_as_used: bool = True)
                     reset_needed = True
 
         verse_text = selected['verse']
-        print(f'[Dankoffer] Selected verse: "{verse_text}" from row {selected["row_idx"]}')
 
         # Parse verse text like "Psalmen 50:14-15" or "Psalmen 50:14" or "Deuteronomium 16:16b-17"
         import re
         match = re.match(r'^(.+?)\s+(\d+):(\d+[a-z]?)(?:-(\d+))?$', verse_text.strip())
         if not match:
-            print(f'[Dankoffer] Failed to parse verse: "{verse_text}"')
             return None
 
         book = match.group(1).strip()
@@ -1447,7 +1435,6 @@ def _get_dankoffer_verse(dbx, service_date: datetime, mark_as_used: bool = True)
         verse_start_str = match.group(3).rstrip('abcdefghijklmnopqrstuvwxyz')
         verse_start = int(verse_start_str)
         verse_end = int(match.group(4)) if match.group(4) else None
-        print(f'[Dankoffer] Parsed: book="{book}", chapter={chapter}, verse_start={verse_start}, verse_end={verse_end}')
 
         # Calculate unused count (for display purposes)
         if already_assigned:
@@ -1461,6 +1448,7 @@ def _get_dankoffer_verse(dbx, service_date: datetime, mark_as_used: bool = True)
             'verse_start': verse_start,
             'verse_end': verse_end,
             'full_text': verse_text,
+            'verse_text': selected.get('verse_text', ''),  # Add verse text from Excel
             'row_index': selected['row_idx'] + 1,  # 1-indexed for user display
             'total_count': len(verses_data),
             'unused_count': unused_count,
