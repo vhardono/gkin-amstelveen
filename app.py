@@ -1334,8 +1334,11 @@ def _get_dankoffer_verse(dbx, service_date: datetime, mark_as_used: bool = True)
     from io import BytesIO
 
     try:
+        print(f'[Dankoffer] Attempting to download from: {DANKOFFER_DROPBOX_PATH}')
         _, resp = dbx.files_download(DANKOFFER_DROPBOX_PATH)
+        print(f'[Dankoffer] Download successful, content length: {len(resp.content)}')
         df = pd.read_excel(BytesIO(resp.content), header=None)
+        print(f'[Dankoffer] Excel loaded, shape: {df.shape}')
 
         # Check if first row is a header
         first_cell = str(df.iloc[0, 0]).strip().lower() if pd.notna(df.iloc[0, 0]) else ''
