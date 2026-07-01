@@ -1430,17 +1430,20 @@ def _get_dankoffer_verse(dbx, service_date: datetime, mark_as_used: bool = True)
                     reset_needed = True
 
         verse_text = selected['verse']
+        print(f'[Dankoffer] Selected verse: "{verse_text}" from row {selected["row_idx"]}')
 
         # Parse verse text like "Psalmen 50:14-15" or "Psalmen 50:14"
         import re
         match = re.match(r'^(.+?)\s+(\d+):(\d+)(?:-(\d+))?$', verse_text.strip())
         if not match:
+            print(f'[Dankoffer] Failed to parse verse: "{verse_text}"')
             return None
 
         book = match.group(1).strip()
         chapter = int(match.group(2))
         verse_start = int(match.group(3))
         verse_end = int(match.group(4)) if match.group(4) else None
+        print(f'[Dankoffer] Parsed: book="{book}", chapter={chapter}, verse_start={verse_start}, verse_end={verse_end}')
 
         # Calculate unused count (for display purposes)
         if already_assigned:
