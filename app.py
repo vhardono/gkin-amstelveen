@@ -1432,9 +1432,9 @@ def _get_dankoffer_verse(dbx, service_date: datetime, mark_as_used: bool = True)
         verse_text = selected['verse']
         print(f'[Dankoffer] Selected verse: "{verse_text}" from row {selected["row_idx"]}')
 
-        # Parse verse text like "Psalmen 50:14-15" or "Psalmen 50:14"
+        # Parse verse text like "Psalmen 50:14-15" or "Psalmen 50:14" or "Deuteronomium 16:16b-17"
         import re
-        match = re.match(r'^(.+?)\s+(\d+):(\d+)(?:-(\d+))?$', verse_text.strip())
+        match = re.match(r'^(.+?)\s+(\d+)[a-z]?:(\d+)(?:-(\d+))?$', verse_text.strip())
         if not match:
             print(f'[Dankoffer] Failed to parse verse: "{verse_text}"')
             return None
