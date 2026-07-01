@@ -1192,6 +1192,19 @@ boek = _get(table2, 4, ["Boek", "boek"])
 hs   = _get(table2, 4, ["H.s.", "H.s", "HS", "H.S.", "H.S"])
 vfrom = _get(table2, 4, ["Vers van", "Vers Van", "vers van", "Van"])
 vto   = _get(table2, 4, ["Vers tot", "Vers Tot", "vers tot", "Tot"])
+verse_text = _get(table2, 4, ["Tekst", "tekst", "Text", "text"])  # Get verse text from C21
+
+# Check if B21 contains a full verse reference (e.g., "Deuteronomium 16:16b-17")
+# This happens when the auto-fill stores the full reference instead of separate cells
+if boek and ':' in str(boek) and not hs:
+    # Parse full reference like "Deuteronomium 16:16b-17"
+    import re
+    match = re.match(r'^(.+?)\s+(\d+):(\d+[a-z]?)(?:-(\d+))?$', str(boek).strip())
+    if match:
+        boek = match.group(1).strip()
+        hs = match.group(2)
+        vfrom = match.group(3).rstrip('abcdefghijklmnopqrstuvwxyz')
+        vto = match.group(4) if match.group(4) else ''
 
 p = doc.add_paragraph()
 pf = p.paragraph_format
@@ -1221,8 +1234,20 @@ if vfrom and str(vfrom).strip():
 else:
     elem13_text = f"En we gedenken daarbij de woorden uit {boek}."
 
-if hs and str(hs).strip() and vfrom and str(vfrom).strip():
-    add_verses_to_doc(doc, boek, hs, vfrom, vto)
+if verse_text and str(verse_text).strip():
+    # Use verse text from Excel (C21) instead of fetching from Bible JSON
+    p = doc.add_paragraph()
+    pf = p.paragraph_format
+    pf.space_before = Pt(0); pf.space_after = Pt(0); pf.line_spacing = 1.0
+    pf.keep_with_next = True
+    pf.tab_stops.add_tab_stop(tab_pos)
+    r = p.add_run(f"\t\t{verse_text}")
+    r.font.name = "Calibri"; r.font.size = Pt(10)
+elif hs and str(hs).strip() and vfrom and str(vfrom).strip():
+    # Fallback: fetch from Bible JSON if verse_text not provided
+    vfrom_clean = str(vfrom).rstrip('abcdefghijklmnopqrstuvwxyz')
+    vto_clean = str(vto).rstrip('abcdefghijklmnopqrstuvwxyz') if vto else ''
+    add_verses_to_doc(doc, boek, hs, vfrom_clean, vto_clean if vto_clean else None)
 
 r = p.add_run(f"\t\t{elem13_text}")
 r.font.name = "Calibri"; r.font.size = Pt(10)

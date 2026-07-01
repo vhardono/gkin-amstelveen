@@ -1351,9 +1351,11 @@ def _get_dankoffer_verse(dbx, service_date: datetime, mark_as_used: bool = True)
             print(f'[Dankoffer] Header detected. Data starts at row 1 (skipping header)')
 
         # Read verses and their used dates from Column C (index 2)
+        # Column B (index 1) contains the verse text
         verses_data = []
         for idx, row in df.iterrows():
             verse = str(row.iloc[0]).strip() if pd.notna(row.iloc[0]) else ''
+            verse_text = str(row.iloc[1]).strip() if len(row) > 1 and pd.notna(row.iloc[1]) else ''
             # Column C (index 2) contains Date Used — may be datetime obj or string
             raw_date = row.iloc[2] if len(row) > 2 else None
             if raw_date is not None and pd.notna(raw_date):
@@ -1369,6 +1371,7 @@ def _get_dankoffer_verse(dbx, service_date: datetime, mark_as_used: bool = True)
             if verse and verse.lower() not in ('nan', 'none', ''):
                 verses_data.append({
                     'verse': verse,
+                    'verse_text': verse_text,
                     'date_used': date_used,
                     'row_idx': idx
                 })
@@ -2254,28 +2257,25 @@ def auto_fill_working_file():
         # 3. Populate Dankoffer verse
         dankoffer = _get_dankoffer_verse(dbx, service_date, mark_as_used=True)
         dankoffer_info = None
-        
+
         if dankoffer:
             dankoffer_row = 21
-            dankoffer_book = dankoffer['book']
-            
+
             def set_dankoffer_cell(ws, row, col, value):
                 cell = ws.cell(row=row, column=col)
                 current_val = str(cell.value).strip() if cell.value else ''
                 if current_val and current_val.lower() not in ('nan', 'none', ''):
                     return False
                 elif value is not None and value != '':
-                    cell.value = value  # int values written directly as numbers
+                    cell.value = value
                     return True
                 return False
-            
-            # Track if any cell was actually written (not already filled)
-            b21_written = set_dankoffer_cell(ws_active, dankoffer_row, 2, dankoffer_book)           # B21: book name
-            c21_written = set_dankoffer_cell(ws_active, dankoffer_row, 3, dankoffer['chapter'])     # C21: chapter (int)
-            d21_written = set_dankoffer_cell(ws_active, dankoffer_row, 4, dankoffer['verse_start']) # D21: start verse (int)
+
+            # Store verse reference in B21 and verse text in C21
+            b21_written = set_dankoffer_cell(ws_active, dankoffer_row, 2, dankoffer['full_text'])  # B21: verse reference
+            c21_written = set_dankoffer_cell(ws_active, dankoffer_row, 3, dankoffer.get('verse_text', ''))  # C21: verse text from Excel
+            d21_written = False
             e21_written = False
-            if dankoffer['verse_end']:
-                e21_written = set_dankoffer_cell(ws_active, dankoffer_row, 5, dankoffer['verse_end']) # E21: end verse (int)
             
             # Only show as auto_populated if something was actually written
             # If already_assigned, the verse was already there - don't show as "filled"
