@@ -1400,27 +1400,9 @@ def _get_dankoffer_verse(dbx, service_date: datetime, mark_as_used: bool = True)
                 selected = unused_verses[0]
                 reset_needed = False
             else:
-                # STEP 3: All verses are used - find the one with the OLDEST date
-                # Parse dates and find the minimum (oldest)
-                dated_verses = []
-                for v in verses_data:
-                    try:
-                        if v['date_used']:
-                            parsed_date = datetime.strptime(v['date_used'], '%Y-%m-%d')
-                            dated_verses.append({**v, 'parsed_date': parsed_date})
-                    except ValueError:
-                        # If date format is invalid, treat as very old
-                        dated_verses.append({**v, 'parsed_date': datetime(1900, 1, 1)})
-
-                if dated_verses:
-                    # Sort by date and pick the oldest
-                    dated_verses.sort(key=lambda x: x['parsed_date'])
-                    selected = dated_verses[0]
-                    reset_needed = True  # Indicates we're reusing an old verse
-                else:
-                    # Fallback - should not happen
-                    selected = verses_data[0]
-                    reset_needed = True
+                # STEP 3: All verses are used - go back to the first verse (row 2)
+                selected = verses_data[0]
+                reset_needed = True  # Indicates we're reusing from the start
 
         verse_text = selected['verse']
 

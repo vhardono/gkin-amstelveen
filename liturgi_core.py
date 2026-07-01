@@ -4219,6 +4219,17 @@ boek = _get(table2, 4, ["Boek", "boek"])
 hs   = _get(table2, 4, ["H.s.", "H.s", "HS", "H.S.", "H.S"])
 vfrom = _get(table2, 4, ["Vers van", "Vers Van", "vers van", "Van"])
 vto   = _get(table2, 4, ["Vers tot", "Vers Tot", "vers tot", "Tot"])
+verse_text = _get(table2, 4, ["Tekst", "tekst", "Text", "text"])  # Get verse text from C21
+
+# Check if B21 contains a full verse reference (e.g., "Deuteronomium 16:16b-17")
+if boek and ':' in str(boek) and not hs:
+    import re
+    match = re.match(r'^(.+?)\s+(\d+):(\d+[a-z]?)(?:-(\d+))?$', str(boek).strip())
+    if match:
+        boek = match.group(1).strip()
+        hs = match.group(2)
+        vfrom = match.group(3).rstrip('abcdefghijklmnopqrstuvwxyz')
+        vto = match.group(4) if match.group(4) else ''
 
 slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
 set_background(slide)
@@ -4242,6 +4253,23 @@ else:
 r.text = f"Ouderling: Gemeente, wij krijgen nu de gelegenheid ons dankoffer aan God te brengen. En we gedenken daarbij de woorden uit {text}."
 r.font.name = "Calibri"
 r.font.size = Pt(32)
+
+# Add verse text on next slide if available
+if verse_text and str(verse_text).strip():
+    slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
+    set_background(slide)
+    box = slide.shapes.add_textbox(BOX_LEFT, Cm(1), BOX_WIDTH, Cm(16))
+    tf = box.text_frame
+    tf.clear()
+    tf.word_wrap = True
+    tf.auto_size = MSO_AUTO_SIZE.NONE
+    tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+    p = tf.paragraphs[0]
+    p.alignment = PP_ALIGN.CENTER
+    r = p.add_run()
+    r.text = verse_text
+    r.font.name = "Calibri"
+    r.font.size = Pt(32)
 r.font.color.rgb = white
 
 add_verses_to_ppt(prs, boek, hs, vfrom, vto)
