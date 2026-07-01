@@ -2458,10 +2458,7 @@ def preview_working_file():
         try:
             dankoffer = _get_dankoffer_verse(dbx, service_date, mark_as_used=False)
             if dankoffer:
-                verse = f"{dankoffer['book']} {dankoffer['chapter']}:{dankoffer['verse_start']}"
-                if dankoffer['verse_end']:
-                    verse += f"-{dankoffer['verse_end']}"
-                preview['proposed_changes']['Dankoffer vers'] = verse
+                preview['proposed_changes']['Dankoffer vers'] = dankoffer['full_text']
             else:
                 preview['alerts']['not_found'].append('Dankoffer niet gevonden')
         except Exception as e:
