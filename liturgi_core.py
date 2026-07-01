@@ -698,7 +698,7 @@ rq.bold = True
 # TABLE 2 & 3 parsing (once)
 # -------------------------------
 
-raw_table2 = excelF.iloc[14:20, 1:9]
+raw_table2 = excelF.iloc[14:21, 1:9]  # Include row 21 for Dankoffer data
 table2 = raw_table2[1:].copy()
 table2.columns = raw_table2.iloc[0]
 table2 = table2.reset_index(drop=True)
