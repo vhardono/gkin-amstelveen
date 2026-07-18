@@ -637,7 +637,8 @@ Namens de kerkenraad GKIN regio Amstelveen,`;
                 const body = document.getElementById('emailBody').value;
                 const songs = [1,2,3,4,5,6,7].map(j => document.getElementById('lied'+j).value.trim());
                 // Only re-render; preserve current kndThema/language by extracting from existing body
-                const kndMatch = body.match(/KND.*?: (.+)/);
+                // Use more specific regex to match the exact KND line
+                const kndMatch = body.match(/Het thema van de KND[^:]*: (.+?)(?:\n|$)/);
                 const kndThema = kndMatch ? kndMatch[1].trim() : '';
                 const isInt = INTERNAL_PREDIKANTS.includes(entry.predikant.toLowerCase().trim());
                 document.getElementById('emailBody').value =
