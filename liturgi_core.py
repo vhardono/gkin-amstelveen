@@ -2460,7 +2460,7 @@ def add_verses_to_ppt_indo(
 
 def add_sermon_doc_to_ppt(
     prs,
-    docx_path,
+    sermon_text,   # now receives text, not a file path
     font_name="Calibri",
     font_size_pt=32,
     box_width=Cm(17),
@@ -2547,9 +2547,8 @@ def add_sermon_doc_to_ppt(
         r.font.size = Pt(font_size_pt)
         r.font.color.rgb = RGBColor(255, 255, 255)
 
-    # --- Load Word document; preserve paragraphs as-is ---
-    doc = Document(docx_path)
-    paragraphs = [p.text.strip() for p in doc.paragraphs if (p.text or "").strip() != ""]
+    # --- Convert sermon_text into paragraphs; preserve as-is ---
+    paragraphs = [p.strip() for p in sermon_text.split("\n") if p.strip()]
     if not paragraphs:
         return 0
 
@@ -4116,8 +4115,78 @@ r.font.italic = True
 
 
 path_sermon = os.path.join(dir_path + '/file mingguan/', PREEK_NAME)
+
 if os.path.exists(path_sermon):
-    add_sermon_doc_to_ppt(prs, path_sermon, box_width=BOX_WIDTH, box_left=BOX_LEFT, box_top=Cm(0.5), font_size_pt=28, max_lines_per_slide=16)
+    preek_doc = Document(path_sermon)
+    full_text = "\n".join(p.text for p in preek_doc.paragraphs)
+
+    # Remove final AMEN/AMIN
+    clean_text, removed_amen = strip_final_amen(full_text)
+    clean_text = clean_text.rstrip()
+
+    add_sermon_doc_to_ppt(prs, clean_text, box_width=BOX_WIDTH, box_left=BOX_LEFT, box_top=Cm(0.5), font_size_pt=28, max_lines_per_slide=16)
+
+    # --- Add final AMEN slide if needed ---
+    if removed_amen:
+        slide = prs.slides.add_slide(prs.slide_layouts[6])
+        set_background(slide)
+
+        box = slide.shapes.add_textbox(BOX_LEFT, Cm(4), BOX_WIDTH, Cm(6))
+        tf = box.text_frame
+        tf.clear()
+        tf.word_wrap = True
+        tf.auto_size = MSO_AUTO_SIZE.NONE
+        tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+
+        p = tf.paragraphs[0]
+        p.alignment = PP_ALIGN.CENTER
+
+        r = p.add_run()
+        r.text = removed_amen.rstrip(".!?,;:").capitalize()  # "Amen" / "Amin", no punctuation
+        r.font.name = "Calibri"
+        r.font.size = Pt(48)
+        r.font.bold = True
+        r.font.color.rgb = white
+else:
+    print(f"WAARSCHUWING: Preek.docx niet gevonden op {path_sermon} — "
+          f"preek-slides overgeslagen.")
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+    set_background(slide)
+    box = slide.shapes.add_textbox(BOX_LEFT, Cm(4), BOX_WIDTH, Cm(6))
+    tf = box.text_frame
+    tf.clear()
+    tf.word_wrap = True
+    tf.auto_size = MSO_AUTO_SIZE.NONE
+    tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+    p = tf.paragraphs[0]
+    p.alignment = PP_ALIGN.CENTER
+    r = p.add_run()
+    r.text = "(Preek.docx niet gevonden — voeg het bestand toe en genereer opnieuw)"
+    r.font.name = "Calibri"
+    r.font.size = Pt(24)
+    r.font.italic = True
+    r.font.color.rgb = white
+
+    # Still add a closing Amen/Amin slide even without the sermon text.
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+    set_background(slide)
+
+    box = slide.shapes.add_textbox(BOX_LEFT, Cm(4), BOX_WIDTH, Cm(6))
+    tf = box.text_frame
+    tf.clear()
+    tf.word_wrap = True
+    tf.auto_size = MSO_AUTO_SIZE.NONE
+    tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+
+    p = tf.paragraphs[0]
+    p.alignment = PP_ALIGN.CENTER
+
+    r = p.add_run()
+    r.text = "Amen / Amin"
+    r.font.name = "Calibri"
+    r.font.size = Pt(48)
+    r.font.bold = True
+    r.font.color.rgb = white
 
 
 # --- Meditatief moment ---
