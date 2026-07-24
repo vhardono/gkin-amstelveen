@@ -269,6 +269,39 @@ def normalize_spaces(txt: str) -> str:
     # Final cleanup: strip leading/trailing space
     return ''.join(out).strip()
 
+def strip_final_amen(text: str):
+    """
+    Removes a final 'Amen' or 'Amin' (any capitalization, with or without punctuation)
+    ONLY if it is the last word in the text.
+    Preserves all original line breaks (only the last line is touched).
+    Returns: (clean_text, removed_word)
+    """
+    if not text:
+        return text, None
+
+    text = text.rstrip()
+    lines = text.split("\n")
+
+    # Find the last non-empty line, since a trailing blank line shouldn't count
+    idx = len(lines) - 1
+    while idx >= 0 and lines[idx].strip() == "":
+        idx -= 1
+    if idx < 0:
+        return text, None
+
+    last_line_words = lines[idx].split()
+    if not last_line_words:
+        return text, None
+
+    last = last_line_words[-1].rstrip(".!?,;:").lower()
+    if last in ("amen", "amin"):
+        removed = last_line_words[-1]
+        lines[idx] = " ".join(last_line_words[:-1]).rstrip()
+        clean = "\n".join(lines).rstrip()
+        return clean, removed
+
+    return text, None
+
 def is_empty(value):
     # First check for pandas-style NaN / None
     if pd.isna(value):
@@ -4419,48 +4452,48 @@ p.alignment = PP_ALIGN.CENTER
 r = p.add_run()
 r.text = "V: Wees getuigen van Christus"
 r.font.name = "Calibri"
-r.font.size = Pt(24)
+r.font.size = Pt(28)
 r.font.color.rgb = yellow
 r=p.add_run()
 r.text = "\n(Jadilah saksi Kristus)\n\n"
 r.font.name = "Calibri"
-r.font.size = Pt(24)
+r.font.size = Pt(28)
 r.font.color.rgb = yellow
 r.font.italic = True
 r = p.add_run()
 r.text = "G: Lof aan God"
 r.font.name = "Calibri"
-r.font.size = Pt(24)
+r.font.size = Pt(28)
 r.font.color.rgb = white
 r.font.bold = True
 r=p.add_run()
 r.text = "\n(Syukur kepada Allah)\n\n"
 r.font.name = "Calibri"
-r.font.size = Pt(24)
+r.font.size = Pt(28)
 r.font.color.rgb = white
 r.font.bold = True
 r.font.italic = True
 r = p.add_run()
 r.text = "V: Geloofd zij de Heer"
 r.font.name = "Calibri"
-r.font.size = Pt(24)
+r.font.size = Pt(28)
 r.font.color.rgb = yellow
 r=p.add_run()
 r.text = "\n(Terpujilah Tuhan)\n\n"
 r.font.name = "Calibri"
-r.font.size = Pt(24)
+r.font.size = Pt(28)
 r.font.color.rgb = yellow
 r.font.italic = True
 r = p.add_run()
 r.text = "G: Nu en voor altijd"
 r.font.name = "Calibri"
-r.font.size = Pt(24)
+r.font.size = Pt(28)
 r.font.color.rgb = white
 r.font.bold = True
 r=p.add_run()
 r.text = "\n(Kini dan selamanya)"
 r.font.name = "Calibri"
-r.font.size = Pt(24)
+r.font.size = Pt(28)
 r.font.color.rgb = white
 r.font.bold = True
 r.font.italic = True
@@ -4565,6 +4598,49 @@ r.font.name = "Calibri"
 r.font.size = Pt(40)
 r.font.color.rgb = white
 r.font.bold = True
+
+# --- Closing Slide (Dutch + Indonesian) ---
+slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank slide
+set_background(slide)
+
+box = slide.shapes.add_textbox(
+    BOX_LEFT,
+    Cm(0.5),
+    BOX_WIDTH,
+    Cm(13)
+)
+
+tf = box.text_frame
+tf.clear()
+tf.word_wrap = True
+tf.auto_size = MSO_AUTO_SIZE.NONE
+tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+
+# Dutch text
+p = tf.paragraphs[0]
+p.alignment = PP_ALIGN.CENTER
+r = p.add_run()
+r.text = "Gezegende zondag"
+r.font.name = "Calibri"
+r.font.size = Pt(32)
+r.font.bold = True
+r.font.color.rgb = white
+
+# Empty line
+p = tf.add_paragraph()
+p.alignment = PP_ALIGN.CENTER
+p.text = ""
+
+# Indonesian text
+p = tf.add_paragraph()
+p.alignment = PP_ALIGN.CENTER
+r = p.add_run()
+r.text = "Selamat Hari Minggu\nTuhan Yesus Memberkati"
+r.font.name = "Calibri"
+r.font.size = Pt(32)
+r.font.bold = True
+r.font.italic = True
+r.font.color.rgb = white
 
 
 # Save after you’ve added all slides
