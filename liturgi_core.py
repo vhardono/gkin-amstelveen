@@ -1925,15 +1925,24 @@ from lxml import etree as ET
 SLIDE_WIDTH = Emu(12192000)   # 13.333 in (16:9)
 SLIDE_HEIGHT = Emu(6858000)   # 7.5 in
 BOX_TOP = Cm(0.0)
-BOX_LEFT = Cm(8.5)
-BOX_WIDTH = Cm(17)
+# --- Broadcast-safe geometry ---
+# The livestream switcher captures only the CENTER HALF of this slide (matching the
+# yellow box in the church's template) and places it into either the left or right
+# half of the 1920x1080 YouTube output (mirrored depending on the operator's setup).
+# So text must stay within that center-half crop, not the full slide width, or it
+# gets replaced by the camera feed on stream (this was cutting off song lyrics).
+# Center-half crop is 8.467-25.4 cm (16.933 cm wide). BOX_WIDTH below is a round
+# number comfortably inside that crop; BOX_LEFT is DERIVED (not hardcoded) so the
+# box is always mathematically exactly centered, even if BOX_WIDTH changes later.
+BOX_WIDTH = Cm(16.5)                             # round number, margin ~0.217 cm/side (min 0.1 cm required)
+BOX_LEFT = Emu((SLIDE_WIDTH - BOX_WIDTH) // 2)   # exact center of the slide (= exact center of the crop)
 yellow = RGBColor(255,173,3)
 white = RGBColor(255, 255, 255)
 
 
 # --- Config you can tweak ---
 BG_HEX = "1E1947"                 # slide background
-BOX_W = Cm(17)                    # 17 cm wide
+BOX_W = BOX_WIDTH                 # match broadcast-safe width (was Cm(17))
 BOX_H = Cm(17)                    # 17 cm high
 FONT_NAME = "Calibri"
 FONT_SIZE_PT = 32
@@ -3366,51 +3375,78 @@ def add_song_slides(songNumber = 1, presentation = prs, staan = False):
             addBox(slideT, f'{s["Boek"]} {s["Nummer"]}: {s["Versen"]}\n\n  "{s["Titel"]}"', BOX_LEFT, Cm(7), BOX_WIDTH, Cm(7), Size = Pt(40))
     
 
+    # Max estimated wrapped lines that comfortably fit the song lyric box
+    # (Cm(13.5) tall, Pt(32) font) — reuses the same tuning as the Bible-verse box.
+    MAX_LINES_SONG = MAX_LINES_PER_SLIDE  # 10
+
     for si, song_text in enumerate(s["cells"]):
         blocks = [b.strip() for b in re.split(r"\r?\n\s*\r?\n", song_text.strip()) if b.strip()]
-        
+
         for bi, block in enumerate(blocks):
-            slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
-            set_background(slide)
-
-            if is_empty(s["Nummer"]):
-                tt1 = f'{s["Boek"]}'
-            else:
-                tt1 = f'{s["Boek"]} {s["Nummer"]}'
-
-            addBox(
-                slide,
-                text=tt1,
-                left=Cm(17), top=Cm(0.5), width=Cm(6.7), height=Cm(2),
-                alignment="RIGHT",
-                color=RGBColor(255,173,3), bold=True, Size=Pt(24)
-            )
-
-            box = slide.shapes.add_textbox(BOX_LEFT, Cm(2), BOX_WIDTH, Cm(13.5))
-            tf = box.text_frame
-            tf.clear()
-            tf.word_wrap = True
-            tf.auto_size = MSO_AUTO_SIZE.NONE
-            tf.vertical_anchor = MSO_ANCHOR.MIDDLE
-
             lines = block.splitlines()
-            for li, line in enumerate(lines):
-                # NEW: normalize line so verse/refrain prefixes go on their own line
-                line_out = split_prefix_to_own_line(line)
 
-                p = tf.paragraphs[0] if li == 0 else tf.add_paragraph()
-                p.alignment = PP_ALIGN.CENTER
-                r = p.add_run()
+            # --- NEW: split this block's lines into chunks that each fit the slide ---
+            # (Previously the whole block always went on ONE slide, so a long verse
+            #  would overflow past the bottom of the slide.)
+            chunks = []
+            current_chunk = []
+            current_est = 0
+            for line in lines:
+                est = _estimate_wrapped_lines(line, CHARS_PER_LINE) if line.strip() else 1
+                if current_chunk and (current_est + est) > MAX_LINES_SONG:
+                    chunks.append(current_chunk)
+                    current_chunk = []
+                    current_est = 0
+                current_chunk.append(line)
+                current_est += est
+            if current_chunk:
+                chunks.append(current_chunk)
+            if not chunks:
+                chunks = [[]]
 
-                # keep your asterisk rule on the very last line of the last block
-                if bi == len(blocks) - 1 and li == len(lines) - 1 and si == len(s["cells"]) - 1:
-                    r.text = line_out + "\n\n*"
+            for ci, chunk_lines in enumerate(chunks):
+                slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
+                set_background(slide)
+
+                if is_empty(s["Nummer"]):
+                    tt1 = f'{s["Boek"]}'
                 else:
-                    r.text = line_out
+                    tt1 = f'{s["Boek"]} {s["Nummer"]}'
 
-                r.font.name = "Calibri"
-                r.font.size = Pt(32)
-                r.font.color.rgb = white
+                addBox(
+                    slide,
+                    text=tt1,
+                    left=Cm(17), top=Cm(0.5), width=Cm(6.7), height=Cm(2),
+                    alignment="RIGHT",
+                    color=RGBColor(255,173,3), bold=True, Size=Pt(24)
+                )
+
+                box = slide.shapes.add_textbox(BOX_LEFT, Cm(2), BOX_WIDTH, Cm(13.5))
+                tf = box.text_frame
+                tf.clear()
+                tf.word_wrap = True
+                tf.auto_size = MSO_AUTO_SIZE.NONE
+                tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+
+                is_last_chunk_of_block = (ci == len(chunks) - 1)
+                for li, line in enumerate(chunk_lines):
+                    # NEW: normalize line so verse/refrain prefixes go on their own line
+                    line_out = split_prefix_to_own_line(line)
+
+                    p = tf.paragraphs[0] if li == 0 else tf.add_paragraph()
+                    p.alignment = PP_ALIGN.CENTER
+                    r = p.add_run()
+
+                    # keep your asterisk rule on the very last line of the last chunk of the last block
+                    if (bi == len(blocks) - 1 and is_last_chunk_of_block
+                            and li == len(chunk_lines) - 1 and si == len(s["cells"]) - 1):
+                        r.text = line_out + "\n\n*"
+                    else:
+                        r.text = line_out
+
+                    r.font.name = "Calibri"
+                    r.font.size = Pt(32)
+                    r.font.color.rgb = white
 
 
 # --- Intochtslied ---
