@@ -1206,6 +1206,45 @@ def _run_liturgi(excel_bytes: bytes, preek_bytes, work_dir: str) -> dict:
         with open(os.path.join(file_mingguan, 'Preek.docx'), 'wb') as f:
             f.write(preek_bytes)
 
+    # Try to retrieve the Tikkie QR image from the same email source as the Tikkie URL
+    try:
+        from io import BytesIO as _BytesIO
+        import openpyxl
+        from data_sources.email_reader import OutlookCollecteReader
+
+        wb = openpyxl.load_workbook(_BytesIO(excel_bytes), data_only=True)
+        ws = wb['Data'] if 'Data' in wb.sheetnames else wb.active
+        date_val = ws.cell(row=3, column=2).value
+        service_date = None
+        if date_val:
+            if isinstance(date_val, datetime):
+                service_date = date_val
+            else:
+                try:
+                    service_date = datetime.strptime(str(date_val), '%d-%m-%Y') if '-' in str(date_val) else datetime.strptime(str(date_val), '%Y-%m-%d')
+                except ValueError:
+                    service_date = None
+
+        if service_date:
+            reader = OutlookCollecteReader()
+            if reader.is_authenticated():
+                email_data = reader.fetch_collecte_data(target_date=service_date, since_days=60)
+                qr_b64_data = email_data.get('dankoffer_qr_b64', '') or email_data.get('ole_qr_b64', '')
+                if qr_b64_data and qr_b64_data.startswith('data:'):
+                    import base64 as _base64
+                    header, _, b64 = qr_b64_data.partition(',')
+                    ext = '.png'
+                    if 'image/jpeg' in header or 'jpg' in header:
+                        ext = '.jpg'
+                    elif 'image/gif' in header:
+                        ext = '.gif'
+                    qr_path = os.path.join(file_mingguan, f'dankoffer_qr{ext}')
+                    with open(qr_path, 'wb') as f:
+                        f.write(_base64.b64decode(b64))
+                    print(f'[Liturgi] Saved Tikkie QR image to {qr_path}')
+    except Exception as e:
+        print(f'[Liturgi] Could not retrieve Tikkie QR image from email: {e}')
+
     for name, src in [('bible', _LITURGIE_CACHE), ('logo.png', _LITURGIE_LOGO), ('telephone.gif', _LITURGIE_PHONE)]:
         link = os.path.join(work_dir, name)
         if not os.path.exists(link) and os.path.exists(src):

@@ -715,17 +715,36 @@ items = [
 for idx, txt in enumerate(items, start=1):
     add_calibri9_par(left_cell, f"{idx}. {txt}")
 
-# RIGHT CELL: Calibri 9 QR placeholder only
+# RIGHT CELL: Tikkie QR image if available, otherwise placeholder
 right_cell = coll_tbl.cell(0,1)
 while right_cell.paragraphs:
     pe = right_cell.paragraphs[0]._element
     pe.getparent().remove(pe)
+right_cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+
 p_qr = right_cell.add_paragraph()
 p_qr.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
-rq = p_qr.add_run("\n\n\nQR CODE\nPLACEHOLDER\n")
-rq.font.name = "Calibri"
-rq.font.size = Pt(9)
-rq.bold = True
+
+# Look for a QR image file in the working folder or via QR_IMAGE_PATH
+_qr_path = None
+if 'QR_IMAGE_PATH' in globals() and QR_IMAGE_PATH and os.path.exists(QR_IMAGE_PATH):
+    _qr_path = QR_IMAGE_PATH
+else:
+    for _qr_name in ['dankoffer_qr.png', 'dankoffer_qr.jpg', 'qr_code.png', 'qr_code.jpg', 'qr.png', 'qr.jpg']:
+        _candidate = os.path.join(dir_path, 'file mingguan', _qr_name)
+        if os.path.exists(_candidate):
+            _qr_path = _candidate
+            break
+
+if _qr_path:
+    rq = p_qr.add_run()
+    # 1.3" square to fit the right column between top/bottom separator lines
+    rq.add_picture(_qr_path, width=Inches(1.3), height=Inches(1.3))
+else:
+    rq = p_qr.add_run("\n\n\nQR CODE\nPLACEHOLDER\n")
+    rq.font.name = "Calibri"
+    rq.font.size = Pt(9)
+    rq.bold = True
 
 # -------------------------------
 # TABLE 2 & 3 parsing (once)
