@@ -2838,6 +2838,8 @@ def campaign_ole_am_template():
             'subject': f"GKIN OLE {date_str}",
             'html_preview': html_content,
             'success': True,
+            'to_email': 'scribagkin@gmail.com',
+            'cc_email': 'vega.hardono@outlook.com',
             'note': 'Vergeet niet de liturgie als bijlage toe te voegen aan de e-mail.'
         })
 

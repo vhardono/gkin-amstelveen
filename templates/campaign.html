@@ -183,9 +183,23 @@
                 <span class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">Vergeet niet de liturgie als bijlage toe te voegen</span>
             </div>
             <div id="amEmailContent" class="text-sm text-gray-700 overflow-auto border border-gray-200 rounded-lg bg-gray-50 p-3"></div>
-            <div class="mt-3 flex gap-2">
-                <input type="text" id="amEmailRecipient" value="Monica" class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Ontvanger naam">
-                <button id="copyAmEmailBtn" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2 px-4 rounded-lg text-sm transition">Kopieer HTML</button>
+            <div class="mt-3 grid grid-cols-1 gap-2">
+                <div class="flex items-center gap-2">
+                    <label class="text-sm text-gray-600 w-12 shrink-0">Aan:</label>
+                    <input type="email" id="amEmailTo" value="scribagkin@gmail.com" class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Ontvanger e-mail">
+                </div>
+                <div class="flex items-center gap-2">
+                    <label class="text-sm text-gray-600 w-12 shrink-0">CC:</label>
+                    <input type="email" id="amEmailCc" value="vega.hardono@outlook.com" class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="CC e-mail">
+                </div>
+                <div class="flex items-center gap-2">
+                    <label class="text-sm text-gray-600 w-12 shrink-0">Naam:</label>
+                    <input type="text" id="amEmailRecipient" value="Monica" class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Ontvanger naam">
+                </div>
+                <div class="flex gap-2 mt-1">
+                    <a id="amEmailMailto" href="#" target="_blank" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-center font-medium py-2 px-4 rounded-lg text-sm transition">Open in mailprogramma</a>
+                    <button id="copyAmEmailBtn" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2 px-4 rounded-lg text-sm transition">Kopieer HTML</button>
+                </div>
             </div>
         </div>
 
@@ -616,6 +630,9 @@
                     const amContent = document.getElementById('amEmailContent');
                     amSection.classList.remove('hidden');
                     amContent.innerHTML = data.html_preview;
+                    if (data.to_email) document.getElementById('amEmailTo').value = data.to_email;
+                    if (data.cc_email) document.getElementById('amEmailCc').value = data.cc_email;
+                    updateAmEmailMailto();
                     // Scroll to preview
                     amSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 } else {
@@ -628,6 +645,24 @@
                 btn.disabled = false;
                 btn.textContent = originalText;
             }
+        });
+
+        function updateAmEmailMailto() {
+            const to = document.getElementById('amEmailTo').value;
+            const cc = document.getElementById('amEmailCc').value;
+            const subject = encodeURIComponent(document.getElementById('subject').value || 'GKIN OLE');
+            const bodyText = (document.getElementById('amEmailContent').innerText || '').substring(0, 1800);
+            const body = encodeURIComponent(bodyText);
+            const params = [`subject=${subject}`, `body=${body}`];
+            if (cc) params.unshift(`cc=${encodeURIComponent(cc)}`);
+            const href = `mailto:${encodeURIComponent(to)}?${params.join('&')}`;
+            document.getElementById('amEmailMailto').href = href;
+        }
+
+        ['input', 'change'].forEach(evt => {
+            document.getElementById('amEmailTo').addEventListener(evt, updateAmEmailMailto);
+            document.getElementById('amEmailCc').addEventListener(evt, updateAmEmailMailto);
+            document.getElementById('subject').addEventListener(evt, updateAmEmailMailto);
         });
 
         document.getElementById('copyAmEmailBtn').addEventListener('click', async () => {
