@@ -6,8 +6,10 @@ import os
 import re
 import base64
 from datetime import datetime
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Tuple
 import requests
+from email.message import EmailMessage
+from email.policy import default as default_email_policy
 
 
 class SenderCampaignGenerator:
@@ -591,3 +593,191 @@ class SenderCampaignGenerator:
             f"Wij wensen u allen een gezegende dienst toe.\n\n"
             f"————————————————————————————————————————"
         )
+
+    def generate_am_ole_email_html(self, service_date: datetime, predikant: str,
+                                    theme: str = "", bible_verse: str = "",
+                                    youtube_link: str = "", liturgie_url: str = "",
+                                    collecte_url: str = "",
+                                    ole_location: str = "", ole_time: str = "10:00",
+                                    collecte_ovv: str = "", recipient_name: str = "Monica",
+                                    qr_cid: str = "qr_image") -> str:
+        """Generate the AM OLE email as HTML for use inside a .eml draft (QR referenced by cid)."""
+        months = ['januari', 'februari', 'maart', 'april', 'mei', 'juni',
+                  'juli', 'augustus', 'september', 'oktober', 'november', 'december']
+        date_str = f"{service_date.day} {months[service_date.month - 1]} {service_date.year}"
+        day_name = ['maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag', 'zondag'][service_date.weekday()]
+
+        location_code, location_body, _ = self._resolve_ole_location(ole_location)
+        if not location_body:
+            location_body = 'vanuit het GKIN Kerkgebouw in Amstelveen'
+        elif location_code == 'AM' and 'Kerkgebouw in Amstelveen' in location_body:
+            location_body = location_body.replace('Kerkgebouw in Amstelveen', 'GKIN Kerkgebouw in Amstelveen')
+
+        time_clean = (ole_time or '10:00').replace('u', '').replace('U', '').strip()
+        ovv = collecte_ovv or f"Collecte OLE {service_date.strftime('%d-%m-%Y')}"
+        qr_filename = f"{ovv}.png"
+
+        theme_html = ""
+        if theme:
+            bible_suffix = f" genomen uit {bible_verse}" if bible_verse else ""
+            theme_html = f'<p>Het thema van deze eredienst is: “{theme}”{bible_suffix}.</p>'
+
+        youtube_html = ""
+        if youtube_link:
+            youtube_html = f'<p>De dienst wordt live uitgezonden via: <a href="{youtube_link}">{youtube_link}</a></p>'
+
+        liturgie_html = "<p>De liturgie kunt u vinden in de bijlage"
+        if liturgie_url:
+            liturgie_html += f' en op <a href="{liturgie_url}">gkin.org</a>'
+        liturgie_html += ".</p>"
+
+        if collecte_url:
+            collecte_html = (
+                f'<p>De collecte is bestemd voor de Landelijke kas (OLE). U kunt dit overmaken via: <a href="{collecte_url}">{collecte_url}</a><br>'
+                f'of door overmaking aan GEREJA KRISTEN INDONESIA NEDERLAND, IBAN: NL19 INGB 0002 6182 90 o.v.v. {ovv}.</p>'
+            )
+        else:
+            collecte_html = (
+                f'<p>De collecte is bestemd voor de Landelijke kas (OLE). '
+                f'U kunt dit overmaken aan GEREJA KRISTEN INDONESIA NEDERLAND, IBAN: NL19 INGB 0002 6182 90 o.v.v. {ovv}.</p>'
+            )
+
+        return f"""<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GKIN OLE {date_str}</title>
+</head>
+<body style="font-family:Arial,sans-serif;color:#000000;font-size:14px;line-height:1.5;">
+<p>Beste {recipient_name},</p>
+<p>Bijgaand de aankondiging, liturgie van de GKIN Online Landelijke Eredienst van a.s. {date_str}.</p>
+<p>Met vriendelijke groet,<br>
+Namens regio Amstelveen,</p>
+<p>Vega Hardono<br>
+<em>Regiosecretaris</em><br>
+<em>GKIN Amstelveen</em></p>
+<br>
+<hr style="border:none;border-top:1px solid #cccccc;">
+<br>
+<p>Beste broeders en zusters,</p>
+<p>Op {day_name} {service_date.day} {months[service_date.month - 1]} zal {predikant} voorgaan in de Online Landelijke Eredienst van GKIN {location_body}, aanvang {time_clean} uur.</p>
+{theme_html}
+{youtube_html}
+{liturgie_html}
+{collecte_html}
+<p>{qr_filename}</p>
+<p><img src="cid:{qr_cid}" alt="QR code" style="max-width:200px;"></p>
+<p>Wij wensen u allen een gezegende dienst toe.</p>
+<br>
+<p>————————————————————————————————————————</p>
+</body>
+</html>"""
+
+    @staticmethod
+    def _resolve_qr_image(qr_image_url: str = "") -> Tuple[Optional[bytes], str]:
+        """Return QR image bytes and a file extension from a base64/URL/local source."""
+        if not qr_image_url:
+            return None, 'png'
+
+        if qr_image_url.startswith('data:'):
+            try:
+                header, b64 = qr_image_url.split(',', 1)
+                ext = header.split(';')[0].split('/')[-1].lower()
+                if not ext or ext not in ('png', 'jpg', 'jpeg', 'gif'):
+                    ext = 'png'
+                return base64.b64decode(b64), ext
+            except Exception:
+                return None, 'png'
+
+        if qr_image_url.startswith('http'):
+            try:
+                r = requests.get(qr_image_url, timeout=10)
+                r.raise_for_status()
+                ext = qr_image_url.rsplit('.', 1)[-1].lower().split('?')[0]
+                if ext not in ('png', 'jpg', 'jpeg', 'gif'):
+                    ext = 'png'
+                return r.content, ext
+            except Exception:
+                return None, 'png'
+
+        # Local file path
+        path = qr_image_url
+        if not os.path.isabs(path):
+            path = os.path.join(os.getcwd(), path)
+        if os.path.exists(path):
+            ext = path.rsplit('.', 1)[-1].lower()
+            if ext not in ('png', 'jpg', 'jpeg', 'gif'):
+                ext = 'png'
+            with open(path, 'rb') as f:
+                return f.read(), ext
+        return None, 'png'
+
+    def generate_am_ole_eml(self, service_date: datetime, predikant: str,
+                            theme: str = "", bible_verse: str = "",
+                            youtube_link: str = "", liturgie_url: str = "",
+                            collecte_url: str = "", qr_image_url: str = "",
+                            ole_location: str = "", ole_time: str = "10:00",
+                            collecte_ovv: str = "", recipient_name: str = "Monica",
+                            to_email: str = "", cc_email: str = "") -> bytes:
+        """Build a .eml draft with plain text, HTML and an inline QR image attachment."""
+        text_body = self.generate_am_ole_email(
+            service_date=service_date,
+            predikant=predikant,
+            theme=theme,
+            bible_verse=bible_verse,
+            youtube_link=youtube_link,
+            liturgie_url=liturgie_url,
+            collecte_url=collecte_url,
+            ole_location=ole_location,
+            ole_time=ole_time,
+            collecte_ovv=collecte_ovv,
+            recipient_name=recipient_name
+        )
+
+        qr_cid = 'qr_image'
+        html_body = self.generate_am_ole_email_html(
+            service_date=service_date,
+            predikant=predikant,
+            theme=theme,
+            bible_verse=bible_verse,
+            youtube_link=youtube_link,
+            liturgie_url=liturgie_url,
+            collecte_url=collecte_url,
+            ole_location=ole_location,
+            ole_time=ole_time,
+            collecte_ovv=collecte_ovv,
+            recipient_name=recipient_name,
+            qr_cid=qr_cid
+        )
+
+        ovv = collecte_ovv or f"Collecte OLE {service_date.strftime('%d-%m-%Y')}"
+        qr_filename = f"{ovv}.png"
+
+        msg = EmailMessage(policy=default_email_policy)
+        msg['Subject'] = f"GKIN OLE {service_date.day} {service_date.strftime('%B')} {service_date.year}".replace(
+            service_date.strftime('%B'), ['januari', 'februari', 'maart', 'april', 'mei', 'juni',
+                                           'juli', 'augustus', 'september', 'oktober', 'november', 'december'][service_date.month - 1]
+        )
+        msg['From'] = f"Vega Hardono <{self.sender_email}>"
+        msg['To'] = to_email or 'scribagkin@gmail.com'
+        if cc_email:
+            msg['Cc'] = cc_email
+
+        msg.set_content(text_body)
+        msg.add_alternative(html_body, subtype='html')
+
+        # Attach inline QR image
+        qr_bytes, qr_ext = self._resolve_qr_image(qr_image_url)
+        if qr_bytes:
+            mime_type = {'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'gif': 'image/gif'}.get(qr_ext, 'image/png')
+            msg.get_payload()[1].add_related(
+                qr_bytes,
+                maintype='image',
+                subtype=mime_type.split('/')[-1],
+                cid=f'<{qr_cid}>',
+                filename=qr_filename,
+                disposition='inline'
+            )
+
+        return msg.as_bytes()

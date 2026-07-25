@@ -2848,6 +2848,90 @@ def campaign_ole_am_template():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/campaign/ole/am-eml', methods=['POST'])
+@_password_required
+def campaign_ole_am_eml():
+    """Generate AM OLE announcement email as a .eml draft with inline QR image."""
+    from sender_campaign import SenderCampaignGenerator
+
+    data = request.get_json() or {}
+    iso_date = data.get('date', '')
+    if not iso_date:
+        return jsonify({'error': 'no date'}), 400
+
+    try:
+        selected_date = datetime.strptime(iso_date, '%Y-%m-%d')
+    except ValueError:
+        return jsonify({'error': 'invalid date format'}), 400
+
+    try:
+        taken = _get_takenrooster()
+        entry = None
+        for e in taken['entries']:
+            e_date = e['date'].date() if hasattr(e['date'], 'date') else e['date']
+            if e_date == selected_date.date():
+                entry = e
+                break
+
+        if not entry:
+            return jsonify({'error': f'No rooster entry for {iso_date}'}), 404
+
+        theme = data.get('theme', '')
+        bible_verse = data.get('bible_verse', '')
+        youtube_link = data.get('youtube_link', '')
+        liturgie_url = data.get('liturgie_url', '')
+        collecte_url = data.get('collecte_url', '')
+        qr_image_url = data.get('qr_image_url', '')
+        ole_location = data.get('ole_location', '')
+        ole_time = data.get('ole_time', '10:00')
+        ole_predikant = data.get('ole_predikant', '')
+        collecte_ovv = data.get('collecte_ovv', '')
+        recipient_name = data.get('recipient_name', 'Monica')
+        to_email = data.get('to_email', 'scribagkin@gmail.com')
+        cc_email = data.get('cc_email', 'vega.hardono@outlook.com')
+
+        # Resolve /uploads/ QR URL to a local filesystem path
+        if qr_image_url and qr_image_url.startswith('/uploads/'):
+            qr_image_url = os.path.join(UPLOAD_DIR, qr_image_url.replace('/uploads/', '').lstrip('/'))
+
+        predikant_to_use = ole_predikant if ole_predikant else entry.get('predikant', '')
+
+        generator = SenderCampaignGenerator()
+        eml_bytes = generator.generate_am_ole_eml(
+            service_date=selected_date,
+            predikant=predikant_to_use,
+            theme=theme,
+            bible_verse=bible_verse,
+            youtube_link=youtube_link,
+            liturgie_url=liturgie_url,
+            collecte_url=collecte_url,
+            qr_image_url=qr_image_url,
+            ole_location=ole_location,
+            ole_time=ole_time,
+            collecte_ovv=collecte_ovv,
+            recipient_name=recipient_name,
+            to_email=to_email,
+            cc_email=cc_email
+        )
+
+        date_str = selected_date.strftime('%Y-%m-%d')
+        filename = f"GKIN OLE {date_str}.eml"
+
+        return Response(
+            eml_bytes,
+            mimetype='message/rfc822',
+            headers={
+                'Content-Disposition': f'attachment; filename="{filename}"',
+                'Content-Length': str(len(eml_bytes))
+            }
+        )
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/campaign/lists', methods=['GET'])
 @_password_required
 def campaign_lists():
