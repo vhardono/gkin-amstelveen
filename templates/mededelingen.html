@@ -1311,14 +1311,26 @@ Dankoffer Amstelveen: ${dankofferUrl || '(nog niet ingevuld)'}`;
                 const d = new Date(iso + 'T00:00:00');
                 const dateStr = `${d.getDate()} ${DUTCH_MONTHS_LONG[d.getMonth()]} ${d.getFullYear()}`;
 
-                // Derive dienst type from opmerking (strip OLE part)
+                // Derive dienst type from opmerking (strip OLE part and any URL)
                 const opmerking = sel.opmerking || '';
                 let dienstType = opmerking.split('OLE')[0].trim().replace(/,$/, '').trim();
+                // Strip any URLs from dienstType to avoid including the YouTube link
+                dienstType = dienstType.replace(/https?:\/\/\S+/g, '').trim().replace(/,$/, '').trim();
+
+                const youtubeUrl = sel.youtube_link || '';
+                const rawTime = sel.tijd || '10:30';
+                const tijdStr = rawTime.replace(/[uU]+$/, '').replace(':', '.') + 'uur';
 
                 // Build title line
-                const titleLine = dienstType
-                    ? `${dienstType} Dienst ${dateStr}`
-                    : `Eredienst ${dateStr}`;
+                let titleLine = '';
+                if (youtubeUrl) {
+                    const titleBase = opmerking.toLowerCase().includes('ole') ? 'WEBLINKS OLE' : 'WEBLINKS Amstelveen';
+                    titleLine = `${titleBase} ${dateStr}: ${youtubeUrl}`;
+                } else {
+                    titleLine = dienstType
+                        ? `${dienstType} Dienst ${dateStr}`
+                        : `Eredienst ${dateStr}`;
+                }
 
                 // Prefer value already in the form field; if empty fetch from email
                 let tikkieUrl = (document.getElementById('dankoffer_url') || {}).value || '';
@@ -1338,10 +1350,9 @@ Dankoffer Amstelveen: ${dankofferUrl || '(nog niet ingevuld)'}`;
                     finally { amLoading.classList.add('hidden'); }
                 }
 
-                const msg =
-`${titleLine}
-
-Dankoffer Amstelveen: ${tikkieUrl || '(nog niet ingevuld)'}`;
+                const msg = youtubeUrl
+                    ? `${titleLine}\nVerzorgd door regio Amstelveen, aanvang om ${tijdStr}\n\nDankoffer Amstelveen: ${tikkieUrl || '(nog niet ingevuld)'}`
+                    : `${titleLine}\n\nDankoffer Amstelveen: ${tikkieUrl || '(nog niet ingevuld)'}`;
 
                 txtArea.value = msg;
             });

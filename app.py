@@ -246,6 +246,7 @@ def _get_takenrooster_and_render_page():
             '1eo_email':       entry.get('1eo_email', ''),
             'opmerking':       entry.get('opmerking', ''),
             'tijd':            entry.get('tijd', '10:30') or '10:30',
+            'youtube_link':    entry.get('youtube_link', ''),
         })
 
     return render_template('mededelingen.html', dates=dates)
