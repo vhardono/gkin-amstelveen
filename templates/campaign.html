@@ -182,32 +182,33 @@
     </main>
 
     <script>
-        // Liturgie file upload to Sender
+        // Liturgie file upload to Sender (only if the file input exists on this page)
         document.addEventListener('DOMContentLoaded', () => {
             const liturgieFile = document.getElementById('liturgieFile');
             const liturgieUploadStatus = document.getElementById('liturgieUploadStatus');
             const liturgieUrl = document.getElementById('liturgieUrl');
-            if (!liturgieFile) return;
-            liturgieFile.addEventListener('change', async () => {
-                const file = liturgieFile.files[0];
-                if (!file) return;
-                liturgieUploadStatus.innerHTML = '<span class="text-blue-600">Uploading...</span>';
-                const formData = new FormData();
-                formData.append('file', file);
-                try {
-                    const resp = await fetch('/campaign/upload-liturgie', { method: 'POST', body: formData });
-                    const data = await resp.json();
-                    if (data.success && data.url) {
-                        liturgieUrl.value = data.url;
-                        liturgieUploadStatus.innerHTML = `<span class="text-green-600">✓ Geüpload: ${file.name}</span>`;
-                    } else {
-                        liturgieUploadStatus.innerHTML = `<span class="text-red-600">✗ ${data.error || 'Upload mislukt'}</span>`;
+            if (liturgieFile) {
+                liturgieFile.addEventListener('change', async () => {
+                    const file = liturgieFile.files[0];
+                    if (!file) return;
+                    if (liturgieUploadStatus) liturgieUploadStatus.innerHTML = '<span class="text-blue-600">Uploading...</span>';
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    try {
+                        const resp = await fetch('/campaign/upload-liturgie', { method: 'POST', body: formData });
+                        const data = await resp.json();
+                        if (data.success && data.url) {
+                            if (liturgieUrl) liturgieUrl.value = data.url;
+                            if (liturgieUploadStatus) liturgieUploadStatus.innerHTML = `<span class="text-green-600">✓ Geüpload: ${file.name}</span>`;
+                        } else {
+                            if (liturgieUploadStatus) liturgieUploadStatus.innerHTML = `<span class="text-red-600">✗ ${data.error || 'Upload mislukt'}</span>`;
+                        }
+                    } catch (err) {
+                        if (liturgieUploadStatus) liturgieUploadStatus.innerHTML = '<span class="text-red-600">✗ Upload fout</span>';
                     }
-                } catch (err) {
-                    liturgieUploadStatus.innerHTML = '<span class="text-red-600">✗ Upload fout</span>';
-                }
-                liturgieFile.value = '';
-            });
+                    liturgieFile.value = '';
+                });
+            }
 
             // QR image upload / drop for OLE campaign
             const qrFile = document.getElementById('qrFile');
