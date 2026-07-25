@@ -738,13 +738,21 @@ else:
 
 if _qr_path:
     rq = p_qr.add_run()
-    # 1.3" square to fit the right column between top/bottom separator lines
-    rq.add_picture(_qr_path, width=Inches(1.3), height=Inches(1.3))
+    # 1.1" square, smaller than the cell so it does not touch separator lines
+    rq.add_picture(_qr_path, width=Inches(1.1), height=Inches(1.1))
 else:
     rq = p_qr.add_run("\n\n\nQR CODE\nPLACEHOLDER\n")
     rq.font.name = "Calibri"
     rq.font.size = Pt(9)
     rq.bold = True
+
+# Set row height to 1.4" so the QR image sits with equal margin below/above separator lines
+_tr = coll_tbl.rows[0]._tr
+_trPr = _tr.get_or_add_trPr()
+_trHeight = OxmlElement('w:trHeight')
+_trHeight.set(qn('w:val'), '2016')  # 1.4" in twips
+_trHeight.set(qn('w:hRule'), 'atLeast')
+_trPr.append(_trHeight)
 
 # -------------------------------
 # TABLE 2 & 3 parsing (once)
