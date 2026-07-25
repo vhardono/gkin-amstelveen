@@ -87,14 +87,46 @@ class DropboxExcelReader:
         try:
             print(f"Reading Mededelingen Overzicht: {path}, date: {mededelingen_date}")
             _, response = self.dbx.files_download(path)
-            
-            # Read from Output sheet (contains mededelingen text)
-            df = pd.read_excel(BytesIO(response.content), sheet_name='Output', header=None)
 
-            regionale_nl = str(df.iloc[1, 1]).strip() if pd.notna(df.iloc[1, 1]) else ''
-            landelijke_nl = str(df.iloc[2, 1]).strip() if pd.notna(df.iloc[2, 1]) else ''
-            regionale_id = str(df.iloc[1, 2]).strip() if pd.notna(df.iloc[1, 2]) else ''
-            landelijke_id = str(df.iloc[2, 2]).strip() if pd.notna(df.iloc[2, 2]) else ''
+            # Read from Output sheet (contains mededelingen text)
+            df_output = pd.read_excel(BytesIO(response.content), sheet_name='Output', header=None)
+
+            def _clean(val):
+                if pd.isna(val):
+                    return ''
+                s = str(val).strip()
+                # Treat Excel formula errors as missing so we fall back to computing from the year sheet
+                if s.startswith('#') or s.lower() in ('#name?', '#value!', '#ref!', '#num!', '#n/a'):
+                    return ''
+                return s
+
+            regionale_nl = _clean(df_output.iloc[1, 1])
+            landelijke_nl = _clean(df_output.iloc[2, 1])
+            regionale_id = _clean(df_output.iloc[1, 2])
+            landelijke_id = _clean(df_output.iloc[2, 2])
+
+            # If Output tab is broken/empty, compute active mededelingen from the year sheet
+            if not (regionale_nl and landelijke_nl and regionale_id and landelijke_id):
+                print('[DropboxReader] Output tab empty or contains errors, computing from year sheet')
+                df_year = pd.read_excel(BytesIO(response.content), sheet_name=str(year), header=0)
+                # Find the status column (last 'Active' formula column, usually column I)
+                status_col = None
+                for col in df_year.columns:
+                    if df_year[col].astype(str).str.contains('Active|Past|Future', case=False, na=False).any():
+                        status_col = col
+                if status_col:
+                    active = df_year[df_year[status_col] == 'Active']
+                    regionale = active[active.iloc[:, 0] == 'Regionale']
+                    landelijke = active[active.iloc[:, 0] == 'Landelijke']
+                    # Column C = Nederlands (index 2), D = Bahasa Indonesia (index 3)
+                    if not regionale_nl:
+                        regionale_nl = '\n\n'.join(regionale.iloc[:, 2].dropna().astype(str).tolist())
+                    if not landelijke_nl:
+                        landelijke_nl = '\n\n'.join(landelijke.iloc[:, 2].dropna().astype(str).tolist())
+                    if not regionale_id:
+                        regionale_id = '\n\n'.join(regionale.iloc[:, 3].dropna().astype(str).tolist())
+                    if not landelijke_id:
+                        landelijke_id = '\n\n'.join(landelijke.iloc[:, 3].dropna().astype(str).tolist())
 
             print(f"Mededelingen loaded: regionale={len(regionale_nl)} chars, landelijke={len(landelijke_nl)} chars")
             return {
