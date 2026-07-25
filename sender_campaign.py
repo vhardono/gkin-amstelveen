@@ -46,6 +46,65 @@ class SenderCampaignGenerator:
                     error_response['response_text'] = e.response.text[:500]
             return error_response
 
+    @staticmethod
+    def _resolve_ole_location(ole_location: str = ""):
+        """Return location code, body text, and OLE tag from the input.
+
+        If the input is already a full phrase (e.g. 'Kerkgebouw in Amstelveen'),
+        it is preserved as the body text. Short codes or city names are mapped to
+        a default phrase.
+        """
+        if not ole_location:
+            return '', '', 'OLE'
+
+        stripped = ole_location.strip()
+        lower = stripped.lower()
+
+        LOCATION_MAP = {
+            'AM': 'vanuit het Kerkgebouw in Amstelveen',
+            'DH': 'vanuit het Kerkgebouw in Den Haag',
+            'TB': 'vanuit de Pauluskerk te Tilburg'
+        }
+        REVERSE_MAP = {
+            'Kerkgebouw in Amstelveen': 'AM',
+            'vanuit het Kerkgebouw in Amstelveen': 'AM',
+            'vanuit de Marcuskerk in Amstelveen': 'AM',
+            'Amstelveen': 'AM',
+            'Kerkgebouw in Den Haag': 'DH',
+            'vanuit het Kerkgebouw in Den Haag': 'DH',
+            'vanuit de Marcuskerk in Den Haag': 'DH',
+            'Den Haag': 'DH',
+            'Pauluskerk te Tilburg': 'TB',
+            'vanuit de Pauluskerk te Tilburg': 'TB',
+            'Tilburg': 'TB'
+        }
+
+        # Detect full phrases that already describe a location
+        is_full_phrase = (
+            lower.startswith('vanuit') or
+            ' in ' in stripped or
+            ' te ' in stripped
+        ) and len(stripped.split()) > 1
+
+        if is_full_phrase:
+            location_code = REVERSE_MAP.get(stripped, '').upper()
+            if location_code not in LOCATION_MAP:
+                location_code = ''
+            if lower.startswith('vanuit'):
+                location_body = stripped
+            else:
+                first_word = stripped.split()[0].lower()
+                article = 'het' if first_word in ('kerkgebouw',) else 'de'
+                location_body = f"vanuit {article} {stripped}"
+        else:
+            location_code = stripped.upper()
+            if location_code not in LOCATION_MAP:
+                location_code = REVERSE_MAP.get(stripped, '').upper() or stripped.upper()
+            location_body = LOCATION_MAP.get(location_code, stripped)
+
+        location_ole_tag = f"{location_code}-OLE" if location_code else "OLE"
+        return location_code, location_body, location_ole_tag
+
     def get_lists(self) -> List[Dict]:
         """Fetch available subscriber groups."""
         result = self._make_request("GET", "/groups")
@@ -135,31 +194,9 @@ class SenderCampaignGenerator:
                   'juli', 'augustus', 'september', 'oktober', 'november', 'december']
         date_str = f"{service_date.day} {months[service_date.month - 1]} {service_date.year}"
 
-        LOCATION_MAP = {
-            'AM': 'vanuit de Marcuskerk in Amstelveen',
-            'DH': 'vanuit de Marcuskerk in Den Haag',
-            'TB': 'vanuit de Pauluskerk te Tilburg'
-        }
-        # Reverse map: full name -> code (handle both old and new formats)
-        REVERSE_MAP = {
-            'Kerkgebouw in Amstelveen': 'AM',
-            'vanuit de Marcuskerk in Amstelveen': 'AM',
-            'Amstelveen': 'AM',
-            'Kerkgebouw in Den Haag': 'DH',
-            'vanuit de Marcuskerk in Den Haag': 'DH',
-            'Den Haag': 'DH',
-            'Pauluskerk te Tilburg': 'TB',
-            'vanuit de Pauluskerk te Tilburg': 'TB',
-            'Tilburg': 'TB'
-        }
-        # Resolve location code (handle both code 'DH' and full name)
-        location_code = REVERSE_MAP.get(ole_location, ole_location).upper() if ole_location else ''
-        if location_code not in LOCATION_MAP:
-            location_code = ole_location  # fallback
+        location_code, location_body, location_ole_tag = self._resolve_ole_location(ole_location)
         location_display = f" ({location_code}-OLE)" if location_code else ""
-        location_body = LOCATION_MAP.get(location_code, location_code) if location_code else ""
         time_clean = ole_time.replace('u', '').replace('U', '') if ole_time else "10:00"
-        location_ole_tag = f"{location_code}-OLE" if location_code else "OLE"
         date_numeric = f"{service_date.day:02d}-{service_date.month:02d}-{service_date.year}"
 
         # Handle QR image — embed as base64 so Sender.net can render it
@@ -340,24 +377,8 @@ class SenderCampaignGenerator:
         nl_days = ['maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag', 'zondag']
         day_name = nl_days[service_date.weekday()]
 
-        LOCATION_MAP = {
-            'AM': 'vanuit de Marcuskerk in Amstelveen',
-            'DH': 'vanuit de Marcuskerk in Den Haag',
-            'TB': 'vanuit de Pauluskerk te Tilburg',
-        }
-        REVERSE_MAP = {
-            'Kerkgebouw in Amstelveen': 'AM',
-            'vanuit de Marcuskerk in Amstelveen': 'AM',
-            'Amstelveen': 'AM',
-            'Kerkgebouw in Den Haag': 'DH',
-            'vanuit de Marcuskerk in Den Haag': 'DH',
-            'Den Haag': 'DH',
-            'Pauluskerk te Tilburg': 'TB',
-            'vanuit de Pauluskerk te Tilburg': 'TB',
-            'Tilburg': 'TB'
-        }
-        loc_code = REVERSE_MAP.get(ole_location, ole_location).upper() if ole_location else 'AM'
-        if loc_code not in LOCATION_MAP:
+        loc_code, _, location_ole_tag = self._resolve_ole_location(ole_location)
+        if not loc_code:
             loc_code = 'AM'
 
         youtube_href = ('https://www.' + re.sub(r'^https?://(?:www\.)?', '', youtube_link)) if youtube_link else '#'
