@@ -87,6 +87,11 @@
                     <input type="text" id="qrUrl" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green" placeholder="">
                     <input type="hidden" id="qrB64">
                     <input type="hidden" id="collecteOvv">
+                    <input type="file" id="qrFile" accept="image/*" class="hidden">
+                    <div id="qrDrop" class="drop-zone mt-2 border-2 border-dashed border-gray-300 rounded-lg p-3 text-center cursor-pointer hover:border-gkin-green hover:bg-green-50 transition">
+                        <svg class="w-6 h-6 mx-auto text-gray-400 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                        <p class="text-xs text-gray-500" data-i18n="camp.qr_drop">Drop QR image here or click to upload</p>
+                    </div>
                     <div id="qrPreview" class="mt-2 hidden"><img id="qrPreviewImg" src="" alt="QR" class="h-20 rounded border border-gray-200"></div>
                 </div>
                 <div>
@@ -200,6 +205,43 @@
                 }
                 liturgieFile.value = '';
             });
+
+            // QR image upload / drop for OLE campaign
+            const qrFile = document.getElementById('qrFile');
+            const qrDrop = document.getElementById('qrDrop');
+            const qrUrl = document.getElementById('qrUrl');
+            const qrB64 = document.getElementById('qrB64');
+            const qrPreview = document.getElementById('qrPreview');
+            const qrPreviewImg = document.getElementById('qrPreviewImg');
+
+            function handleQrFile(file) {
+                if (!file || !file.type.startsWith('image/')) return;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const dataUrl = e.target.result;
+                    qrB64.value = dataUrl;
+                    qrUrl.value = file.name;
+                    qrPreviewImg.src = dataUrl;
+                    qrPreview.classList.remove('hidden');
+                };
+                reader.readAsDataURL(file);
+            }
+
+            if (qrDrop && qrFile) {
+                qrDrop.addEventListener('click', () => qrFile.click());
+                qrDrop.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    qrDrop.classList.add('drag-over');
+                });
+                qrDrop.addEventListener('dragleave', () => qrDrop.classList.remove('drag-over'));
+                qrDrop.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    qrDrop.classList.remove('drag-over');
+                    const file = e.dataTransfer.files[0];
+                    handleQrFile(file);
+                });
+                qrFile.addEventListener('change', () => handleQrFile(qrFile.files[0]));
+            }
         });
 
         const dateSelect = document.getElementById('dateSelect');
@@ -314,10 +356,11 @@
                 if (data.ole_collecte_ovv) document.getElementById('collecteOvv').value = data.ole_collecte_ovv;
                 console.log('[Frontend] collecteUrl field value:', document.getElementById('collecteUrl').value);
 
-                // Handle QR
+                // Handle QR (prefer website base64, then email base64, then filename/URL)
                 if (data.ole_qr_b64) {
                     document.getElementById('qrB64').value = data.ole_qr_b64;
-                    document.getElementById('qrUrl').value = data.ole_qr || 'Van gkin.org';
+                    const qrSourceLabel = (data.ole_qr && data.ole_qr.startsWith('http')) ? 'Van gkin.org' : 'Van e-mail';
+                    document.getElementById('qrUrl').value = data.ole_qr || qrSourceLabel;
                     const preview = document.getElementById('qrPreview');
                     const img = document.getElementById('qrPreviewImg');
                     img.src = data.ole_qr_b64;
@@ -325,6 +368,11 @@
                 } else if (data.ole_qr) {
                     const localPath = data.ole_qr.startsWith('http') ? data.ole_qr : `/uploads/${data.ole_qr}`;
                     document.getElementById('qrUrl').value = localPath;
+                    document.getElementById('qrB64').value = '';
+                } else {
+                    document.getElementById('qrB64').value = '';
+                    document.getElementById('qrUrl').value = '';
+                    document.getElementById('qrPreview').classList.add('hidden');
                 }
 
                 // Update preview text with actual location, day, date, time once data arrives
@@ -348,7 +396,10 @@
                 if (data.ole_url) fetchedItems.push(t('camp.collecte_url'));
                 if (data.ole_qr_b64 || data.ole_qr) fetchedItems.push(t('camp.qr_code'));
                 if (fetchedItems.length > 0) {
-                    oleFetchStatus.innerHTML = `<span class="text-green-600">✓ ${t('camp.fetched_from_gkin')}: ${fetchedItems.join(', ')}</span>`;
+                    const hasWebsite = data.ole_thema || data.ole_bible_verse || data.ole_youtube_link || data.ole_liturgie_url ||
+                        (data.ole_qr && data.ole_qr.startsWith && data.ole_qr.startsWith('http'));
+                    const sourceText = hasWebsite ? t('camp.fetched_from_gkin') : t('camp.fetched_from_email');
+                    oleFetchStatus.innerHTML = `<span class="text-green-600">✓ ${sourceText}: ${fetchedItems.join(', ')}</span>`;
                 } else {
                     oleFetchStatus.innerHTML = `<span class="text-amber-600">⚠ ${t('camp.no_data_found')}</span>`;
                 }

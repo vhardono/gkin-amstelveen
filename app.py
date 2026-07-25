@@ -2521,16 +2521,16 @@ def fetch_ole_data():
         collecte_data = None
 
         try:
-            from data_sources.email_reader import EmailReader
-            reader = EmailReader()
-            print("[OLE Fetch] Email reader initialized")
-            # Fetch collecte data for the selected date
-            collecte_data = reader.fetch_collecte_data(target_date=selected_date, since_days=14)
+            from data_sources.email_reader import OutlookCollecteReader
+            reader = OutlookCollecteReader()
+            print("[OLE Fetch] Outlook collecte reader initialized")
+            # Fetch collecte data for the selected date (OLE email first, then Tikkie fallback)
+            collecte_data = reader.fetch_collecte_data(target_date=selected_date, since_days=60)
             print(f"[OLE Fetch] Collecte data: {collecte_data}")
             if collecte_data:
                 qr_filename = collecte_data.get('ole_qr') or collecte_data.get('dankoffer_qr')
                 ole_url = collecte_data.get('ole_url') or collecte_data.get('dankoffer_url')
-                print(f"[OLE Fetch] QR filename: {qr_filename}, URL: {ole_url}")
+                print(f"[OLE Fetch] Email QR filename: {qr_filename}, URL: {ole_url}")
         except Exception as e:
             print(f"[OLE Fetch] Email fetch error: {e}")
             import traceback
