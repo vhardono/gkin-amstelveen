@@ -2603,6 +2603,22 @@ def fetch_ole_data():
                 print(f"[OLE Fetch] OLE mededeling fetch error: {e}")
                 import traceback; traceback.print_exc()
 
+        # Fallback 3: use YouTube link from Takenrooster OPMERKING column
+        if not youtube_link:
+            try:
+                taken = _get_takenrooster()
+                for tr_entry in taken.get('entries', []):
+                    tr_date = tr_entry.get('date')
+                    if tr_date and hasattr(tr_date, 'date'):
+                        tr_date = tr_date.date()
+                    if tr_date == selected_date.date() and tr_entry.get('youtube_link'):
+                        youtube_link = tr_entry['youtube_link']
+                        print(f"[OLE Fetch] YouTube link from Takenrooster: {youtube_link}")
+                        break
+            except Exception as e:
+                print(f"[OLE Fetch] Takenrooster fallback error: {e}")
+                import traceback; traceback.print_exc()
+
         result = {
             'ole_predikant': ole_data.get('predikant', ''),
             'ole_location_code': location_code,

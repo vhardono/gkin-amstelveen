@@ -435,6 +435,12 @@ class DropboxExcelReader:
             predikant = _cell('PREDIKANT', 4)
             ovd_short = _cell('OVD', 5)
             opmerking = _cell('OPMERKING', 3)
+            # Extract YouTube link from opmerking (e.g. "OLE: https://youtube.com/live/...")
+            youtube_link = ''
+            if opmerking:
+                yt_m = re.search(r'https?://(?:www\.)?(?:youtube\.com/(?:live|watch)|youtu\.be)/[^\s<>"\']*', opmerking)
+                if yt_m:
+                    youtube_link = yt_m.group(0).rstrip('.,)')
             eo1_short    = _cell('1EO', 6)    # G = index 6 (1e ONTV)
             beamer_short = _cell('BEAMER', 9)  # J = index 9 (BEAMER)
             # Parse TIJD: may be a time object or string like '10:30:00'
@@ -519,6 +525,7 @@ class DropboxExcelReader:
                 'beamer':          beamer_full,
                 'beamer_email':    beamer_email,
                 'opmerking':       opmerking,
+                'youtube_link':    youtube_link,
                 'tijd':            tijd,
                 'muziek':          muziek,
                 'voorzangers':     voorzangers,
