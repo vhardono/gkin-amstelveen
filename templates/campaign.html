@@ -189,16 +189,11 @@
                     <input type="text" id="amEmailRecipient" value="Monica" class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Ontvanger naam">
                 </div>
             </div>
-            <div class="flex gap-2 mb-3">
-                <button id="amEmailBtn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-4 rounded-lg text-sm transition">
-                    Open in mailprogramma (concept)
-                </button>
-                <button id="amEmlBtn" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-4 rounded-lg text-sm transition">
-                    Download .eml
-                </button>
-            </div>
+            <button id="amEmailBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-4 rounded-lg text-sm transition mb-3">
+                Open mailprogramma + download .eml
+            </button>
             <p class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1.5 mb-3">
-                Download .eml opent het bestand in je mailprogramma met de tekst en QR-code al ingevoegd. De liturgie moet je nog handmatig toevoegen.
+                Opent een leeg mailconcept en downloadt de .eml met de QR-code. Open de .eml in je mailprogramma voor het volledige ontwerp. De liturgie moet je nog handmatig toevoegen.
             </p>
             <div id="amEmailPreviewBox" class="hidden">
                 <label class="block text-xs text-gray-500 mb-1">Tekstcontrole (bij problemen kun je deze kopiëren):</label>
@@ -607,7 +602,14 @@
             btn.textContent = 'Openen...';
 
             try {
-                const resp = await fetch('/campaign/ole/am-template', {
+                const qrB64 = document.getElementById('qrB64').value;
+                const qrUrl = document.getElementById('qrUrl').value;
+                let qr_image_url = qrB64;
+                if (!qr_image_url && qrUrl && !qrUrl.startsWith('Van')) {
+                    qr_image_url = qrUrl;
+                }
+
+                const resp = await fetch('/campaign/ole/am-combined', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -617,33 +619,47 @@
                         youtube_link: document.getElementById('youtubeLink').value,
                         liturgie_url: document.getElementById('liturgieUrl').value,
                         collecte_url: document.getElementById('collecteUrl').value,
+                        qr_image_url,
                         ole_location: document.getElementById('oleLocation').value,
                         ole_time: document.getElementById('oleTime').value,
                         ole_predikant: document.getElementById('olePredikant').value || '',
                         collecte_ovv: document.getElementById('collecteOvv').value || '',
-                        recipient_name: document.getElementById('amEmailRecipient').value || 'Monica'
+                        recipient_name: document.getElementById('amEmailRecipient').value || 'Monica',
+                        to_email: document.getElementById('amEmailTo').value || 'scribagkin@gmail.com',
+                        cc_email: document.getElementById('amEmailCc').value || 'vega.hardono@outlook.com'
                     })
                 });
                 const data = await resp.json();
 
-                if (data.success) {
-                    const to = document.getElementById('amEmailTo').value || data.to_email || '';
-                    const cc = document.getElementById('amEmailCc').value || data.cc_email || '';
-                    const subject = encodeURIComponent(data.subject || 'GKIN OLE');
-                    const body = encodeURIComponent(data.text_preview || '');
-                    const params = [`subject=${subject}`, `body=${body}`];
-                    if (cc) params.unshift(`cc=${encodeURIComponent(cc)}`);
-                    const mailto = `mailto:${encodeURIComponent(to)}?${params.join('&')}`;
-
-                    // Try to open mail app; if it fails (e.g. blocked), show text fallback
-                    try {
-                        window.location.href = mailto;
-                    } catch (e) {
-                        showAmEmailFallback(data.text_preview || '');
-                    }
-                } else {
+                if (!data.success) {
                     alert('Fout bij genereren AM OLE email: ' + (data.error || 'Onbekende fout'));
+                    return;
                 }
+
+                const to = document.getElementById('amEmailTo').value || data.to_email || '';
+                const cc = document.getElementById('amEmailCc').value || data.cc_email || '';
+                const subject = encodeURIComponent(data.subject || 'GKIN OLE');
+                const body = encodeURIComponent(data.text_preview || '');
+                const params = [`subject=${subject}`, `body=${body}`];
+                if (cc) params.unshift(`cc=${encodeURIComponent(cc)}`);
+                const mailto = `mailto:${encodeURIComponent(to)}?${params.join('&')}`;
+
+                // Download .eml first
+                if (data.eml_base64) {
+                    const emlBytes = Uint8Array.from(atob(data.eml_base64), c => c.charCodeAt(0));
+                    const blob = new Blob([emlBytes], { type: 'message/rfc822' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = data.eml_filename || `GKIN OLE ${date}.eml`;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    URL.revokeObjectURL(url);
+                }
+
+                // Then try to open mail app
+                window.location.href = mailto;
             } catch (err) {
                 console.error('AM email error:', err);
                 alert('Fout bij genereren AM OLE email');
@@ -662,63 +678,6 @@
         }
 
         document.getElementById('amEmailBtn').addEventListener('click', openAmEmailDraft);
-
-        async function downloadAmEml() {
-            const date = dateSelect.value;
-            if (!date) return;
-
-            const btn = document.getElementById('amEmlBtn');
-            const originalText = btn.textContent;
-            btn.disabled = true;
-            btn.textContent = 'Maken...';
-
-            try {
-                const resp = await fetch('/campaign/ole/am-eml', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        date,
-                        theme: document.getElementById('theme').value,
-                        bible_verse: document.getElementById('bibleVerse').value,
-                        youtube_link: document.getElementById('youtubeLink').value,
-                        liturgie_url: document.getElementById('liturgieUrl').value,
-                        collecte_url: document.getElementById('collecteUrl').value,
-                        qr_image_url: document.getElementById('qrB64').value || document.getElementById('qrUrl').value,
-                        ole_location: document.getElementById('oleLocation').value,
-                        ole_time: document.getElementById('oleTime').value,
-                        ole_predikant: document.getElementById('olePredikant').value || '',
-                        collecte_ovv: document.getElementById('collecteOvv').value || '',
-                        recipient_name: document.getElementById('amEmailRecipient').value || 'Monica',
-                        to_email: document.getElementById('amEmailTo').value || 'scribagkin@gmail.com',
-                        cc_email: document.getElementById('amEmailCc').value || 'vega.hardono@outlook.com'
-                    })
-                });
-
-                if (!resp.ok) {
-                    const errData = await resp.json().catch(() => ({}));
-                    throw new Error(errData.error || `Fout ${resp.status}`);
-                }
-
-                const blob = await resp.blob();
-                const filename = resp.headers.get('content-disposition')?.match(/filename="?([^"]+)"?/)?.[1] || `GKIN OLE ${date}.eml`;
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = filename;
-                document.body.appendChild(a);
-                a.click();
-                a.remove();
-                URL.revokeObjectURL(url);
-            } catch (err) {
-                console.error('EML download error:', err);
-                alert('Fout bij maken .eml: ' + err.message + '\n\nProbeer de "Open in mailprogramma" knop.');
-            } finally {
-                btn.disabled = false;
-                btn.textContent = originalText;
-            }
-        }
-
-        document.getElementById('amEmlBtn').addEventListener('click', downloadAmEml);
 
         createBtn.addEventListener('click', async () => {
             const date = dateSelect.value;
