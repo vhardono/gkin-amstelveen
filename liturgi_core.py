@@ -2007,7 +2007,7 @@ def add_textbox(slide, left, top, width, height, text, font_name, font_size=36, 
     run.font.color.rgb = color
     return box
 
-def add_qr_image_to_slide(slide, qr_path=None, width=Cm(5), height=Cm(5), bottom_margin=Cm(1)):
+def add_qr_image_to_slide(slide, qr_path=None, width=Cm(7), height=Cm(7), bottom_margin=Cm(1)):
     """Add the Tikkie QR image centered near the bottom of a slide if available."""
     if qr_path is None:
         qr_path = globals().get('_qr_path') or globals().get('QR_IMAGE_PATH')
@@ -3052,7 +3052,7 @@ r.font.color.rgb = white
 slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
 set_background(slide)
 
-box = slide.shapes.add_textbox(BOX_LEFT, Cm(3), BOX_WIDTH, Cm(8))
+box = slide.shapes.add_textbox(BOX_LEFT, Cm(3), BOX_WIDTH, Cm(7.5))
 tf = box.text_frame
 tf.clear()
 tf.word_wrap = True
@@ -3393,23 +3393,27 @@ def add_song_slides(songNumber = 1, presentation = prs, staan = False):
             s["Boek"] = ""
 
         
+    # Title positioning: dankoffer song (6) title moved up to leave room for 7cm QR at bottom
+    title_top = Cm(2) if songNumber == 6 else Cm(4)
+    info_top = Cm(3.7) if songNumber == 6 else Cm(7)
+
     if (staan):
         addBox(slideT, "(gemeente gaat staan)", BOX_LEFT, Cm(3), BOX_WIDTH, Cm(2), RGBColor(255,173,3), italic=True, Size=Pt(24))
-    
+
     if songNumber == 1:
-        addBox(slideT, "INTOCHTSLIED", BOX_LEFT, Cm(4), BOX_WIDTH, Cm(2), bold=True, underline=True, Size=Pt(40))
+        addBox(slideT, "INTOCHTSLIED", BOX_LEFT, title_top, BOX_WIDTH, Cm(2), bold=True, underline=True, Size=Pt(40))
     elif songNumber == 7:
-        addBox(slideT, "SLOTLIED", BOX_LEFT, Cm(4), BOX_WIDTH, Cm(2), bold=True, underline=True, Size=Pt(40))
+        addBox(slideT, "SLOTLIED", BOX_LEFT, title_top, BOX_WIDTH, Cm(2), bold=True, underline=True, Size=Pt(40))
     else:
-        addBox(slideT, "SAMENZANG", BOX_LEFT, Cm(4), BOX_WIDTH, Cm(2), bold=True, Size=Pt(40))
+        addBox(slideT, "SAMENZANG", BOX_LEFT, title_top, BOX_WIDTH, Cm(2), bold=True, Size=Pt(40))
 
     if is_empty(s["Nummer"]):
-        addBox(slideT, f'{s["Boek"]}\n\n "{s["Titel"]}"', BOX_LEFT, Cm(7), BOX_WIDTH, Cm(7), Size = Pt(40))
+        addBox(slideT, f'{s["Boek"]}\n\n "{s["Titel"]}"', BOX_LEFT, info_top, BOX_WIDTH, Cm(5), Size = Pt(40))
     else:
         if is_empty(s["Versen"]):
-            addBox(slideT, f'{s["Boek"]} {s["Nummer"]}\n\n "{s["Titel"]}"', BOX_LEFT, Cm(7), BOX_WIDTH, Cm(7), Size = Pt(40))
+            addBox(slideT, f'{s["Boek"]} {s["Nummer"]}\n\n "{s["Titel"]}"', BOX_LEFT, info_top, BOX_WIDTH, Cm(5), Size = Pt(40))
         else:
-            addBox(slideT, f'{s["Boek"]} {s["Nummer"]}: {s["Versen"]}\n\n  "{s["Titel"]}"', BOX_LEFT, Cm(7), BOX_WIDTH, Cm(7), Size = Pt(40))
+            addBox(slideT, f'{s["Boek"]} {s["Nummer"]}: {s["Versen"]}\n\n  "{s["Titel"]}"', BOX_LEFT, info_top, BOX_WIDTH, Cm(5), Size = Pt(40))
 
     # Show Tikkie QR on the title slide of the dankoffer song (song 6)
     if songNumber == 6:
@@ -3417,7 +3421,8 @@ def add_song_slides(songNumber = 1, presentation = prs, staan = False):
 
     # Max estimated wrapped lines that comfortably fit the song lyric box
     # (Cm(13.5) tall, Pt(32) font) — reuses the same tuning as the Bible-verse box.
-    MAX_LINES_SONG = MAX_LINES_PER_SLIDE  # 10
+    # Dankoffer song gets a shorter box because of the QR image, so chunk into fewer lines.
+    MAX_LINES_SONG = 7 if songNumber == 6 else MAX_LINES_PER_SLIDE  # 10
 
     for si, song_text in enumerate(s["cells"]):
         blocks = [b.strip() for b in re.split(r"\r?\n\s*\r?\n", song_text.strip()) if b.strip()]
@@ -3461,9 +3466,14 @@ def add_song_slides(songNumber = 1, presentation = prs, staan = False):
                     color=RGBColor(255,173,3), bold=True, Size=Pt(24)
                 )
 
-                # Reduce lyric box height for dankoffer song to make room for QR at bottom
-                lyric_box_height = Cm(10.5) if songNumber == 6 else Cm(13.5)
-                box = slide.shapes.add_textbox(BOX_LEFT, Cm(2), BOX_WIDTH, lyric_box_height)
+                # Reduce lyric box height for dankoffer song to make room for 7cm QR at bottom
+                if songNumber == 6:
+                    lyric_box_top = Cm(2.5)
+                    lyric_box_height = Cm(8)
+                else:
+                    lyric_box_top = Cm(2)
+                    lyric_box_height = Cm(13.5)
+                box = slide.shapes.add_textbox(BOX_LEFT, lyric_box_top, BOX_WIDTH, lyric_box_height)
                 tf = box.text_frame
                 tf.clear()
                 tf.word_wrap = True
@@ -4460,7 +4470,7 @@ add_verses_to_ppt(prs, boek, hs, vfrom, vto)
 
 slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
 set_background(slide)
-box = slide.shapes.add_textbox(BOX_LEFT, Cm(1), BOX_WIDTH, Cm(9))
+box = slide.shapes.add_textbox(BOX_LEFT, Cm(1), BOX_WIDTH, Cm(8.5))
 tf = box.text_frame
 tf.clear()
 tf.word_wrap = True
@@ -4480,7 +4490,7 @@ add_song_slides(6, prs, False)
 
 slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
 set_background(slide)
-box = slide.shapes.add_textbox(BOX_LEFT, Cm(1), BOX_WIDTH, Cm(10))
+box = slide.shapes.add_textbox(BOX_LEFT, Cm(1), BOX_WIDTH, Cm(9.5))
 tf = box.text_frame
 tf.clear()
 tf.word_wrap = True
