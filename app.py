@@ -2528,8 +2528,8 @@ def fetch_ole_data():
             collecte_data = reader.fetch_collecte_data(target_date=selected_date, since_days=60)
             print(f"[OLE Fetch] Collecte data: {collecte_data}")
             if collecte_data:
-                qr_filename = collecte_data.get('ole_qr') or collecte_data.get('dankoffer_qr')
-                ole_url = collecte_data.get('ole_url') or collecte_data.get('dankoffer_url')
+                qr_filename = collecte_data.get('ole_qr')
+                ole_url = collecte_data.get('ole_url')
                 print(f"[OLE Fetch] Email QR filename: {qr_filename}, URL: {ole_url}")
         except Exception as e:
             print(f"[OLE Fetch] Email fetch error: {e}")

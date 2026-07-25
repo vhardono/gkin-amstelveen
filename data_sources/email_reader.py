@@ -184,7 +184,7 @@ class OutlookCollecteReader:
         """Search inbox for Tikkie and OLE emails matching target_date.
 
         Tikkie: from fokkedj@gmail.com, subject contains 'Tikkie Collecte'
-        OLE:    from pmcvb.gkin@gmail.com, subject contains 'QR Code OLE'
+        OLE:    from pmcvb.gkin@gmail.com, subject contains 'Collecte OLE'
         Both also contain an image attachment (QR) and a payment URL.
         """
         import base64
@@ -247,9 +247,17 @@ class OutlookCollecteReader:
             except Exception:
                 return []
 
-        def _extract_url(body: str) -> str:
+        def _extract_url(body: str, raw_html: str = '') -> str:
+            """Extract a payment URL from email body, searching both visible text and href links."""
+            candidates = []
+            # First, extract URLs from href attributes in the raw HTML
+            if raw_html:
+                href_urls = re.findall(r'href=["\'](https?://[^"\']+)["\']', raw_html, re.IGNORECASE)
+                candidates.extend(href_urls)
+            # Then search the cleaned body text
+            search_text = ' '.join(candidates) + ' ' + body
             for pat in [TIKKIE_PAT, ING_PAT, URL_PAT]:
-                m = pat.search(body)
+                m = pat.search(search_text)
                 if m:
                     return m.group(0).rstrip('.,)<>')
             return ''
@@ -300,9 +308,9 @@ class OutlookCollecteReader:
         tikkie_match = None
         for candidate in tikkie_candidates:
             raw_body = candidate.get('body', {})
-            body_content = raw_body.get('content', '')
-            body = re.sub(r'<[^>]+>', ' ', body_content)
-            url = _extract_url(body)
+            raw_html = raw_body.get('content', '')
+            body = re.sub(r'<[^>]+>', ' ', raw_html)
+            url = _extract_url(body, raw_html)
             if url:
                 tikkie_match = candidate
                 result['dankoffer_url'] = url
@@ -317,17 +325,19 @@ class OutlookCollecteReader:
             result['not_found'].append('Tikkie Collecte e-mail niet gevonden voor deze datum')
 
         # --- Fetch OLE QR email ---
-        ole_msgs = _search_messages('QR Code OLE', 'pmcvb.gkin@gmail.com')
+        # Actual subject examples: "QR code Collecte OLE 26 juli 2026" (pmcvb.gkin@gmail.com)
+        ole_msgs = _search_messages('Collecte OLE', 'pmcvb.gkin@gmail.com')
         ole_match = next((m for m in ole_msgs if _date_in_subject(m.get('subject',''))), None)
         if ole_match:
             result['emails_found'] += 1
             result['source_subjects'].append(ole_match.get('subject',''))
-            body = re.sub(r'<[^>]+>', ' ', ole_match.get('body', {}).get('content', ''))
-            result['ole_url'] = _extract_url(body)
+            raw_html = ole_match.get('body', {}).get('content', '')
+            body = re.sub(r'<[^>]+>', ' ', raw_html)
+            result['ole_url'] = _extract_url(body, raw_html)
             # Always try attachments — OLE QR is inline (isInline=True, hasAttachments=False)
             result['ole_qr'], result['ole_qr_b64'] = _save_first_image(ole_match['id'], 'ole')
         else:
-            result['not_found'].append('QR Code OLE e-mail niet gevonden voor deze datum')
+            result['not_found'].append('Collecte OLE e-mail niet gevonden voor deze datum')
 
         return result
 
