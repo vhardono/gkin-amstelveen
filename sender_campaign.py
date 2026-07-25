@@ -519,13 +519,13 @@ class SenderCampaignGenerator:
 </body>
 </html>"""
 
-    def generate_am_ole_email_html(self, service_date: datetime, predikant: str,
-                                    theme: str = "", bible_verse: str = "",
-                                    youtube_link: str = "", liturgie_url: str = "",
-                                    collecte_url: str = "", qr_image_url: str = "",
-                                    ole_location: str = "", ole_time: str = "10:00",
-                                    collecte_ovv: str = "", recipient_name: str = "Monica") -> str:
-        """Generate a personal AM OLE announcement email (with liturgie attachment reminder)."""
+    def generate_am_ole_email(self, service_date: datetime, predikant: str,
+                               theme: str = "", bible_verse: str = "",
+                               youtube_link: str = "", liturgie_url: str = "",
+                               collecte_url: str = "",
+                               ole_location: str = "", ole_time: str = "10:00",
+                               collecte_ovv: str = "", recipient_name: str = "Monica") -> str:
+        """Generate a plain-text AM OLE announcement email draft (QR image must be attached manually)."""
         months = ['januari', 'februari', 'maart', 'april', 'mei', 'juni',
                   'juli', 'augustus', 'september', 'oktober', 'november', 'december']
         date_str = f"{service_date.day} {months[service_date.month - 1]} {service_date.year}"
@@ -534,79 +534,60 @@ class SenderCampaignGenerator:
         location_code, location_body, _ = self._resolve_ole_location(ole_location)
         if not location_body:
             location_body = 'vanuit het GKIN Kerkgebouw in Amstelveen'
+        elif location_code == 'AM' and 'Kerkgebouw in Amstelveen' in location_body:
+            location_body = location_body.replace('Kerkgebouw in Amstelveen', 'GKIN Kerkgebouw in Amstelveen')
 
         time_clean = (ole_time or '10:00').replace('u', '').replace('U', '').strip()
 
         ovv = collecte_ovv or f"Collecte OLE {service_date.strftime('%d-%m-%Y')}"
 
         # Theme / bible verse line
-        theme_html = ""
+        theme_line = ""
         if theme:
             bible_suffix = f" genomen uit {bible_verse}" if bible_verse else ""
-            theme_html = f'<p>Het thema van deze eredienst is: “{theme}”{bible_suffix}.</p>'
+            theme_line = f"Het thema van deze eredienst is: “{theme}”{bible_suffix}.\n\n"
 
         # YouTube line
-        youtube_html = ""
+        youtube_line = ""
         if youtube_link:
-            youtube_html = f'<p>De dienst wordt live uitgezonden via: <a href="{youtube_link}">{youtube_link}</a></p>'
+            youtube_line = f"De dienst wordt live uitgezonden via: {youtube_link}\n"
 
         # Liturgie line
-        liturgie_html = "<p>De liturgie kunt u vinden in de bijlage"
+        liturgie_line = "De liturgie kunt u vinden in de bijlage"
         if liturgie_url:
-            liturgie_html += f' en op <a href="{liturgie_url}">gkin.org</a>'
-        liturgie_html += ".</p>"
-
-        # QR image
-        qr_html = ""
-        if qr_image_url:
-            if qr_image_url.startswith('data:'):
-                qr_html = f'<p><img src="{qr_image_url}" alt="QR code" style="max-width:200px;border-radius:8px;"></p>'
-            elif qr_image_url.startswith('http'):
-                try:
-                    import requests as _req
-                    r = _req.get(qr_image_url, timeout=10)
-                    r.raise_for_status()
-                    ext = qr_image_url.rsplit('.', 1)[-1].lower().split('?')[0]
-                    mime = {'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'gif': 'image/gif'}.get(ext, 'image/png')
-                    b64 = base64.b64encode(r.content).decode('utf-8')
-                    qr_html = f'<p><img src="data:{mime};base64,{b64}" alt="QR code" style="max-width:200px;border-radius:8px;"></p>'
-                except Exception:
-                    qr_html = f'<p><a href="{qr_image_url}">QR code</a></p>'
-            else:
-                qr_html = f'<p><em>QR code bijlage: {qr_image_url}</em></p>'
+            liturgie_line += f" en op {liturgie_url}"
+        liturgie_line += ".\n"
 
         # Collecte
         if collecte_url:
-            collecte_html = f'<p>De collecte is bestemd voor de Landelijke kas (OLE). U kunt dit overmaken via: <a href="{collecte_url}">{collecte_url}</a><br>of door overmaking aan GEREJA KRISTEN INDONESIA NEDERLAND, IBAN: NL19 INGB 0002 6182 90 o.v.v. {ovv}.</p>'
+            collecte_lines = (
+                f"De collecte is bestemd voor de Landelijke kas (OLE). U kunt dit overmaken via: {collecte_url}\n"
+                f"of door overmaking aan GEREJA KRISTEN INDONESIA NEDERLAND, IBAN: NL19 INGB 0002 6182 90 o.v.v. {ovv}."
+            )
         else:
-            collecte_html = f'<p>De collecte is bestemd voor de Landelijke kas (OLE). U kunt dit overmaken aan GEREJA KRISTEN INDONESIA NEDERLAND, IBAN: NL19 INGB 0002 6182 90 o.v.v. {ovv}.</p>'
+            collecte_lines = (
+                f"De collecte is bestemd voor de Landelijke kas (OLE). "
+                f"U kunt dit overmaken aan GEREJA KRISTEN INDONESIA NEDERLAND, IBAN: NL19 INGB 0002 6182 90 o.v.v. {ovv}."
+            )
 
-        return f"""<!DOCTYPE html>
-<html lang="nl">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GKIN OLE {date_str}</title>
-</head>
-<body style="font-family:Arial,sans-serif;color:#000000;font-size:14px;line-height:1.5;">
-<p>Beste {recipient_name},</p>
-<p>Bijgaand de aankondiging, liturgie van de GKIN Online Landelijke Eredienst van a.s. {date_str}.</p>
-<br>
-<hr style="border:none;border-top:1px solid #cccccc;">
-<br>
-<p>Beste broeders en zusters,</p>
-<p>Op {day_name} {service_date.day} {months[service_date.month - 1]} zal {predikant} voorgaan in de Online Landelijke Eredienst van GKIN {location_body}, aanvang {time_clean} uur.</p>
-{theme_html}
-{youtube_html}
-{liturgie_html}
-{collecte_html}
-{qr_html}
-<p>Wij wensen u allen een gezegende dienst toe.</p>
-<br>
-<p>Met vriendelijke groet,<br>
-Namens regio Amstelveen,</p>
-<p>Vega Hardono<br>
-Regiosecretaris<br>
-GKIN Amstelveen</p>
-</body>
-</html>"""
+        qr_filename = f"{ovv}.png"
+
+        return (
+            f"Beste {recipient_name},\n\n"
+            f"Bijgaand de aankondiging, liturgie van de GKIN Online Landelijke Eredienst van a.s. {date_str}.\n\n"
+            f"Met vriendelijke groet,\n"
+            f"Namens regio Amstelveen,\n\n"
+            f"Vega Hardono\n"
+            f"Regiosecretaris\n"
+            f"GKIN Amstelveen\n\n\n"
+            f"---------------------------------------------------------------------------------------\n\n\n"
+            f"Beste broeders en zusters, \n\n"
+            f"Op {day_name} {service_date.day} {months[service_date.month - 1]} zal {predikant} voorgaan in de Online Landelijke Eredienst van GKIN {location_body}, aanvang {time_clean} uur. \n\n"
+            f"{theme_line}"
+            f"{youtube_line}"
+            f"{liturgie_line}\n"
+            f"{collecte_lines}\n"
+            f"{qr_filename}\n\n"
+            f"Wij wensen u allen een gezegende dienst toe.\n\n"
+            f"————————————————————————————————————————"
+        )

@@ -2810,7 +2810,7 @@ def campaign_ole_am_template():
         predikant_to_use = ole_predikant if ole_predikant else entry.get('predikant', '')
 
         generator = SenderCampaignGenerator()
-        html_content = generator.generate_am_ole_email_html(
+        text_content = generator.generate_am_ole_email(
             service_date=selected_date,
             predikant=predikant_to_use,
             theme=theme,
@@ -2818,7 +2818,6 @@ def campaign_ole_am_template():
             youtube_link=youtube_link,
             liturgie_url=liturgie_url,
             collecte_url=collecte_url,
-            qr_image_url=qr_image_url,
             ole_location=ole_location,
             ole_time=ole_time,
             collecte_ovv=collecte_ovv,
@@ -2836,11 +2835,11 @@ def campaign_ole_am_template():
             'location': ole_location,
             'time': time_clean,
             'subject': f"GKIN OLE {date_str}",
-            'html_preview': html_content,
+            'text_preview': text_content,
             'success': True,
             'to_email': 'scribagkin@gmail.com',
             'cc_email': 'vega.hardono@outlook.com',
-            'note': 'Vergeet niet de liturgie als bijlage toe te voegen aan de e-mail.'
+            'note': 'Vergeet niet de QR code en liturgie als bijlage toe te voegen aan de e-mail.'
         })
 
     except Exception as e:

@@ -173,17 +173,9 @@
             </button>
         </div>
 
-        <button id="amEmailBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-4 rounded-lg text-sm transition mb-5 hidden">
-            AM OLE Aankondigingsmail maken
-        </button>
-
         <div id="amEmailSection" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-5 hidden">
-            <div class="flex items-center justify-between mb-3">
-                <h2 class="text-base font-semibold text-blue-700">AM OLE Aankondigingsmail</h2>
-                <span class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">Vergeet niet de liturgie als bijlage toe te voegen</span>
-            </div>
-            <div id="amEmailContent" class="text-sm text-gray-700 overflow-auto border border-gray-200 rounded-lg bg-gray-50 p-3"></div>
-            <div class="mt-3 grid grid-cols-1 gap-2">
+            <h2 class="text-base font-semibold text-blue-700 mb-3">AM OLE Aankondigingsmail</h2>
+            <div class="grid grid-cols-1 gap-2 mb-3">
                 <div class="flex items-center gap-2">
                     <label class="text-sm text-gray-600 w-12 shrink-0">Aan:</label>
                     <input type="email" id="amEmailTo" value="scribagkin@gmail.com" class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Ontvanger e-mail">
@@ -196,10 +188,16 @@
                     <label class="text-sm text-gray-600 w-12 shrink-0">Naam:</label>
                     <input type="text" id="amEmailRecipient" value="Monica" class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Ontvanger naam">
                 </div>
-                <div class="flex gap-2 mt-1">
-                    <a id="amEmailMailto" href="#" target="_blank" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-center font-medium py-2 px-4 rounded-lg text-sm transition">Open in mailprogramma</a>
-                    <button id="copyAmEmailBtn" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2 px-4 rounded-lg text-sm transition">Kopieer HTML</button>
-                </div>
+            </div>
+            <button id="amEmailBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-4 rounded-lg text-sm transition mb-3">
+                Open in mailprogramma (concept)
+            </button>
+            <p class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1.5 mb-3">
+                Vergeet niet de <strong>QR code</strong> en <strong>liturgie</strong> als bijlage toe te voegen aan de e-mail.
+            </p>
+            <div id="amEmailPreviewBox" class="hidden">
+                <label class="block text-xs text-gray-500 mb-1">Tekstcontrole (bij problemen kun je deze kopiëren):</label>
+                <textarea id="amEmailText" readonly class="w-full h-48 border border-gray-200 rounded-lg p-2 text-xs font-mono bg-gray-50"></textarea>
             </div>
         </div>
 
@@ -451,7 +449,7 @@
                     oleFetchStatus.innerHTML = `<span class="text-amber-600">⚠ ${t('camp.no_data_found')}</span>`;
                 }
                 console.log('[Frontend] Auto-population complete');
-                updateAmEmailButton();
+                updateAmEmailSection();
 
             } catch (err) {
                 console.error('[Frontend] OLE fetch error:', err);
@@ -578,31 +576,30 @@
             return loc === 'am' || loc.includes('amstelveen');
         }
 
-        function updateAmEmailButton() {
-            const btn = document.getElementById('amEmailBtn');
+        function updateAmEmailSection() {
+            const section = document.getElementById('amEmailSection');
             if (isAMLocation()) {
-                btn.classList.remove('hidden');
+                section.classList.remove('hidden');
             } else {
-                btn.classList.add('hidden');
-                document.getElementById('amEmailSection').classList.add('hidden');
+                section.classList.add('hidden');
             }
         }
 
-        // Watch location changes to show/hide AM email button
+        // Watch location changes to show/hide AM email section
         const oleLocationInput = document.getElementById('oleLocation');
         if (oleLocationInput) {
-            oleLocationInput.addEventListener('input', updateAmEmailButton);
-            oleLocationInput.addEventListener('change', updateAmEmailButton);
+            oleLocationInput.addEventListener('input', updateAmEmailSection);
+            oleLocationInput.addEventListener('change', updateAmEmailSection);
         }
 
-        document.getElementById('amEmailBtn').addEventListener('click', async () => {
+        async function openAmEmailDraft() {
             const date = dateSelect.value;
             if (!date) return;
 
             const btn = document.getElementById('amEmailBtn');
             const originalText = btn.textContent;
             btn.disabled = true;
-            btn.textContent = 'Genereren...';
+            btn.textContent = 'Openen...';
 
             try {
                 const resp = await fetch('/campaign/ole/am-template', {
@@ -615,7 +612,6 @@
                         youtube_link: document.getElementById('youtubeLink').value,
                         liturgie_url: document.getElementById('liturgieUrl').value,
                         collecte_url: document.getElementById('collecteUrl').value,
-                        qr_image_url: document.getElementById('qrB64').value || document.getElementById('qrUrl').value,
                         ole_location: document.getElementById('oleLocation').value,
                         ole_time: document.getElementById('oleTime').value,
                         ole_predikant: document.getElementById('olePredikant').value || '',
@@ -626,15 +622,20 @@
                 const data = await resp.json();
 
                 if (data.success) {
-                    const amSection = document.getElementById('amEmailSection');
-                    const amContent = document.getElementById('amEmailContent');
-                    amSection.classList.remove('hidden');
-                    amContent.innerHTML = data.html_preview;
-                    if (data.to_email) document.getElementById('amEmailTo').value = data.to_email;
-                    if (data.cc_email) document.getElementById('amEmailCc').value = data.cc_email;
-                    updateAmEmailMailto();
-                    // Scroll to preview
-                    amSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    const to = document.getElementById('amEmailTo').value || data.to_email || '';
+                    const cc = document.getElementById('amEmailCc').value || data.cc_email || '';
+                    const subject = encodeURIComponent(data.subject || 'GKIN OLE');
+                    const body = encodeURIComponent(data.text_preview || '');
+                    const params = [`subject=${subject}`, `body=${body}`];
+                    if (cc) params.unshift(`cc=${encodeURIComponent(cc)}`);
+                    const mailto = `mailto:${encodeURIComponent(to)}?${params.join('&')}`;
+
+                    // Try to open mail app; if it fails (e.g. blocked), show text fallback
+                    try {
+                        window.location.href = mailto;
+                    } catch (e) {
+                        showAmEmailFallback(data.text_preview || '');
+                    }
                 } else {
                     alert('Fout bij genereren AM OLE email: ' + (data.error || 'Onbekende fout'));
                 }
@@ -645,39 +646,17 @@
                 btn.disabled = false;
                 btn.textContent = originalText;
             }
-        });
-
-        function updateAmEmailMailto() {
-            const to = document.getElementById('amEmailTo').value;
-            const cc = document.getElementById('amEmailCc').value;
-            const subject = encodeURIComponent(document.getElementById('subject').value || 'GKIN OLE');
-            const bodyText = (document.getElementById('amEmailContent').innerText || '').substring(0, 1800);
-            const body = encodeURIComponent(bodyText);
-            const params = [`subject=${subject}`, `body=${body}`];
-            if (cc) params.unshift(`cc=${encodeURIComponent(cc)}`);
-            const href = `mailto:${encodeURIComponent(to)}?${params.join('&')}`;
-            document.getElementById('amEmailMailto').href = href;
         }
 
-        ['input', 'change'].forEach(evt => {
-            document.getElementById('amEmailTo').addEventListener(evt, updateAmEmailMailto);
-            document.getElementById('amEmailCc').addEventListener(evt, updateAmEmailMailto);
-            document.getElementById('subject').addEventListener(evt, updateAmEmailMailto);
-        });
+        function showAmEmailFallback(text) {
+            const previewBox = document.getElementById('amEmailPreviewBox');
+            const textarea = document.getElementById('amEmailText');
+            textarea.value = text;
+            previewBox.classList.remove('hidden');
+            previewBox.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
 
-        document.getElementById('copyAmEmailBtn').addEventListener('click', async () => {
-            const html = document.getElementById('amEmailContent').innerHTML;
-            try {
-                await navigator.clipboard.writeText(html);
-                const btn = document.getElementById('copyAmEmailBtn');
-                const original = btn.textContent;
-                btn.textContent = 'Gekopieerd!';
-                setTimeout(() => btn.textContent = original, 2000);
-            } catch (err) {
-                console.error('Copy error:', err);
-                alert('Kopiëren mislukt');
-            }
-        });
+        document.getElementById('amEmailBtn').addEventListener('click', openAmEmailDraft);
 
         createBtn.addEventListener('click', async () => {
             const date = dateSelect.value;
