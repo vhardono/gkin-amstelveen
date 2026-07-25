@@ -11,6 +11,10 @@
         }
     </script>
     <script src="/static/i18n.js"></script>
+    <style>
+        .drop-zone.drag-over { border-color: #3A7C22 !important; background-color: #f0fdf4 !important; }
+        .qr-file-input { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+    </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
     <header class="bg-gkin-green shadow-md">
@@ -87,8 +91,8 @@
                     <input type="text" id="qrUrl" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green" placeholder="">
                     <input type="hidden" id="qrB64">
                     <input type="hidden" id="collecteOvv">
-                    <input type="file" id="qrFile" accept="image/*" class="hidden">
-                    <div id="qrDrop" class="drop-zone mt-2 border-2 border-dashed border-gray-300 rounded-lg p-3 text-center cursor-pointer hover:border-gkin-green hover:bg-green-50 transition">
+                    <input type="file" id="qrFile" accept="image/*" class="qr-file-input">
+                    <div id="qrDrop" class="drop-zone relative mt-2 border-2 border-dashed border-gray-300 rounded-lg p-3 text-center cursor-pointer hover:border-gkin-green hover:bg-green-50 transition">
                         <svg class="w-6 h-6 mx-auto text-gray-400 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
                         <p class="text-xs text-gray-500" data-i18n="camp.qr_drop">Drop QR image here or click to upload</p>
                     </div>
@@ -228,16 +232,33 @@
             }
 
             if (qrDrop && qrFile) {
-                qrDrop.addEventListener('click', () => qrFile.click());
-                qrDrop.addEventListener('dragover', (e) => {
+                function setDropActive(active) {
+                    if (active) qrDrop.classList.add('drag-over');
+                    else qrDrop.classList.remove('drag-over');
+                }
+                // Click on drop zone opens the file dialog
+                qrDrop.addEventListener('click', (e) => {
                     e.preventDefault();
-                    qrDrop.classList.add('drag-over');
+                    e.stopPropagation();
+                    qrFile.click();
                 });
-                qrDrop.addEventListener('dragleave', () => qrDrop.classList.remove('drag-over'));
+                // Prevent default on all drag events so Safari does not try to open the file URL
+                ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(name => {
+                    qrDrop.addEventListener(name, (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                    }, false);
+                });
+                qrDrop.addEventListener('dragenter', () => setDropActive(true));
+                qrDrop.addEventListener('dragover', (e) => {
+                    setDropActive(true);
+                    if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+                });
+                qrDrop.addEventListener('dragleave', () => setDropActive(false));
                 qrDrop.addEventListener('drop', (e) => {
-                    e.preventDefault();
-                    qrDrop.classList.remove('drag-over');
-                    const file = e.dataTransfer.files[0];
+                    setDropActive(false);
+                    const dt = e.dataTransfer;
+                    const file = dt ? (dt.files[0] || (dt.items && dt.items[0] && dt.items[0].getAsFile())) : null;
                     handleQrFile(file);
                 });
                 qrFile.addEventListener('change', () => handleQrFile(qrFile.files[0]));
