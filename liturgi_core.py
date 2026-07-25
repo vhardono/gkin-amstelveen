@@ -2007,6 +2007,15 @@ def add_textbox(slide, left, top, width, height, text, font_name, font_size=36, 
     run.font.color.rgb = color
     return box
 
+def add_qr_image_to_slide(slide, qr_path=None, width=Cm(5), height=Cm(5), bottom_margin=Cm(1)):
+    """Add the Tikkie QR image centered near the bottom of a slide if available."""
+    if qr_path is None:
+        qr_path = globals().get('_qr_path') or globals().get('QR_IMAGE_PATH')
+    if qr_path and os.path.exists(qr_path):
+        left = (SLIDE_WIDTH - width) / 2
+        top = SLIDE_HEIGHT - height - bottom_margin
+        slide.shapes.add_picture(qr_path, left, top, width, height)
+
 def set_tabs(paragraph, stops_cm):
     pPr = paragraph._p.get_or_add_pPr()
     tabLst = OxmlElement('a:tabLst')
@@ -3043,7 +3052,7 @@ r.font.color.rgb = white
 slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
 set_background(slide)
 
-box = slide.shapes.add_textbox(BOX_LEFT, Cm(3), BOX_WIDTH, Cm(16))
+box = slide.shapes.add_textbox(BOX_LEFT, Cm(3), BOX_WIDTH, Cm(8))
 tf = box.text_frame
 tf.clear()
 tf.word_wrap = True
@@ -3057,6 +3066,8 @@ r.text = f"""3.	Menggunakan QR-code atau tautan pembayaran:"""
 r.font.name = "Calibri"
 r.font.size = Pt(32)
 r.font.color.rgb = white
+
+add_qr_image_to_slide(slide)
 
 
 # --- Regional ---
@@ -3399,7 +3410,10 @@ def add_song_slides(songNumber = 1, presentation = prs, staan = False):
             addBox(slideT, f'{s["Boek"]} {s["Nummer"]}\n\n "{s["Titel"]}"', BOX_LEFT, Cm(7), BOX_WIDTH, Cm(7), Size = Pt(40))
         else:
             addBox(slideT, f'{s["Boek"]} {s["Nummer"]}: {s["Versen"]}\n\n  "{s["Titel"]}"', BOX_LEFT, Cm(7), BOX_WIDTH, Cm(7), Size = Pt(40))
-    
+
+    # Show Tikkie QR on the title slide of the dankoffer song (song 6)
+    if songNumber == 6:
+        add_qr_image_to_slide(slideT)
 
     # Max estimated wrapped lines that comfortably fit the song lyric box
     # (Cm(13.5) tall, Pt(32) font) — reuses the same tuning as the Bible-verse box.
@@ -3447,7 +3461,9 @@ def add_song_slides(songNumber = 1, presentation = prs, staan = False):
                     color=RGBColor(255,173,3), bold=True, Size=Pt(24)
                 )
 
-                box = slide.shapes.add_textbox(BOX_LEFT, Cm(2), BOX_WIDTH, Cm(13.5))
+                # Reduce lyric box height for dankoffer song to make room for QR at bottom
+                lyric_box_height = Cm(10.5) if songNumber == 6 else Cm(13.5)
+                box = slide.shapes.add_textbox(BOX_LEFT, Cm(2), BOX_WIDTH, lyric_box_height)
                 tf = box.text_frame
                 tf.clear()
                 tf.word_wrap = True
@@ -3473,6 +3489,9 @@ def add_song_slides(songNumber = 1, presentation = prs, staan = False):
                     r.font.name = "Calibri"
                     r.font.size = Pt(32)
                     r.font.color.rgb = white
+
+                if songNumber == 6:
+                    add_qr_image_to_slide(slide)
 
 
 # --- Intochtslied ---
@@ -4441,7 +4460,7 @@ add_verses_to_ppt(prs, boek, hs, vfrom, vto)
 
 slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
 set_background(slide)
-box = slide.shapes.add_textbox(BOX_LEFT, Cm(1), BOX_WIDTH, Cm(16))
+box = slide.shapes.add_textbox(BOX_LEFT, Cm(1), BOX_WIDTH, Cm(9))
 tf = box.text_frame
 tf.clear()
 tf.word_wrap = True
@@ -4455,11 +4474,13 @@ r.font.name = "Calibri"
 r.font.size = Pt(32)
 r.font.color.rgb = white
 
+add_qr_image_to_slide(slide)
+
 add_song_slides(6, prs, False)
 
 slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
 set_background(slide)
-box = slide.shapes.add_textbox(BOX_LEFT, Cm(1), BOX_WIDTH, Cm(16))
+box = slide.shapes.add_textbox(BOX_LEFT, Cm(1), BOX_WIDTH, Cm(10))
 tf = box.text_frame
 tf.clear()
 tf.word_wrap = True
@@ -4481,6 +4502,8 @@ r.font.size = Pt(40)
 r.font.color.rgb = white
 r.font.bold = True
 r.font.italic = True
+
+add_qr_image_to_slide(slide)
 
 slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
 set_background(slide)
