@@ -518,3 +518,95 @@ class SenderCampaignGenerator:
 </td></tr></table>
 </body>
 </html>"""
+
+    def generate_am_ole_email_html(self, service_date: datetime, predikant: str,
+                                    theme: str = "", bible_verse: str = "",
+                                    youtube_link: str = "", liturgie_url: str = "",
+                                    collecte_url: str = "", qr_image_url: str = "",
+                                    ole_location: str = "", ole_time: str = "10:00",
+                                    collecte_ovv: str = "", recipient_name: str = "Monica") -> str:
+        """Generate a personal AM OLE announcement email (with liturgie attachment reminder)."""
+        months = ['januari', 'februari', 'maart', 'april', 'mei', 'juni',
+                  'juli', 'augustus', 'september', 'oktober', 'november', 'december']
+        date_str = f"{service_date.day} {months[service_date.month - 1]} {service_date.year}"
+        day_name = ['maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag', 'zondag'][service_date.weekday()]
+
+        location_code, location_body, _ = self._resolve_ole_location(ole_location)
+        if not location_body:
+            location_body = 'vanuit het GKIN Kerkgebouw in Amstelveen'
+
+        time_clean = (ole_time or '10:00').replace('u', '').replace('U', '').strip()
+
+        ovv = collecte_ovv or f"Collecte OLE {service_date.strftime('%d-%m-%Y')}"
+
+        # Theme / bible verse line
+        theme_html = ""
+        if theme:
+            bible_suffix = f" genomen uit {bible_verse}" if bible_verse else ""
+            theme_html = f'<p>Het thema van deze eredienst is: “{theme}”{bible_suffix}.</p>'
+
+        # YouTube line
+        youtube_html = ""
+        if youtube_link:
+            youtube_html = f'<p>De dienst wordt live uitgezonden via: <a href="{youtube_link}">{youtube_link}</a></p>'
+
+        # Liturgie line
+        liturgie_html = "<p>De liturgie kunt u vinden in de bijlage"
+        if liturgie_url:
+            liturgie_html += f' en op <a href="{liturgie_url}">gkin.org</a>'
+        liturgie_html += ".</p>"
+
+        # QR image
+        qr_html = ""
+        if qr_image_url:
+            if qr_image_url.startswith('data:'):
+                qr_html = f'<p><img src="{qr_image_url}" alt="QR code" style="max-width:200px;border-radius:8px;"></p>'
+            elif qr_image_url.startswith('http'):
+                try:
+                    import requests as _req
+                    r = _req.get(qr_image_url, timeout=10)
+                    r.raise_for_status()
+                    ext = qr_image_url.rsplit('.', 1)[-1].lower().split('?')[0]
+                    mime = {'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'gif': 'image/gif'}.get(ext, 'image/png')
+                    b64 = base64.b64encode(r.content).decode('utf-8')
+                    qr_html = f'<p><img src="data:{mime};base64,{b64}" alt="QR code" style="max-width:200px;border-radius:8px;"></p>'
+                except Exception:
+                    qr_html = f'<p><a href="{qr_image_url}">QR code</a></p>'
+            else:
+                qr_html = f'<p><em>QR code bijlage: {qr_image_url}</em></p>'
+
+        # Collecte
+        if collecte_url:
+            collecte_html = f'<p>De collecte is bestemd voor de Landelijke kas (OLE). U kunt dit overmaken via: <a href="{collecte_url}">{collecte_url}</a><br>of door overmaking aan GEREJA KRISTEN INDONESIA NEDERLAND, IBAN: NL19 INGB 0002 6182 90 o.v.v. {ovv}.</p>'
+        else:
+            collecte_html = f'<p>De collecte is bestemd voor de Landelijke kas (OLE). U kunt dit overmaken aan GEREJA KRISTEN INDONESIA NEDERLAND, IBAN: NL19 INGB 0002 6182 90 o.v.v. {ovv}.</p>'
+
+        return f"""<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GKIN OLE {date_str}</title>
+</head>
+<body style="font-family:Arial,sans-serif;color:#000000;font-size:14px;line-height:1.5;">
+<p>Beste {recipient_name},</p>
+<p>Bijgaand de aankondiging, liturgie van de GKIN Online Landelijke Eredienst van a.s. {date_str}.</p>
+<br>
+<hr style="border:none;border-top:1px solid #cccccc;">
+<br>
+<p>Beste broeders en zusters,</p>
+<p>Op {day_name} {service_date.day} {months[service_date.month - 1]} zal {predikant} voorgaan in de Online Landelijke Eredienst van GKIN {location_body}, aanvang {time_clean} uur.</p>
+{theme_html}
+{youtube_html}
+{liturgie_html}
+{collecte_html}
+{qr_html}
+<p>Wij wensen u allen een gezegende dienst toe.</p>
+<br>
+<p>Met vriendelijke groet,<br>
+Namens regio Amstelveen,</p>
+<p>Vega Hardono<br>
+Regiosecretaris<br>
+GKIN Amstelveen</p>
+</body>
+</html>"""
