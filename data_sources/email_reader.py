@@ -1073,10 +1073,11 @@ class OutlookCollecteReader:
 
 
     def fetch_ole_mededeling(self, target_date: datetime = None, since_days: int = 30) -> Dict[str, Any]:
-        """Fetch OLE mededeling from scribagkin@gmail.com.
+        """Fetch OLE mededeling / weblinks from scribagkin@gmail.com.
         Subject patterns: 'Mededeling: GKIN OLE zo 10 mei 2026',
                           'Mededeling OLE 14 mei donderdag (Hemelvaartsdag)',
-                          'Mededeling OLE zo 3 mei 2026'
+                          'Mededeling OLE zo 3 mei 2026',
+                          'WEBLINKS OLE 26 juli 2026'
         Extracts: thema, bijbeltekst (bible_verse), youtube_link from email body.
         """
         NL_MONTHS = ['','januari','februari','maart','april','mei','juni',
@@ -1107,7 +1108,7 @@ class OutlookCollecteReader:
 
         try:
             msgs = self._graph_get('/me/messages', params={
-                '$filter': f"receivedDateTime ge {since} and contains(subject,'Mededeling')",
+                '$filter': f"receivedDateTime ge {since} and (contains(subject,'Mededeling') or contains(subject,'WEBLINKS'))",
                 '$top': 50,
                 '$select': 'id,subject,from,body,receivedDateTime,hasAttachments',
                 '$orderby': 'receivedDateTime desc',

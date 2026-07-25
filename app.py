@@ -2587,6 +2587,22 @@ def fetch_ole_data():
         if not qr_image_b64 and collecte_data:
             qr_image_b64 = collecte_data.get('ole_qr_b64', '')
 
+        # Fallback: use OLE mededeling / weblinks email for YouTube, thema, bible verse
+        if not youtube_link or not thema or not bible_verse:
+            try:
+                ole_meded_data = reader.fetch_ole_mededeling(target_date=selected_date, since_days=60)
+                print(f"[OLE Fetch] OLE mededeling data: {ole_meded_data}")
+                if ole_meded_data:
+                    if not youtube_link:
+                        youtube_link = ole_meded_data.get('youtube_link', '')
+                    if not thema:
+                        thema = ole_meded_data.get('thema', '')
+                    if not bible_verse:
+                        bible_verse = ole_meded_data.get('bible_verse', '')
+            except Exception as e:
+                print(f"[OLE Fetch] OLE mededeling fetch error: {e}")
+                import traceback; traceback.print_exc()
+
         result = {
             'ole_predikant': ole_data.get('predikant', ''),
             'ole_location_code': location_code,
