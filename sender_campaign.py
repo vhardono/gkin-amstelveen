@@ -50,25 +50,22 @@ class SenderCampaignGenerator:
     def _resolve_ole_location(ole_location: str = ""):
         """Return location code, body text, and OLE tag from the input.
 
-        If the input is already a full phrase (e.g. 'Kerkgebouw in Amstelveen'),
-        it is preserved as the body text. Short codes or city names are mapped to
-        a default phrase.
+        Input can be a short code (AM/DH/TB), city name, or full building phrase.
+        The output body text is always the canonical phrase for that code.
         """
         if not ole_location:
             return '', '', 'OLE'
 
         stripped = ole_location.strip()
-        lower = stripped.lower()
 
         LOCATION_MAP = {
             'AM': 'vanuit het Kerkgebouw in Amstelveen',
-            'DH': 'vanuit het Kerkgebouw in Den Haag',
+            'DH': 'vanuit de Marcuskerk in Den Haag',
             'TB': 'vanuit de Pauluskerk te Tilburg'
         }
         REVERSE_MAP = {
             'Kerkgebouw in Amstelveen': 'AM',
             'vanuit het Kerkgebouw in Amstelveen': 'AM',
-            'vanuit de Marcuskerk in Amstelveen': 'AM',
             'Amstelveen': 'AM',
             'Kerkgebouw in Den Haag': 'DH',
             'vanuit het Kerkgebouw in Den Haag': 'DH',
@@ -79,30 +76,15 @@ class SenderCampaignGenerator:
             'Tilburg': 'TB'
         }
 
-        # Detect full phrases that already describe a location
-        is_full_phrase = (
-            lower.startswith('vanuit') or
-            ' in ' in stripped or
-            ' te ' in stripped
-        ) and len(stripped.split()) > 1
+        location_code = stripped.upper()
+        if location_code not in LOCATION_MAP:
+            location_code = REVERSE_MAP.get(stripped, '').upper() or stripped.upper()
+        if location_code not in LOCATION_MAP:
+            # Free-form phrase not matching a known code
+            return '', stripped, 'OLE'
 
-        if is_full_phrase:
-            location_code = REVERSE_MAP.get(stripped, '').upper()
-            if location_code not in LOCATION_MAP:
-                location_code = ''
-            if lower.startswith('vanuit'):
-                location_body = stripped
-            else:
-                first_word = stripped.split()[0].lower()
-                article = 'het' if first_word in ('kerkgebouw',) else 'de'
-                location_body = f"vanuit {article} {stripped}"
-        else:
-            location_code = stripped.upper()
-            if location_code not in LOCATION_MAP:
-                location_code = REVERSE_MAP.get(stripped, '').upper() or stripped.upper()
-            location_body = LOCATION_MAP.get(location_code, stripped)
-
-        location_ole_tag = f"{location_code}-OLE" if location_code else "OLE"
+        location_body = LOCATION_MAP[location_code]
+        location_ole_tag = f"{location_code}-OLE"
         return location_code, location_body, location_ole_tag
 
     def get_lists(self) -> List[Dict]:
