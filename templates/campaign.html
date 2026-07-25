@@ -175,25 +175,11 @@
 
         <div id="amEmailSection" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-5 hidden">
             <h2 class="text-base font-semibold text-blue-700 mb-3">AM OLE Aankondigingsmail</h2>
-            <div class="grid grid-cols-1 gap-2 mb-3">
-                <div class="flex items-center gap-2">
-                    <label class="text-sm text-gray-600 w-12 shrink-0">Aan:</label>
-                    <input type="email" id="amEmailTo" value="scribagkin@gmail.com" class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Ontvanger e-mail">
-                </div>
-                <div class="flex items-center gap-2">
-                    <label class="text-sm text-gray-600 w-12 shrink-0">CC:</label>
-                    <input type="email" id="amEmailCc" value="vega.hardono@outlook.com" class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="CC e-mail">
-                </div>
-                <div class="flex items-center gap-2">
-                    <label class="text-sm text-gray-600 w-12 shrink-0">Naam:</label>
-                    <input type="text" id="amEmailRecipient" value="Monica" class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Ontvanger naam">
-                </div>
-            </div>
             <button id="amEmailBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-4 rounded-lg text-sm transition mb-3">
-                Open mailprogramma + download .eml
+                Open in mailprogramma (concept)
             </button>
             <p class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1.5 mb-3">
-                Opent een leeg mailconcept en downloadt de .eml met de QR-code. Open de .eml in je mailprogramma voor het volledige ontwerp. De liturgie moet je nog handmatig toevoegen.
+                Vergeet niet de <strong>QR code</strong> en <strong>liturgie</strong> als bijlage toe te voegen aan de e-mail.
             </p>
             <div id="amEmailPreviewBox" class="hidden">
                 <label class="block text-xs text-gray-500 mb-1">Tekstcontrole (bij problemen kun je deze kopiëren):</label>
@@ -602,14 +588,7 @@
             btn.textContent = 'Openen...';
 
             try {
-                const qrB64 = document.getElementById('qrB64').value;
-                const qrUrl = document.getElementById('qrUrl').value;
-                let qr_image_url = qrB64;
-                if (!qr_image_url && qrUrl && !qrUrl.startsWith('Van')) {
-                    qr_image_url = qrUrl;
-                }
-
-                const resp = await fetch('/campaign/ole/am-combined', {
+                const resp = await fetch('/campaign/ole/am-template', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -619,47 +598,31 @@
                         youtube_link: document.getElementById('youtubeLink').value,
                         liturgie_url: document.getElementById('liturgieUrl').value,
                         collecte_url: document.getElementById('collecteUrl').value,
-                        qr_image_url,
                         ole_location: document.getElementById('oleLocation').value,
                         ole_time: document.getElementById('oleTime').value,
                         ole_predikant: document.getElementById('olePredikant').value || '',
-                        collecte_ovv: document.getElementById('collecteOvv').value || '',
-                        recipient_name: document.getElementById('amEmailRecipient').value || 'Monica',
-                        to_email: document.getElementById('amEmailTo').value || 'scribagkin@gmail.com',
-                        cc_email: document.getElementById('amEmailCc').value || 'vega.hardono@outlook.com'
+                        collecte_ovv: document.getElementById('collecteOvv').value || ''
                     })
                 });
                 const data = await resp.json();
 
-                if (!data.success) {
+                if (data.success) {
+                    const to = data.to_email || '';
+                    const cc = data.cc_email || '';
+                    const subject = encodeURIComponent(data.subject || 'GKIN OLE');
+                    const body = encodeURIComponent(data.text_preview || '');
+                    const params = [`subject=${subject}`, `body=${body}`];
+                    if (cc) params.unshift(`cc=${encodeURIComponent(cc)}`);
+                    const mailto = `mailto:${encodeURIComponent(to)}?${params.join('&')}`;
+
+                    try {
+                        window.location.href = mailto;
+                    } catch (e) {
+                        showAmEmailFallback(data.text_preview || '');
+                    }
+                } else {
                     alert('Fout bij genereren AM OLE email: ' + (data.error || 'Onbekende fout'));
-                    return;
                 }
-
-                const to = document.getElementById('amEmailTo').value || data.to_email || '';
-                const cc = document.getElementById('amEmailCc').value || data.cc_email || '';
-                const subject = encodeURIComponent(data.subject || 'GKIN OLE');
-                const body = encodeURIComponent(data.text_preview || '');
-                const params = [`subject=${subject}`, `body=${body}`];
-                if (cc) params.unshift(`cc=${encodeURIComponent(cc)}`);
-                const mailto = `mailto:${encodeURIComponent(to)}?${params.join('&')}`;
-
-                // Download .eml first
-                if (data.eml_base64) {
-                    const emlBytes = Uint8Array.from(atob(data.eml_base64), c => c.charCodeAt(0));
-                    const blob = new Blob([emlBytes], { type: 'message/rfc822' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = data.eml_filename || `GKIN OLE ${date}.eml`;
-                    document.body.appendChild(a);
-                    a.click();
-                    a.remove();
-                    URL.revokeObjectURL(url);
-                }
-
-                // Then try to open mail app
-                window.location.href = mailto;
             } catch (err) {
                 console.error('AM email error:', err);
                 alert('Fout bij genereren AM OLE email');
