@@ -1897,12 +1897,20 @@ def liturgie_fill_data():
 
             # Tekst column: write the verse text from Dankoffer.xlsx so liturgi_core.py
             # uses it instead of falling back to the Bible JSON.
+            header_row = dankoffer_row - 6
             tekst_col = None
-            for col in range(2, 10):
-                header_val = str(ws.cell(row=dankoffer_row - 6, column=col).value or '').strip().lower()
+            for col in range(2, 13):
+                header_val = str(ws.cell(row=header_row, column=col).value or '').strip().lower()
                 if header_val in ('tekst', 'text'):
                     tekst_col = col
                     break
+            if not tekst_col:
+                # Create a Tekst header in the first empty cell from column I onward
+                for col in range(9, 13):
+                    if not ws.cell(row=header_row, column=col).value:
+                        ws.cell(row=header_row, column=col).value = 'Tekst'
+                        tekst_col = col
+                        break
             if tekst_col:
                 ws.cell(row=dankoffer_row, column=tekst_col).value = dankoffer.get('verse_text', '')
                 print(f'[Liturgie Fill] Tekst column {tekst_col} set to verse text for row {dankoffer_row}')
