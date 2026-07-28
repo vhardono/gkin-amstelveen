@@ -1403,12 +1403,13 @@ def _get_dankoffer_verse(dbx, service_date: datetime, mark_as_used: bool = True)
                     else:
                         raw_str = str(raw_date).strip()
                         # Try ISO YYYY-MM-DD first (avoids dayfirst swapping month/day)
-                        parsed = pd.to_datetime(raw_str, format='%Y-%m-%d', errors='coerce')
-                        if pd.isna(parsed):
+                        try:
+                            date_used_dt = datetime.date.fromisoformat(raw_str)
+                        except ValueError:
                             # Fall back to Dutch / European day-first formats
                             parsed = pd.to_datetime(raw_str, dayfirst=True, errors='coerce')
-                        if pd.notna(parsed):
-                            date_used_dt = parsed.to_pydatetime().date()
+                            if pd.notna(parsed):
+                                date_used_dt = parsed.to_pydatetime().date()
                 except Exception:
                     date_used_dt = None
 
@@ -1527,11 +1528,12 @@ def _debug_dankoffer_verse(dbx, service_date: datetime) -> dict:
                 else:
                     raw_str = str(raw_date).strip()
                     # Try ISO YYYY-MM-DD first (avoids dayfirst swapping month/day)
-                    parsed = pd.to_datetime(raw_str, format='%Y-%m-%d', errors='coerce')
-                    if pd.isna(parsed):
+                    try:
+                        date_used_dt = datetime.date.fromisoformat(raw_str)
+                    except ValueError:
                         parsed = pd.to_datetime(raw_str, dayfirst=True, errors='coerce')
-                    if pd.notna(parsed):
-                        date_used_dt = parsed.to_pydatetime().date()
+                        if pd.notna(parsed):
+                            date_used_dt = parsed.to_pydatetime().date()
             except Exception:
                 date_used_dt = None
 
