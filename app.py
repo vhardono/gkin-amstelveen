@@ -2404,24 +2404,47 @@ def auto_fill_working_file():
 
         if dankoffer:
             dankoffer_row = 21
+            header_row = dankoffer_row - 6  # row 15 contains the column headers
 
-            def set_dankoffer_cell(ws, row, col, value):
-                cell = ws.cell(row=row, column=col)
-                current_val = str(cell.value).strip() if cell.value else ''
-                # Treat common placeholder/empty markers as empty so they get overwritten
-                empty_markers = ('nan', 'none', '', '(leeg)', 'leeg', '(empty)', 'empty', 'nvt', '-', '—', '...')
-                if current_val and current_val.lower() not in empty_markers:
-                    return False
-                elif value is not None and value != '':
-                    cell.value = value
+            # Helpers to treat placeholder/empty markers as blank
+            _empty_markers = {'nan', 'none', '', '(leeg)', 'leeg', '(empty)', 'empty', 'nvt', '-', '—', '...'}
+
+            def _is_empty_or_placeholder(val):
+                if val is None:
                     return True
-                return False
+                v = str(val).strip().lower()
+                return v in _empty_markers
 
-            # Store verse reference in B21 and verse text in C21
-            b21_written = set_dankoffer_cell(ws_active, dankoffer_row, 2, dankoffer['full_text'])  # B21: verse reference
-            c21_written = set_dankoffer_cell(ws_active, dankoffer_row, 3, dankoffer.get('verse_text', ''))  # C21: verse text from Excel
-            d21_written = False
-            e21_written = False
+            # Always fill split reference fields so liturgi_core can read them by header
+            ws_active.cell(row=dankoffer_row, column=2).value = dankoffer.get('book', '')
+            ws_active.cell(row=dankoffer_row, column=3).value = dankoffer.get('chapter', '')
+            ws_active.cell(row=dankoffer_row, column=4).value = dankoffer.get('verse_start', '')
+            if dankoffer.get('verse_end'):
+                ws_active.cell(row=dankoffer_row, column=5).value = dankoffer.get('verse_end', '')
+            else:
+                ws_active.cell(row=dankoffer_row, column=5).value = None
+
+            b21_written = not _is_empty_or_placeholder(dankoffer.get('book'))
+            c21_written = not _is_empty_or_placeholder(dankoffer.get('chapter'))
+            d21_written = not _is_empty_or_placeholder(dankoffer.get('verse_start'))
+            e21_written = True
+
+            # Find or create a "Tekst" column and write the verse text from Dankoffer.xlsx
+            tekst_col = None
+            for col in range(2, 11):  # columns B to J
+                header_val = str(ws_active.cell(row=header_row, column=col).value or '').strip().lower()
+                if header_val in ('tekst', 'text'):
+                    tekst_col = col
+                    break
+            if not tekst_col:
+                # Use the first empty header cell from column I (9) onward
+                for col in range(9, 13):
+                    if _is_empty_or_placeholder(ws_active.cell(row=header_row, column=col).value):
+                        ws_active.cell(row=header_row, column=col).value = 'Tekst'
+                        tekst_col = col
+                        break
+            if tekst_col:
+                ws_active.cell(row=dankoffer_row, column=tekst_col).value = dankoffer.get('verse_text', '')
             
             # Only show as auto_populated if something was actually written
             # If already_assigned, the verse was already there - don't show as "filled"
