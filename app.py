@@ -1630,7 +1630,7 @@ def _mark_dankoffer_verse_as_used(dbx, row_idx: int, service_date: datetime,
         output.seek(0)
 
         # Upload back to Dropbox
-        dbx.files_upload(output.read(), DANKOFFER_DROPBOX_PATH, mode=dropbox.files.WriteMode('overwrite'))
+        dbx.files_upload(output.getvalue(), DANKOFFER_DROPBOX_PATH, mode=dropbox.files.WriteMode.overwrite)
         print(f'[Dankoffer] Successfully marked verse at row {excel_row}, column C as used on {date_str}')
 
     except Exception as e:
