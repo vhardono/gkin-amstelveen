@@ -1427,19 +1427,26 @@ def _get_dankoffer_verse(dbx, service_date: datetime, mark_as_used: bool = True)
 
         service_date_dt = service_date.date() if hasattr(service_date, 'date') else service_date
 
-        # Select the verse with the oldest non-blank used date and override it with the
-        # current service date. Blank rows are only used when every row is blank; then the
-        # first row is used. This always overrides the date instead of sticking to whatever
-        # row previously carried this service date.
+        # If the current service date is already assigned to a row, stick to that row
+        # (useful when regenerating the same liturgy). Otherwise, select the verse with
+        # the oldest non-blank used date and override it. Blank rows are used only when
+        # every row is blank; then the first row is used.
         from datetime import date as _date
 
-        def _sort_key(v):
-            # None (blank) dates sort last; otherwise oldest date first; tie by row index
-            return (v['date_used_dt'] is None, v['date_used_dt'] or _date.min, v['row_idx'])
+        existing_for_date = [
+            v for v in verses_data if v['date_used_dt'] == service_date_dt
+        ]
+        if existing_for_date:
+            selected = min(existing_for_date, key=lambda v: v['row_idx'])
+            already_assigned = True
+        else:
+            def _sort_key(v):
+                # None (blank) dates sort last; otherwise oldest date first; tie by row index
+                return (v['date_used_dt'] is None, v['date_used_dt'] or _date.min, v['row_idx'])
 
-        sorted_verses = sorted(verses_data, key=_sort_key)
-        selected = sorted_verses[0]
-        already_assigned = selected['date_used_dt'] == service_date_dt
+            sorted_verses = sorted(verses_data, key=_sort_key)
+            selected = sorted_verses[0]
+            already_assigned = False
 
         # If another row already carries the current service date, clear it so we don't
         # end up with duplicate dates after overriding the selected (oldest) row.
