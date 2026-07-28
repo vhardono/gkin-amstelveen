@@ -1255,14 +1255,18 @@ vto   = _get(table2, 5, ["Vers tot", "Vers Tot", "vers tot", "Tot"])
 verse_text = _get(table2, 5, ["Tekst", "tekst", "Text", "text"])  # Verse text from Tekst column, row 21
 
 # Check if B21 contains a full verse reference (e.g., "Deuteronomium 16:16b-17")
-# This happens when the auto-fill stores the full reference instead of separate cells
-if boek and ':' in str(boek) and not hs:
+# Auto-fill stores the full reference in Boek and the Excel verse text in H.s. when Tekst is absent
+if boek and ':' in str(boek):
     # Parse full reference like "Deuteronomium 16:16b-17"
     import re
     match = re.match(r'^(.+?)\s+(\d+):(\d+[a-z]?)(?:-(\d+))?$', str(boek).strip())
     if match:
+        parsed_hs = match.group(2)
+        # If H.s. holds the Excel verse text (not a chapter number) and there is no Tekst column, use it
+        if not verse_text and hs and not str(hs).isdigit():
+            verse_text = hs
         boek = match.group(1).strip()
-        hs = match.group(2)
+        hs = parsed_hs
         vfrom = match.group(3).rstrip('abcdefghijklmnopqrstuvwxyz')
         vto = match.group(4) if match.group(4) else ''
 
@@ -4416,12 +4420,17 @@ vto   = _get(table2, 5, ["Vers tot", "Vers Tot", "vers tot", "Tot"])
 verse_text = _get(table2, 5, ["Tekst", "tekst", "Text", "text"])  # Verse text from Tekst column, row 21
 
 # Check if B21 contains a full verse reference (e.g., "Deuteronomium 16:16b-17")
-if boek and ':' in str(boek) and not hs:
+# Auto-fill stores the full reference in Boek and the Excel verse text in H.s. when Tekst is absent
+if boek and ':' in str(boek):
     import re
     match = re.match(r'^(.+?)\s+(\d+):(\d+[a-z]?)(?:-(\d+))?$', str(boek).strip())
     if match:
+        parsed_hs = match.group(2)
+        # If H.s. holds the Excel verse text (not a chapter number) and there is no Tekst column, use it
+        if not verse_text and hs and not str(hs).isdigit():
+            verse_text = hs
         boek = match.group(1).strip()
-        hs = match.group(2)
+        hs = parsed_hs
         vfrom = match.group(3).rstrip('abcdefghijklmnopqrstuvwxyz')
         vto = match.group(4) if match.group(4) else ''
 
