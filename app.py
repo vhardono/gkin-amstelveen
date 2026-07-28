@@ -2421,13 +2421,17 @@ def auto_fill_working_file():
                 alerts['auto_populated'].append(f'Dankoffer vers: {dankoffer["full_text"]}')
             
             # Build status detail
-            status_detail = f'Rij {dankoffer["row_index"]} van {dankoffer["total_count"]} ({dankoffer["unused_count"]} resterend)'
+            status_parts = []
             if dankoffer.get('already_assigned'):
-                status_detail = f'Dit vers was al toegewezen aan deze datum • {status_detail}'
-            elif dankoffer.get('reset_needed'):
-                status_detail = f'Alle verzen waren gebruikt → oudste verzen worden hergebruikt • {status_detail}'
-            else:
-                status_detail = f'Nieuwe toewijzing toegevoegd aan Dankoffer.xlsx • {status_detail}'
+                status_parts.append('Dit vers was al toegewezen aan deze datum')
+            elif dankoffer.get('marked_as_used'):
+                status_parts.append('Nieuwe toewijzing toegevoegd aan Dankoffer.xlsx')
+            
+            if dankoffer.get('reset_needed'):
+                status_parts.append('Alle verzen waren gebruikt → oudste verzen worden hergebruikt')
+            
+            status_parts.append(f'Rij {dankoffer["row_index"]} van {dankoffer["total_count"]} ({dankoffer["unused_count"]} resterend)')
+            status_detail = ' • '.join(status_parts)
             
             dankoffer_info = {
                 'verse': dankoffer['full_text'],
@@ -2436,7 +2440,8 @@ def auto_fill_working_file():
                 'unused_count': dankoffer['unused_count'],
                 'already_assigned': dankoffer.get('already_assigned', False),
                 'reset_needed': dankoffer.get('reset_needed', False),
-                'marked_as_used': dankoffer.get('marked_as_used', True),
+                'marked_as_used': dankoffer.get('marked_as_used', False),
+                'mark_error': dankoffer.get('mark_error'),
                 'status_detail': status_detail
             }
         else:
