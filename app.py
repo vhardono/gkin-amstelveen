@@ -2408,7 +2408,9 @@ def auto_fill_working_file():
             def set_dankoffer_cell(ws, row, col, value):
                 cell = ws.cell(row=row, column=col)
                 current_val = str(cell.value).strip() if cell.value else ''
-                if current_val and current_val.lower() not in ('nan', 'none', ''):
+                # Treat common placeholder/empty markers as empty so they get overwritten
+                empty_markers = ('nan', 'none', '', '(leeg)', 'leeg', '(empty)', 'empty', 'nvt', '-', '—', '...')
+                if current_val and current_val.lower() not in empty_markers:
                     return False
                 elif value is not None and value != '':
                     cell.value = value
