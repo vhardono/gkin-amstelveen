@@ -1393,6 +1393,7 @@ def _get_dankoffer_verse(dbx, service_date: datetime, mark_as_used: bool = True)
             verse = str(row.iloc[0]).strip() if pd.notna(row.iloc[0]) else ''
             verse_text = str(row.iloc[1]).strip() if len(row) > 1 and pd.notna(row.iloc[1]) else ''
             # Column C (index 2) contains Date Used — may be datetime obj or string
+            from datetime import date as _date
             raw_date = row.iloc[2] if len(row) > 2 else None
             date_used_dt = None
             if raw_date is not None and pd.notna(raw_date):
@@ -1404,7 +1405,7 @@ def _get_dankoffer_verse(dbx, service_date: datetime, mark_as_used: bool = True)
                         raw_str = str(raw_date).strip()
                         # Try ISO YYYY-MM-DD first (avoids dayfirst swapping month/day)
                         try:
-                            date_used_dt = datetime.date.fromisoformat(raw_str)
+                            date_used_dt = _date.fromisoformat(raw_str)
                         except ValueError:
                             # Fall back to Dutch / European day-first formats
                             parsed = pd.to_datetime(raw_str, dayfirst=True, errors='coerce')
@@ -1526,10 +1527,11 @@ def _debug_dankoffer_verse(dbx, service_date: datetime) -> dict:
                 if hasattr(raw_date, 'strftime') and not isinstance(raw_date, str):
                     date_used_dt = pd.Timestamp(raw_date).to_pydatetime().date()
                 else:
+                    from datetime import date as _date
                     raw_str = str(raw_date).strip()
                     # Try ISO YYYY-MM-DD first (avoids dayfirst swapping month/day)
                     try:
-                        date_used_dt = datetime.date.fromisoformat(raw_str)
+                        date_used_dt = _date.fromisoformat(raw_str)
                     except ValueError:
                         parsed = pd.to_datetime(raw_str, dayfirst=True, errors='coerce')
                         if pd.notna(parsed):
