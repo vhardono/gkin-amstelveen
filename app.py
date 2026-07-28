@@ -1421,12 +1421,15 @@ def _get_dankoffer_verse(dbx, service_date: datetime, mark_as_used: bool = True)
 
         service_date_dt = service_date.date() if hasattr(service_date, 'date') else service_date
 
-        # Select the verse with the oldest used date. Unassigned (blank) verses count as oldest,
-        # then the earliest real date. This implements a round-robin that overrides the oldest
-        # date with the current service date.
+        # Select the verse with the oldest non-blank used date and override it with the
+        # current service date. Blank rows are only used when every row is blank; then the
+        # first row is used. This always overrides the date instead of sticking to whatever
+        # row previously carried this service date.
         from datetime import date as _date
+
         def _sort_key(v):
-            return (v['date_used_dt'] is not None, v['date_used_dt'] or _date.max, v['row_idx'])
+            # None (blank) dates sort last; otherwise oldest date first; tie by row index
+            return (v['date_used_dt'] is None, v['date_used_dt'] or _date.min, v['row_idx'])
 
         sorted_verses = sorted(verses_data, key=_sort_key)
         selected = sorted_verses[0]
@@ -1490,6 +1493,75 @@ def _get_dankoffer_verse(dbx, service_date: datetime, mark_as_used: bool = True)
         import traceback
         traceback.print_exc()
         return None
+
+
+def _debug_dankoffer_verse(dbx, service_date: datetime) -> dict:
+    """Return parsed Dankoffer.xlsx rows and which would be selected, without marking."""
+    from io import BytesIO
+    from datetime import date as _date
+
+    _, resp = dbx.files_download(DANKOFFER_DROPBOX_PATH)
+    df = pd.read_excel(BytesIO(resp.content), header=None)
+
+    first_cell = str(df.iloc[0, 0]).strip().lower() if pd.notna(df.iloc[0, 0]) else ''
+    header_keywords = ['verse', 'bible', 'text', 'reference', 'ref', 'book', 'chapter', 'date', 'gebruikt']
+    has_header = any(keyword in first_cell for keyword in header_keywords)
+    if has_header:
+        df = df.iloc[1:].reset_index(drop=True)
+
+    verses_data = []
+    for idx, row in df.iterrows():
+        verse = str(row.iloc[0]).strip() if pd.notna(row.iloc[0]) else ''
+        verse_text = str(row.iloc[1]).strip() if len(row) > 1 and pd.notna(row.iloc[1]) else ''
+        raw_date = row.iloc[2] if len(row) > 2 else None
+        date_used_dt = None
+        date_used_raw = str(raw_date).strip() if raw_date is not None and pd.notna(raw_date) else ''
+        if raw_date is not None and pd.notna(raw_date):
+            try:
+                if hasattr(raw_date, 'strftime') and not isinstance(raw_date, str):
+                    date_used_dt = pd.Timestamp(raw_date).to_pydatetime().date()
+                else:
+                    parsed = pd.to_datetime(str(raw_date).strip(), dayfirst=True, errors='coerce')
+                    if pd.notna(parsed):
+                        date_used_dt = parsed.to_pydatetime().date()
+            except Exception:
+                date_used_dt = None
+
+        if verse and verse.lower() not in ('nan', 'none', ''):
+            verses_data.append({
+                'verse': verse,
+                'verse_text': verse_text,
+                'date_used_dt': date_used_dt,
+                'date_used_raw': date_used_raw,
+                'row_idx': idx
+            })
+
+    service_date_dt = service_date.date() if hasattr(service_date, 'date') else service_date
+
+    def _sort_key(v):
+        return (v['date_used_dt'] is None, v['date_used_dt'] or _date.min, v['row_idx'])
+
+    sorted_verses = sorted(verses_data, key=_sort_key)
+    selected = sorted_verses[0] if sorted_verses else None
+
+    rows = []
+    for v in verses_data:
+        rows.append({
+            'row_idx': v['row_idx'],
+            'verse': v['verse'],
+            'verse_text_preview': v['verse_text'][:60] if v['verse_text'] else '',
+            'date_used_raw': v['date_used_raw'],
+            'date_used_parsed': v['date_used_dt'].isoformat() if v['date_used_dt'] else None,
+            'selected': v is selected
+        })
+
+    return {
+        'service_date': service_date_dt.isoformat(),
+        'selected_row_idx': selected['row_idx'] if selected else None,
+        'selected_verse': selected['verse'] if selected else None,
+        'rows': rows,
+        'has_header': has_header
+    }
 
 
 def _mark_dankoffer_verse_as_used(dbx, row_idx: int, service_date: datetime,
@@ -1953,6 +2025,27 @@ def preview_dankoffer():
                        (' (ALLE verzen zijn al gebruikt - cyclus wordt gereset!)' if dankoffer.get('reset_needed') else '')
         })
 
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/liturgie/debug-dankoffer', methods=['GET'])
+def debug_dankoffer():
+    """Debug endpoint to inspect Dankoffer.xlsx rows and selection for a date."""
+    from datetime import datetime as _datetime
+    date_str = request.args.get('date', '')
+    if not date_str:
+        return jsonify({'error': 'Geen datum opgegeven. Gebruik ?date=YYYY-MM-DD'}), 400
+    try:
+        service_date = _datetime.strptime(date_str, '%Y-%m-%d')
+    except ValueError:
+        return jsonify({'error': 'Ongeldige datum formaat. Gebruik YYYY-MM-DD.'}), 400
+    try:
+        dbx = _get_dbx_liturgie()
+        result = _debug_dankoffer_verse(dbx, service_date)
+        return jsonify(result)
     except Exception as e:
         import traceback
         traceback.print_exc()
