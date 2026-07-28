@@ -273,7 +273,7 @@
                         </p>
                         <p id="dankofferStatusDetail" class="text-xs text-blue-600"></p>
                         <p id="dankofferError" class="hidden text-xs text-red-600 mt-1 font-semibold">
-                            ⚠️ Kon Dankoffer.xlsx niet bijwerken (controleer logs)
+                            ⚠️ Kon Dankoffer.xlsx niet bijwerken: <span id="dankofferErrorText">controleer logs</span>
                         </p>
                     </div>
                 </div>
@@ -834,8 +834,14 @@
 
                 // Show/hide error message
                 const errorEl = document.getElementById('dankofferError');
+                const errorTextEl = document.getElementById('dankofferErrorText');
                 const markedAsUsed = dankofferInfo.marked_as_used !== false;
                 if (!markedAsUsed) {
+                    if (dankofferInfo.mark_error) {
+                        errorTextEl.textContent = dankofferInfo.mark_error;
+                    } else {
+                        errorTextEl.textContent = 'controleer logs';
+                    }
                     errorEl.classList.remove('hidden');
                 } else {
                     errorEl.classList.add('hidden');

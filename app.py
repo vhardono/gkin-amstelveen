@@ -1488,9 +1488,12 @@ def _get_dankoffer_verse(dbx, service_date: datetime, mark_as_used: bool = True)
                     reset_needed=False, clear_row_indices=duplicate_row_indices
                 )
                 result['marked_as_used'] = True
+                result['mark_error'] = None
             except Exception as e:
+                error_msg = str(e)
                 print(f'[Dankoffer] Warning: Could not mark verse as used: {e}')
                 result['marked_as_used'] = False
+                result['mark_error'] = error_msg
 
         return result
 
@@ -1975,6 +1978,7 @@ def liturgie_fill_data():
                 'marked_as_used': dankoffer.get('marked_as_used', False),
                 'already_assigned': dankoffer.get('already_assigned', False),
                 'date_assigned': dankoffer.get('date_assigned'),
+                'mark_error': dankoffer.get('mark_error'),
                 'status_detail': ' • '.join(status_parts),
                 'cells': dankoffer_cells
             }
