@@ -1485,7 +1485,7 @@ def _get_dankoffer_verse(dbx, service_date: datetime, mark_as_used: bool = True)
             try:
                 _mark_dankoffer_verse_as_used(
                     dbx, selected['row_idx'], service_date,
-                    reset_needed=False, clear_row_indices=duplicate_row_indices
+                    reset_all=False, clear_row_indices=duplicate_row_indices
                 )
                 result['marked_as_used'] = True
                 result['mark_error'] = None
