@@ -1394,55 +1394,50 @@ def _get_dankoffer_verse(dbx, service_date: datetime, mark_as_used: bool = True)
             verse_text = str(row.iloc[1]).strip() if len(row) > 1 and pd.notna(row.iloc[1]) else ''
             # Column C (index 2) contains Date Used — may be datetime obj or string
             raw_date = row.iloc[2] if len(row) > 2 else None
+            date_used_dt = None
             if raw_date is not None and pd.notna(raw_date):
-                if hasattr(raw_date, 'strftime'):
-                    date_used = raw_date.strftime('%Y-%m-%d')
-                else:
-                    date_used = str(raw_date).strip()[:10]  # take YYYY-MM-DD portion
-                if date_used.lower() in ('nan', 'none', ''):
-                    date_used = ''
-            else:
-                date_used = ''
+                try:
+                    if hasattr(raw_date, 'strftime') and not isinstance(raw_date, str):
+                        # pandas/numpy datetime or Python datetime object
+                        date_used_dt = pd.Timestamp(raw_date).to_pydatetime().date()
+                    else:
+                        # string date; accept Dutch and ISO formats
+                        parsed = pd.to_datetime(str(raw_date).strip(), dayfirst=True, errors='coerce')
+                        if pd.notna(parsed):
+                            date_used_dt = parsed.to_pydatetime().date()
+                except Exception:
+                    date_used_dt = None
 
             if verse and verse.lower() not in ('nan', 'none', ''):
                 verses_data.append({
                     'verse': verse,
                     'verse_text': verse_text,
-                    'date_used': date_used,
+                    'date_used_dt': date_used_dt,
                     'row_idx': idx
                 })
 
         if not verses_data:
             return None
 
-        # Format the service date for comparison (YYYY-MM-DD)
-        service_date_str = service_date.strftime('%Y-%m-%d')
+        service_date_dt = service_date.date() if hasattr(service_date, 'date') else service_date
 
-        # STEP 1: Check if this service date is already assigned to a verse
-        existing_assignment = None
-        for v in verses_data:
-            if v['date_used'] == service_date_str:
-                existing_assignment = v
-                break
+        # Select the verse with the oldest used date. Unassigned (blank) verses count as oldest,
+        # then the earliest real date. This implements a round-robin that overrides the oldest
+        # date with the current service date.
+        from datetime import date as _date
+        def _sort_key(v):
+            return (v['date_used_dt'] is not None, v['date_used_dt'] or _date.max, v['row_idx'])
 
-        if existing_assignment:
-            # This date already has a verse assigned - use it again
-            selected = existing_assignment
-            reset_needed = False
-            already_assigned = True
-        else:
-            # STEP 2: Find the first unused verse (blank date)
-            already_assigned = False
-            unused_verses = [v for v in verses_data if not v['date_used']]
+        sorted_verses = sorted(verses_data, key=_sort_key)
+        selected = sorted_verses[0]
+        already_assigned = selected['date_used_dt'] == service_date_dt
 
-            if unused_verses:
-                # Use the first unused verse
-                selected = unused_verses[0]
-                reset_needed = False
-            else:
-                # STEP 3: All verses are used - go back to the first verse (row 2)
-                selected = verses_data[0]
-                reset_needed = True  # Indicates we're reusing from the start
+        # If another row already carries the current service date, clear it so we don't
+        # end up with duplicate dates after overriding the selected (oldest) row.
+        duplicate_row_indices = [
+            v['row_idx'] for v in verses_data
+            if v['row_idx'] != selected['row_idx'] and v['date_used_dt'] == service_date_dt
+        ]
 
         verse_text = selected['verse']
 
@@ -1458,11 +1453,8 @@ def _get_dankoffer_verse(dbx, service_date: datetime, mark_as_used: bool = True)
         verse_start = int(verse_start_str)
         verse_end = int(match.group(4)) if match.group(4) else None
 
-        # Calculate unused count (for display purposes)
-        if already_assigned:
-            unused_count = len([v for v in verses_data if not v['date_used']])
-        else:
-            unused_count = len(unused_verses) if not reset_needed else 0
+        # Count still-unassigned verses (for display purposes)
+        unused_count = len([v for v in verses_data if v['date_used_dt'] is None])
 
         result = {
             'book': book,
@@ -1470,19 +1462,22 @@ def _get_dankoffer_verse(dbx, service_date: datetime, mark_as_used: bool = True)
             'verse_start': verse_start,
             'verse_end': verse_end,
             'full_text': verse_text,
-            'verse_text': selected.get('verse_text', ''),  # Add verse text from Excel
+            'verse_text': selected.get('verse_text', ''),  # Verse text from Excel column B
             'row_index': selected['row_idx'] + 1,  # 1-indexed for user display
             'total_count': len(verses_data),
             'unused_count': unused_count,
-            'reset_needed': reset_needed,
+            'reset_needed': False,
             'already_assigned': already_assigned,
-            'date_assigned': selected['date_used'] if already_assigned else None
+            'date_assigned': selected['date_used_dt'].isoformat() if selected['date_used_dt'] else None
         }
 
-        # Update the Dankoffer.xlsx to mark this verse as used (or update date if reusing)
+        # Update the Dankoffer.xlsx to mark this verse as used (override oldest date)
         if mark_as_used:
             try:
-                _mark_dankoffer_verse_as_used(dbx, selected['row_idx'], service_date, reset_needed)
+                _mark_dankoffer_verse_as_used(
+                    dbx, selected['row_idx'], service_date,
+                    reset_needed=False, clear_row_indices=duplicate_row_indices
+                )
                 result['marked_as_used'] = True
             except Exception as e:
                 print(f'[Dankoffer] Warning: Could not mark verse as used: {e}')
@@ -1492,13 +1487,17 @@ def _get_dankoffer_verse(dbx, service_date: datetime, mark_as_used: bool = True)
 
     except Exception as e:
         print(f'[Dankoffer] Error reading dankoffer file: {e}')
+        import traceback
+        traceback.print_exc()
         return None
 
 
-def _mark_dankoffer_verse_as_used(dbx, row_idx: int, service_date: datetime, reset_all: bool = False):
+def _mark_dankoffer_verse_as_used(dbx, row_idx: int, service_date: datetime,
+                                   reset_all: bool = False, clear_row_indices: list = None):
     """
     Update Dankoffer.xlsx in Dropbox to mark a verse as used (Column C).
-    Updates just the selected row with the new date.
+    Updates just the selected row with the new date, and optionally clears
+    stale dates from other rows (e.g. when overriding an existing assignment).
     Auto-detects if there's a header row based on first cell content.
     """
     try:
@@ -1526,11 +1525,18 @@ def _mark_dankoffer_verse_as_used(dbx, row_idx: int, service_date: datetime, res
 
         date_str = service_date.strftime('%Y-%m-%d')
 
+        # Clear stale service-date assignments from other rows when requested
+        if clear_row_indices:
+            for ci in clear_row_indices:
+                clear_excel_row = ci + 2 if has_header else ci + 1
+                ws.cell(row=clear_excel_row, column=3).value = None
+                print(f'[Dankoffer] Cleared stale date at row {clear_excel_row}, col 3')
+
         # Read current value for logging
         current_val = ws.cell(row=excel_row, column=3).value
         print(f'[Dankoffer] Current value in row {excel_row}, col 3: {current_val}')
 
-        # Update the cell
+        # Update the selected row's date
         ws.cell(row=excel_row, column=3).value = date_str
         print(f'[Dankoffer] Setting row {excel_row}, col 3 to: {date_str}')
 
@@ -1754,11 +1760,11 @@ def liturgie_fill_data():
             # Set all dankoffer cells (directly, without individual alerts)
             dankoffer_filled_parts = []
             
-            # Helper to set cell without adding to alerts
-            def set_dankoffer_cell(row, col, value):
+            # Helper to set cell without adding to alerts; force=True overwrites existing data
+            def set_dankoffer_cell(row, col, value, force=False):
                 cell = ws.cell(row=row, column=col)
                 current_val = str(cell.value).strip() if cell.value else ''
-                if current_val and current_val.lower() not in ('nan', 'none', ''):
+                if not force and current_val and current_val.lower() not in ('nan', 'none', ''):
                     return False  # Already has content
                 elif value is not None and value != '':
                     cell.value = value  # int values written directly as numbers
@@ -1767,7 +1773,7 @@ def liturgie_fill_data():
             
             # B21: Book name (only if validation passed or no Boeken sheet)
             if book_valid or not valid_books:
-                result_b21 = set_dankoffer_cell(dankoffer_row, 2, dankoffer_book)
+                result_b21 = set_dankoffer_cell(dankoffer_row, 2, dankoffer_book, force=True)
                 print(f'[Liturgie Fill] B21 set result: {result_b21}, value: {dankoffer_book}')
                 if result_b21:
                     dankoffer_filled_parts.append(dankoffer_book)
@@ -1776,13 +1782,13 @@ def liturgie_fill_data():
                 print(f'[Liturgie Fill] B21 NOT set - book validation failed')
 
             # C21: Chapter (H.S. / pasal)
-            result_c21 = set_dankoffer_cell(dankoffer_row, 3, dankoffer['chapter'])
+            result_c21 = set_dankoffer_cell(dankoffer_row, 3, dankoffer['chapter'], force=True)
             print(f'[Liturgie Fill] C21 set result: {result_c21}, value: {dankoffer["chapter"]}')
             if result_c21:
                 dankoffer_filled_parts.append(dankoffer['chapter'])
 
             # D21: Start verse (ayat)
-            result_d21 = set_dankoffer_cell(dankoffer_row, 4, dankoffer['verse_start'])
+            result_d21 = set_dankoffer_cell(dankoffer_row, 4, dankoffer['verse_start'], force=True)
             print(f'[Liturgie Fill] D21 set result: {result_d21}, value: {dankoffer["verse_start"]}')
             if result_d21:
                 verse_text = dankoffer['verse_start']
@@ -1792,8 +1798,20 @@ def liturgie_fill_data():
 
             # E21: End verse (ayat) - only if there's an end verse
             if dankoffer['verse_end']:
-                result_e21 = set_dankoffer_cell(dankoffer_row, 5, dankoffer['verse_end'])
+                result_e21 = set_dankoffer_cell(dankoffer_row, 5, dankoffer['verse_end'], force=True)
                 print(f'[Liturgie Fill] E21 set result: {result_e21}, value: {dankoffer["verse_end"]}')
+
+            # Tekst column: write the verse text from Dankoffer.xlsx so liturgi_core.py
+            # uses it instead of falling back to the Bible JSON.
+            tekst_col = None
+            for col in range(2, 10):
+                header_val = str(ws.cell(row=dankoffer_row - 6, column=col).value or '').strip().lower()
+                if header_val in ('tekst', 'text'):
+                    tekst_col = col
+                    break
+            if tekst_col:
+                ws.cell(row=dankoffer_row, column=tekst_col).value = dankoffer.get('verse_text', '')
+                print(f'[Liturgie Fill] Tekst column {tekst_col} set to verse text for row {dankoffer_row}')
 
             # Add simplified one-line dankoffer alert
             if dankoffer_filled_parts:

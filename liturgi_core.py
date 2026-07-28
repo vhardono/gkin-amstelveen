@@ -1248,11 +1248,11 @@ r = p.add_run('17. Voorbede ( eindigend met het Onze Vader )')
 r.font.name = "Calibri"; r.font.size = Pt(10); r.bold=True
 
 # --- Element 18: Dankoffer ---
-boek = _get(table2, 4, ["Boek", "boek"])
-hs   = _get(table2, 4, ["H.s.", "H.s", "HS", "H.S.", "H.S"])
-vfrom = _get(table2, 4, ["Vers van", "Vers Van", "vers van", "Van"])
-vto   = _get(table2, 4, ["Vers tot", "Vers Tot", "vers tot", "Tot"])
-verse_text = _get(table2, 4, ["Tekst", "tekst", "Text", "text"])  # Get verse text from C21
+boek = _get(table2, 5, ["Boek", "boek"])
+hs   = _get(table2, 5, ["H.s.", "H.s", "HS", "H.S.", "H.S"])
+vfrom = _get(table2, 5, ["Vers van", "Vers Van", "vers van", "Van"])
+vto   = _get(table2, 5, ["Vers tot", "Vers Tot", "vers tot", "Tot"])
+verse_text = _get(table2, 5, ["Tekst", "tekst", "Text", "text"])  # Verse text from Tekst column, row 21
 
 # Check if B21 contains a full verse reference (e.g., "Deuteronomium 16:16b-17")
 # This happens when the auto-fill stores the full reference instead of separate cells
@@ -4409,11 +4409,11 @@ r.font.color.rgb = white
 r.font.bold = True
 r.font.italic = True
 
-boek = _get(table2, 4, ["Boek", "boek"])
-hs   = _get(table2, 4, ["H.s.", "H.s", "HS", "H.S.", "H.S"])
-vfrom = _get(table2, 4, ["Vers van", "Vers Van", "vers van", "Van"])
-vto   = _get(table2, 4, ["Vers tot", "Vers Tot", "vers tot", "Tot"])
-verse_text = _get(table2, 4, ["Tekst", "tekst", "Text", "text"])  # Get verse text from C21
+boek = _get(table2, 5, ["Boek", "boek"])
+hs   = _get(table2, 5, ["H.s.", "H.s", "HS", "H.S.", "H.S"])
+vfrom = _get(table2, 5, ["Vers van", "Vers Van", "vers van", "Van"])
+vto   = _get(table2, 5, ["Vers tot", "Vers Tot", "vers tot", "Tot"])
+verse_text = _get(table2, 5, ["Tekst", "tekst", "Text", "text"])  # Verse text from Tekst column, row 21
 
 # Check if B21 contains a full verse reference (e.g., "Deuteronomium 16:16b-17")
 if boek and ':' in str(boek) and not hs:
