@@ -2745,6 +2745,84 @@ def add_sermon_doc_to_ppt(
     return slides_added
 
 
+def add_mededelingen_slides(prs, json_path):
+    """
+    Read mededelingen.json and add bilingual mededelingen slides to the presentation.
+    Slide text uses the selected language; notes contain the other language.
+    """
+    if not os.path.exists(json_path):
+        return 0
+    try:
+        with open(json_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+    except Exception:
+        return 0
+
+    language = data.get('language', 'nl')
+    if language not in ('nl', 'id'):
+        language = 'nl'
+    other = 'id' if language == 'nl' else 'nl'
+
+    sections = data.get('sections', [])
+    if not sections:
+        return 0
+
+    slides_added = 0
+
+    def _title_slide(slide_text, notes_text):
+        slide = prs.slides.add_slide(prs.slide_layouts[6])
+        fill = slide.background.fill
+        fill.solid()
+        fill.fore_color.rgb = RGBColor.from_string("1E1947")
+        box = slide.shapes.add_textbox(BOX_LEFT, Cm(1), BOX_WIDTH, Cm(16))
+        tf = box.text_frame
+        tf.clear()
+        tf.word_wrap = True
+        tf.auto_size = MSO_AUTO_SIZE.NONE
+        tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+        p = tf.paragraphs[0]
+        p.alignment = PP_ALIGN.CENTER
+        r = p.add_run()
+        r.text = slide_text
+        r.font.name = "Calibri"
+        r.font.size = Pt(48)
+        r.font.color.rgb = RGBColor(255, 255, 255)
+        r.font.bold = True
+        if notes_text:
+            try:
+                ntf = slide.notes_slide.notes_text_frame
+                ntf.clear()
+                ntf.paragraphs[0].text = notes_text
+            except Exception:
+                pass
+        return slide
+
+    for section in sections:
+        title = section.get('title', {})
+        slide_title = title.get(language, '')
+        notes_title = title.get(other, '')
+        if slide_title:
+            _title_slide(slide_title, notes_title)
+            slides_added += 1
+
+        for item in section.get('items', []):
+            slide_text = item.get(language, '')
+            notes_text = item.get(other, '')
+            if not slide_text:
+                continue
+            added = add_sermon_doc_to_ppt(
+                prs, slide_text,
+                font_name="Calibri", font_size_pt=32,
+                box_width=BOX_WIDTH, box_height=Cm(17),
+                box_left=BOX_LEFT, box_top=Cm(0),
+                bg_hex="1E1947", max_lines_per_slide=16,
+                notes_text=notes_text,
+            )
+            slides_added += added
+
+    return slides_added
+
+
 # === MAIN ===
 prs = Presentation()
 prs.slide_width = SLIDE_WIDTH
@@ -2878,113 +2956,117 @@ for line in lines:
 
 
 # --- MEDEDELINGEN ---
-slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
-set_background(slide)
-box = slide.shapes.add_textbox(BOX_LEFT, Cm(1), BOX_WIDTH, Cm(16))
-tf = box.text_frame
-tf.clear()
-tf.word_wrap = True
-tf.auto_size = MSO_AUTO_SIZE.NONE
-tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+mededelingen_json = os.path.join(dir_path, 'mededelingen.json')
+if os.path.exists(mededelingen_json):
+    add_mededelingen_slides(prs, mededelingen_json)
+else:
+    slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
+    set_background(slide)
+    box = slide.shapes.add_textbox(BOX_LEFT, Cm(1), BOX_WIDTH, Cm(16))
+    tf = box.text_frame
+    tf.clear()
+    tf.word_wrap = True
+    tf.auto_size = MSO_AUTO_SIZE.NONE
+    tf.vertical_anchor = MSO_ANCHOR.MIDDLE
 
-p = tf.paragraphs[0]
-p.alignment = PP_ALIGN.CENTER
-r = p.add_run()
-r.text = "MEDEDELINGEN\n"
-r.font.name = "Calibri"
-r.font.size = Pt(48)
-r.font.color.rgb = white
-r.font.bold = True
+    p = tf.paragraphs[0]
+    p.alignment = PP_ALIGN.CENTER
+    r = p.add_run()
+    r.text = "MEDEDELINGEN\n"
+    r.font.name = "Calibri"
+    r.font.size = Pt(48)
+    r.font.color.rgb = white
+    r.font.bold = True
 
-p = tf.add_paragraph()
-p.alignment = PP_ALIGN.CENTER
-r = p.add_run()
-r.text = "PEMBERITAHUAN" 
-r.font.name = "Calibri"
-r.font.size = Pt(48)
-r.font.color.rgb = white
-r.font.italic = True
-r.font.bold = True
+    p = tf.add_paragraph()
+    p.alignment = PP_ALIGN.CENTER
+    r = p.add_run()
+    r.text = "PEMBERITAHUAN"
+    r.font.name = "Calibri"
+    r.font.size = Pt(48)
+    r.font.color.rgb = white
+    r.font.italic = True
+    r.font.bold = True
 
-# --- woord van welkom ---
+    # --- woord van welkom ---
 
-slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
-set_background(slide)
-box = slide.shapes.add_textbox(BOX_LEFT, Cm(1), BOX_WIDTH, Cm(16))
-tf = box.text_frame
-tf.clear()
-tf.word_wrap = True
-tf.auto_size = MSO_AUTO_SIZE.NONE
-tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+    slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
+    set_background(slide)
+    box = slide.shapes.add_textbox(BOX_LEFT, Cm(1), BOX_WIDTH, Cm(16))
+    tf = box.text_frame
+    tf.clear()
+    tf.word_wrap = True
+    tf.auto_size = MSO_AUTO_SIZE.NONE
+    tf.vertical_anchor = MSO_ANCHOR.MIDDLE
 
-p = tf.paragraphs[0]
-p.alignment = PP_ALIGN.CENTER
-r = p.add_run()
-r.text = "Selamat pagi saudara-saudari, Atas nama dewan Majelis regio Amstelveen, saya mengucapkan selamat datang kepada saudara-saudari sekalian dalam kebaktian ini, khususnya bagi mereka yang baru pertama kali hadir."
-r.font.name = "Calibri"
-r.font.size = Pt(32)
-r.font.color.rgb = white
+    p = tf.paragraphs[0]
+    p.alignment = PP_ALIGN.CENTER
+    r = p.add_run()
+    r.text = "Selamat pagi saudara-saudari, Atas nama dewan Majelis regio Amstelveen, saya mengucapkan selamat datang kepada saudara-saudari sekalian dalam kebaktian ini, khususnya bagi mereka yang baru pertama kali hadir."
+    r.font.name = "Calibri"
+    r.font.size = Pt(32)
+    r.font.color.rgb = white
 
-p = tf.add_paragraph()
-p.alignment = PP_ALIGN.CENTER
-r = p.add_run()
-r.text = f"Hari ini, Minggu {long_date}, ibadah akan dipimpin oleh {voorganger}." 
-r.font.name = "Calibri"
-r.font.size = Pt(32)
-r.font.color.rgb = white
+    p = tf.add_paragraph()
+    p.alignment = PP_ALIGN.CENTER
+    r = p.add_run()
+    r.text = f"Hari ini, Minggu {long_date}, ibadah akan dipimpin oleh {voorganger}."
+    r.font.name = "Calibri"
+    r.font.size = Pt(32)
+    r.font.color.rgb = white
 
-slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
-set_background(slide)
-box = slide.shapes.add_textbox(BOX_LEFT, Cm(1), BOX_WIDTH, Cm(16))
-tf = box.text_frame
-tf.clear()
-tf.word_wrap = True
-tf.auto_size = MSO_AUTO_SIZE.NONE
-tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+    slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
+    set_background(slide)
+    box = slide.shapes.add_textbox(BOX_LEFT, Cm(1), BOX_WIDTH, Cm(16))
+    tf = box.text_frame
+    tf.clear()
+    tf.word_wrap = True
+    tf.auto_size = MSO_AUTO_SIZE.NONE
+    tf.vertical_anchor = MSO_ANCHOR.MIDDLE
 
-p = tf.paragraphs[0]
-p.alignment = PP_ALIGN.CENTER
-r = p.add_run()
-r.text = "Majelis yang bertugas dalam ibadah adalah "
-r.font.name = "Calibri"
-r.font.size = Pt(32)
-r.font.color.rgb = white
-r = p.add_run()
-r.text = f"{ouderling}."
-r.font.name = "Calibri"
-r.font.size = Pt(32)
-r.font.color.rgb = white
-r.font.italic = True
-r = p.add_run()
-r.text = " Jika anda memiliki pertanyaan, dapat menghubungi beliau."
-r.font.name = "Calibri"
-r.font.size = Pt(32)
-r.font.color.rgb = white
+    p = tf.paragraphs[0]
+    p.alignment = PP_ALIGN.CENTER
+    r = p.add_run()
+    r.text = "Majelis yang bertugas dalam ibadah adalah "
+    r.font.name = "Calibri"
+    r.font.size = Pt(32)
+    r.font.color.rgb = white
+    r = p.add_run()
+    r.text = f"{ouderling}."
+    r.font.name = "Calibri"
+    r.font.size = Pt(32)
+    r.font.color.rgb = white
+    r.font.italic = True
+    r = p.add_run()
+    r.text = " Jika anda memiliki pertanyaan, dapat menghubungi beliau."
+    r.font.name = "Calibri"
+    r.font.size = Pt(32)
+    r.font.color.rgb = white
 
-slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
-set_background(slide)
-box = slide.shapes.add_textbox(BOX_LEFT, Cm(1), BOX_WIDTH, Cm(16))
-tf = box.text_frame
-tf.clear()
-tf.word_wrap = True
-tf.auto_size = MSO_AUTO_SIZE.NONE
-tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+    slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
+    set_background(slide)
+    box = slide.shapes.add_textbox(BOX_LEFT, Cm(1), BOX_WIDTH, Cm(16))
+    tf = box.text_frame
+    tf.clear()
+    tf.word_wrap = True
+    tf.auto_size = MSO_AUTO_SIZE.NONE
+    tf.vertical_anchor = MSO_ANCHOR.MIDDLE
 
-p = tf.paragraphs[0]
-p.alignment = PP_ALIGN.CENTER
-r = p.add_run()
-r.text = f"Hari Minggu, yang akan datang, {long_datenw}, ibadah akan dipimpin oleh ... Kebaktian akan dimulai pada pukul 10.30.\n"
-r.font.name = "Calibri"
-r.font.size = Pt(32)
-r.font.color.rgb = white
+    p = tf.paragraphs[0]
+    p.alignment = PP_ALIGN.CENTER
+    r = p.add_run()
+    r.text = f"Hari Minggu, yang akan datang, {long_datenw}, ibadah akan dipimpin oleh ... Kebaktian akan dimulai pada pukul 10.30.\n"
+    r.font.name = "Calibri"
+    r.font.size = Pt(32)
+    r.font.color.rgb = white
 
-p = tf.add_paragraph()
-p.alignment = PP_ALIGN.CENTER
-r = p.add_run()
-r.text = f"Pada hari minggu {long_datenw} yang akan datang, Online Landelijke Eredienst (OLE) akan dipimpin oleh …. dan dimulai pukul …"
-r.font.name = "Calibri"
-r.font.size = Pt(32)
-r.font.color.rgb = white
+    p = tf.add_paragraph()
+    p.alignment = PP_ALIGN.CENTER
+    r = p.add_run()
+    r.text = f"Pada hari minggu {long_datenw} yang akan datang, Online Landelijke Eredienst (OLE) akan dipimpin oleh …. dan dimulai pukul …"
+    r.font.name = "Calibri"
+    r.font.size = Pt(32)
+    r.font.color.rgb = white
 
 
 # --- dankoffer vorige week ---

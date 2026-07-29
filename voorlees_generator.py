@@ -148,7 +148,7 @@ def _subheader_row(table, nl_text: str, id_text: str):
                  [(id_text, True)])
 
 
-def _parse_meded_blocks(text: str) -> List[dict]:
+def parse_meded_blocks(text: str) -> List[dict]:
     """
     Split raw mededelingen text into blocks of {'heading': str, 'body': str}.
     Blank lines separate blocks. First line of each block is the heading if it
@@ -174,7 +174,11 @@ def _parse_meded_blocks(text: str) -> List[dict]:
     return blocks
 
 
-def _align_id_blocks(nl_blocks: list, id_blocks: list) -> list:
+# Backward-compatible private alias
+_parse_meded_blocks = parse_meded_blocks
+
+
+def align_id_blocks(nl_blocks: list, id_blocks: list) -> list:
     """
     Ensure id_blocks has the same length as nl_blocks by merging extra
     consecutive ID blocks (those without a heading) into the preceding block.
@@ -207,6 +211,10 @@ def _align_id_blocks(nl_blocks: list, id_blocks: list) -> list:
     return merged
 
 
+# Backward-compatible private alias
+_align_id_blocks = align_id_blocks
+
+
 # ── Generator class ───────────────────────────────────────────────────────────
 
 class VoorleesGenerator:
@@ -229,6 +237,39 @@ class VoorleesGenerator:
                 continue
             bold = part in names
             _r(para, part, bold=bold, color=color)
+
+    def build_welkom_texts(self, mededelingen_date: datetime,
+                           takenrooster_entry: Dict[str, Any],
+                           welkom_paragraphs: List[str] = None) -> tuple:
+        """Return (nl_text, id_text) for the welkomstwoord."""
+        predikant = takenrooster_entry.get('predikant', '')
+        ovd       = takenrooster_entry.get('ovd', '')
+        opmerking = takenrooster_entry.get('opmerking', '')
+        is_ole    = 'OLE' in opmerking.upper()
+        day_nl    = DUTCH_DAYS[mededelingen_date.weekday()]
+        day_id    = INDO_DAYS[mededelingen_date.weekday()]
+        date_str_nl = _format_nl_date(mededelingen_date)
+        date_str_id = _format_id_date(mededelingen_date)
+
+        if welkom_paragraphs:
+            nl_welkom = '\n'.join(p for p in welkom_paragraphs if p.strip())
+        else:
+            nl_welkom = (
+                f"Goedemorgen broeders en zusters,\n"
+                f"Namens de kerkenraad heet ik u allen van harte welkom bij deze eredienst, "
+                f"in het bijzonder diegenen die vandaag voor het eerst aanwezig zijn.\n"
+                f"Vandaag, {day_nl} {date_str_nl}, gaat voor {predikant}. "
+                f"De ouderling van dienst is {ovd}. "
+                f"Als u vragen heeft, kunt u de ouderling van dienst aanspreken."
+            )
+
+        nl_lines = nl_welkom.split('\n')
+        id_segments = self._build_id_welkom_segments(nl_lines, predikant, ovd, is_ole, opmerking, day_id, date_str_id)
+        id_lines = []
+        for seg_line in id_segments:
+            id_lines.append(''.join(txt for txt, _ in seg_line))
+        id_welkom = '\n'.join(id_lines)
+        return nl_welkom, id_welkom
 
     def _build_id_welkom_segments(self, nl_lines: list, predikant: str, ovd: str, is_ole: bool, opmerking: str,
                                    day_id: str, date_str_id: str) -> list:

@@ -27,7 +27,7 @@ from data_sources.scipio_scraper import ScipioScraper
 from data_sources.preekroster_scraper import PreekrosterScraper
 from data_sources.email_reader import OutlookCollecteReader, get_token_cache_json
 from bulletin_generator import BulletinGenerator
-from voorlees_generator import VoorleesGenerator
+from voorlees_generator import VoorleesGenerator, parse_meded_blocks, align_id_blocks
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10MB max upload
@@ -1193,7 +1193,8 @@ def _ensure_bible_file(filename: str):
             raise FileNotFoundError(f'Bijbelbestand niet gevonden in Dropbox: {filename} ({e})')
 
 
-def _run_liturgi(excel_bytes: bytes, preek_bytes, work_dir: str) -> dict:
+def _run_liturgi(excel_bytes: bytes, preek_bytes, work_dir: str,
+                 include_mededelingen=False, mededelingen_language=None) -> dict:
     _ensure_liturgie_file(LOGO_DROPBOX_PATH_L, _LITURGIE_LOGO)
     _ensure_liturgie_file(PHONE_DROPBOX_PATH_L, _LITURGIE_PHONE)
     os.makedirs(_LITURGIE_CACHE, exist_ok=True)
@@ -1207,16 +1208,13 @@ def _run_liturgi(excel_bytes: bytes, preek_bytes, work_dir: str) -> dict:
         with open(os.path.join(file_mingguan, 'Preek.docx'), 'wb') as f:
             f.write(preek_bytes)
 
-    # Try to retrieve the Tikkie QR image from the same email source as the Tikkie URL
+    service_date = None
     try:
         from io import BytesIO as _BytesIO
         import openpyxl
-        from data_sources.email_reader import OutlookCollecteReader
-
         wb = openpyxl.load_workbook(_BytesIO(excel_bytes), data_only=True)
         ws = wb['Data'] if 'Data' in wb.sheetnames else wb.active
         date_val = ws.cell(row=3, column=2).value
-        service_date = None
         if date_val:
             if isinstance(date_val, datetime):
                 service_date = date_val
@@ -1225,6 +1223,12 @@ def _run_liturgi(excel_bytes: bytes, preek_bytes, work_dir: str) -> dict:
                     service_date = datetime.strptime(str(date_val), '%d-%m-%Y') if '-' in str(date_val) else datetime.strptime(str(date_val), '%Y-%m-%d')
                 except ValueError:
                     service_date = None
+    except Exception as e:
+        print(f'[Liturgi] Could not parse service date from Excel: {e}')
+
+    # Try to retrieve the Tikkie QR image from the same email source as the Tikkie URL
+    try:
+        from data_sources.email_reader import OutlookCollecteReader
 
         if service_date:
             reader = OutlookCollecteReader()
@@ -1245,6 +1249,50 @@ def _run_liturgi(excel_bytes: bytes, preek_bytes, work_dir: str) -> dict:
                     print(f'[Liturgi] Saved Tikkie QR image to {qr_path}')
     except Exception as e:
         print(f'[Liturgi] Could not retrieve Tikkie QR image from email: {e}')
+
+    # Prepare mededelingen data for LiturgieP if requested
+    if include_mededelingen and service_date and mededelingen_language in ('nl', 'id'):
+        try:
+            taken = _get_takenrooster()
+            entry = next((e for e in taken.get('entries', []) if e.get('date') == service_date), None)
+            if entry:
+                reader = DropboxExcelReader()
+                meded = reader.get_mededelingen(mededelingen_date=service_date)
+                welkom_paras = _extract_welkom_paragraphs(service_date, entry, meded, taken.get('entries'))
+                gen = VoorleesGenerator()
+                nl_welkom, id_welkom = gen.build_welkom_texts(service_date, entry, welkom_paras)
+
+                def _build_section(title_nl, title_id, nl_raw, id_raw):
+                    nl_blocks = parse_meded_blocks(nl_raw)
+                    id_blocks = align_id_blocks(nl_blocks, parse_meded_blocks(id_raw))
+                    items = []
+                    for nb, ib in zip(nl_blocks, id_blocks):
+                        nl_text = '\n'.join(p for p in [nb.get('heading', ''), nb.get('body', '')] if p)
+                        id_text = '\n'.join(p for p in [ib.get('heading', ''), ib.get('body', '')] if p)
+                        items.append({'nl': nl_text, 'id': id_text})
+                    return {'title': {'nl': title_nl, 'id': title_id}, 'items': items}
+
+                mededelingen_data = {
+                    'language': mededelingen_language,
+                    'date': service_date.strftime('%Y-%m-%d'),
+                    'sections': [
+                        {
+                            'title': {'nl': 'Welkomstwoord', 'id': 'Kata Sambutan'},
+                            'items': [{'nl': nl_welkom, 'id': id_welkom}],
+                        },
+                        _build_section('Regionale Mededelingen', 'Berita Regional',
+                                       meded.get('regionale_nl', ''), meded.get('regionale_id', '')),
+                        _build_section('Landelijke Mededelingen', 'Berita Nasional',
+                                       meded.get('landelijke_nl', ''), meded.get('landelijke_id', '')),
+                    ],
+                }
+                with open(os.path.join(work_dir, 'mededelingen.json'), 'w', encoding='utf-8') as f:
+                    json.dump(mededelingen_data, f, ensure_ascii=False, indent=2)
+                print(f'[Liturgi] Prepared mededelingen data for {service_date}')
+        except Exception as e:
+            print(f'[Liturgi] Could not prepare mededelingen data: {e}')
+            import traceback
+            traceback.print_exc()
 
     for name, src in [('bible', _LITURGIE_CACHE), ('logo.png', _LITURGIE_LOGO), ('telephone.gif', _LITURGIE_PHONE)]:
         link = os.path.join(work_dir, name)
@@ -1297,6 +1345,8 @@ def liturgie_generate():
     want_a = request.form.get('want_a', '1') == '1'
     want_b = request.form.get('want_b', '1') == '1'
     want_p = request.form.get('want_p', '1') == '1'
+    include_mededelingen = request.form.get('include_mededelingen', '0') == '1'
+    mededelingen_language = request.form.get('mededelingen_lang', 'nl') if include_mededelingen else None
 
     # Get Excel bytes
     if excel_source == 'dropbox':
@@ -1327,7 +1377,9 @@ def liturgie_generate():
 
     work_dir = tempfile.mkdtemp(prefix='liturgi_')
     try:
-        result = _run_liturgi(excel_bytes, preek_bytes, work_dir)
+        result = _run_liturgi(excel_bytes, preek_bytes, work_dir,
+                              include_mededelingen=include_mededelingen,
+                              mededelingen_language=mededelingen_language)
         if not result:
             return jsonify({'error': 'Geen output bestanden gegenereerd.'}), 500
 

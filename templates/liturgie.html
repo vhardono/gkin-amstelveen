@@ -365,6 +365,36 @@
                 </div>
             </div>
 
+            <!-- Mededelingen option -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-5">
+                <h2 class="text-base font-semibold text-gkin-green mb-4 flex items-center gap-2">
+                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/>
+                    </svg>
+                    <span data-i18n="lit.sec_mededelingen">Mededelingen in LiturgieP</span>
+                </h2>
+                <label class="flex items-center gap-3 cursor-pointer mb-4">
+                    <input type="checkbox" id="chkMededelingen" class="w-4 h-4 accent-gkin-green">
+                    <div>
+                        <span class="text-sm font-medium text-gray-800" data-i18n="lit.mededelingen_include">Mededelingen opnemen in LiturgieP</span>
+                        <span class="text-xs text-gray-400 ml-2 block sm:inline" data-i18n="lit.mededelingen_include_hint">Welkomstwoord, regionale en landelijke mededelingen</span>
+                    </div>
+                </label>
+                <div id="mededelingenLangPanel" class="hidden pl-7 border-l-2 border-green-100">
+                    <p class="text-sm text-gray-700 mb-2" data-i18n="lit.mededelingen_lang_label">Taal op de slide:</p>
+                    <div class="flex gap-4">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="mededelingenLang" value="nl" checked class="accent-gkin-green">
+                            <span class="text-sm text-gray-700" data-i18n="lit.mededelingen_nl">Nederlands (notities Indonesisch)</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="mededelingenLang" value="id" class="accent-gkin-green">
+                            <span class="text-sm text-gray-700" data-i18n="lit.mededelingen_id">Indonesisch (notities Nederlands)</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
             <!-- Generate button -->
             <button type="submit" id="genBtn"
                     class="w-full bg-gkin-green hover:bg-gkin-dark text-white font-semibold py-3 px-6 rounded-xl shadow transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3">
@@ -454,6 +484,11 @@
                 const isUpload = document.querySelector('input[name="preekSource"]:checked').value === 'upload';
                 document.getElementById('preekUploadSection').classList.toggle('hidden', !isUpload);
             });
+        });
+
+        // --- Mededelingen inclusion toggle ---
+        document.getElementById('chkMededelingen').addEventListener('change', function() {
+            document.getElementById('mededelingenLangPanel').classList.toggle('hidden', !this.checked);
         });
 
         // Translation state (declared here so the preekDrop callback below can reference them)
@@ -880,6 +915,9 @@
                 return;
             }
 
+            const includeMededelingen = document.getElementById('chkMededelingen').checked;
+            const mededelingenLang = document.querySelector('input[name="mededelingenLang"]:checked')?.value || 'nl';
+
             const fd = new FormData();
             fd.append('excel_source', excelSource);
             if (excelSource === 'upload') {
@@ -891,6 +929,10 @@
             fd.append('want_a', wantA ? '1' : '0');
             fd.append('want_b', wantB ? '1' : '0');
             fd.append('want_p', wantP ? '1' : '0');
+            fd.append('include_mededelingen', includeMededelingen ? '1' : '0');
+            if (includeMededelingen) {
+                fd.append('mededelingen_lang', mededelingenLang);
+            }
 
             try {
                 const resp = await fetch('/liturgie/generate', { method: 'POST', body: fd });
