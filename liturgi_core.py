@@ -2535,6 +2535,7 @@ def add_sermon_doc_to_ppt(
     bg_hex="1E1947",
     max_lines_per_slide=None,
     chars_per_line=None,
+    notes_text=None,
 ):
     """
     - Preserve Word paragraphing (no auto-merging).
@@ -2556,6 +2557,21 @@ def add_sermon_doc_to_ppt(
         CPL = chars_per_line or CHARS_PER_LINE
     except NameError:
         CPL = chars_per_line or 30
+
+    def _flush_notes(target_slide, notes_list):
+        if not notes_text or not notes_list:
+            return
+        try:
+            ntf = target_slide.notes_slide.notes_text_frame
+            ntf.clear()
+            for i, note in enumerate(notes_list):
+                if i < len(ntf.paragraphs):
+                    p = ntf.paragraphs[i]
+                else:
+                    p = ntf.add_paragraph()
+                p.text = note
+        except Exception:
+            pass
 
     def _new_slide_and_textframe():
         slide = prs.slides.add_slide(prs.slide_layouts[6])
@@ -2617,14 +2633,19 @@ def add_sermon_doc_to_ppt(
     if not paragraphs:
         return 0
 
+    notes_paragraphs = [p.strip() for p in (notes_text or "").split("\n") if p.strip()]
+
     slides_added = 0
     slide, tf = _new_slide_and_textframe()
     slides_added += 1
     used_lines = 0
+    current_notes = []
 
-    for para in paragraphs:
+    for para_idx, para in enumerate(paragraphs):
         if not para:
             continue
+
+        notes_para = notes_paragraphs[para_idx] if para_idx < len(notes_paragraphs) else ""
 
         para_lines = _estimate_lines(para)
         spacer_cost = 1 if used_lines > 0 else 0  # blank line between paragraphs on same slide
@@ -2635,15 +2656,19 @@ def add_sermon_doc_to_ppt(
                 _add_blank_line(tf)
                 used_lines += 1
             _add_one_paragraph(tf, para)
+            current_notes.append(notes_para)
             used_lines += para_lines
             continue
 
         if para_lines <= ML:
             # 2) Doesn't fit with current content, but fits alone → new slide, no splitting
+            _flush_notes(slide, current_notes)
+            current_notes = []
             slide, tf = _new_slide_and_textframe()
             slides_added += 1
             used_lines = 0
             _add_one_paragraph(tf, para)
+            current_notes.append(notes_para)
             used_lines = para_lines
             continue
 
@@ -2653,6 +2678,8 @@ def add_sermon_doc_to_ppt(
         while idx < len(sents):
             # if there is already content, move to a fresh slide
             if used_lines > 0:
+                _flush_notes(slide, current_notes)
+                current_notes = []
                 slide, tf = _new_slide_and_textframe()
                 slides_added += 1
                 used_lines = 0
@@ -2686,10 +2713,13 @@ def add_sermon_doc_to_ppt(
 
             # Render this chunk as ONE PPT paragraph
             _add_one_paragraph(tf, chunk_text)
+            current_notes.append(notes_para)
             used_lines = chunk_lines
 
             # If more sentences remain, go to a fresh slide
             if idx < len(sents):
+                _flush_notes(slide, current_notes)
+                current_notes = []
                 slide, tf = _new_slide_and_textframe()
                 slides_added += 1
                 used_lines = 0
@@ -2698,6 +2728,7 @@ def add_sermon_doc_to_ppt(
             if not made_progress:
                 break
 
+    _flush_notes(slide, current_notes)
     return slides_added
 
 
@@ -4217,6 +4248,13 @@ if os.path.exists(path_sermon):
                 if p.text.strip():
                     cell_texts.append(p.text)
         full_text = "\n".join(cell_texts)
+
+        original_cell_texts = []
+        for cell in first_table.columns[0].cells:
+            for p in cell.paragraphs:
+                if p.text.strip():
+                    original_cell_texts.append(p.text)
+        original_text = "\n".join(original_cell_texts)
     else:
         full_text = "\n".join(p.text for p in preek_doc.paragraphs)
         # Fallback: document has only a single-column table and no body paragraphs.
@@ -4227,12 +4265,26 @@ if os.path.exists(path_sermon):
                     if p.text.strip():
                         cell_texts.append(p.text)
             full_text = "\n".join(cell_texts)
+        original_text = None
 
     # Remove final AMEN/AMIN
     clean_text, removed_amen = strip_final_amen(full_text)
     clean_text = clean_text.rstrip()
 
-    add_sermon_doc_to_ppt(prs, clean_text, box_width=BOX_WIDTH, box_left=BOX_LEFT, box_top=Cm(0.5), font_size_pt=28, max_lines_per_slide=16)
+    original_clean, _ = strip_final_amen(original_text) if original_text else (None, None)
+    if original_clean is not None:
+        original_clean = original_clean.rstrip()
+
+    add_sermon_doc_to_ppt(
+        prs,
+        clean_text,
+        box_width=BOX_WIDTH,
+        box_left=BOX_LEFT,
+        box_top=Cm(0.5),
+        font_size_pt=28,
+        max_lines_per_slide=16,
+        notes_text=original_clean,
+    )
 
     # --- Add final AMEN slide if needed ---
     if removed_amen:
