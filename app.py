@@ -1274,7 +1274,7 @@ def _run_liturgi(excel_bytes: bytes, preek_bytes, work_dir: str,
                     gen = VoorleesGenerator()
                     nl_welkom, id_welkom = gen.build_welkom_texts(service_date, entry, welkom_paras)
 
-                    def _build_section(title_nl, title_id, nl_raw, id_raw):
+                    def _build_section(section_type, title_nl, title_id, nl_raw, id_raw):
                         nl_blocks = parse_meded_blocks(nl_raw)
                         id_blocks = align_id_blocks(nl_blocks, parse_meded_blocks(id_raw))
                         items = []
@@ -1282,19 +1282,20 @@ def _run_liturgi(excel_bytes: bytes, preek_bytes, work_dir: str,
                             nl_text = '\n'.join(p for p in [nb.get('heading', ''), nb.get('body', '')] if p)
                             id_text = '\n'.join(p for p in [ib.get('heading', ''), ib.get('body', '')] if p)
                             items.append({'nl': nl_text, 'id': id_text})
-                        return {'title': {'nl': title_nl, 'id': title_id}, 'items': items}
+                        return {'type': section_type, 'title': {'nl': title_nl, 'id': title_id}, 'items': items}
 
                     mededelingen_data = {
                         'language': mededelingen_language,
                         'date': service_date.strftime('%Y-%m-%d'),
                         'sections': [
                             {
+                                'type': 'welkom',
                                 'title': {'nl': 'Welkomstwoord', 'id': 'Kata Sambutan'},
                                 'items': [{'nl': nl_welkom, 'id': id_welkom}],
                             },
-                            _build_section('Regionale Mededelingen', 'Berita Regional',
+                            _build_section('regionale', 'Regionale Mededelingen', 'Berita Regional',
                                            meded.get('regionale_nl', ''), meded.get('regionale_id', '')),
-                            _build_section('Landelijke Mededelingen', 'Berita Nasional',
+                            _build_section('landelijke', 'Landelijke Mededelingen', 'Berita Nasional',
                                            meded.get('landelijke_nl', ''), meded.get('landelijke_id', '')),
                         ],
                     }

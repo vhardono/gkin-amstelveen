@@ -2536,6 +2536,9 @@ def add_sermon_doc_to_ppt(
     max_lines_per_slide=None,
     chars_per_line=None,
     notes_text=None,
+    header_text=None,
+    header_notes_text=None,
+    header_font_size_pt=32,
 ):
     """
     - Preserve Word paragraphing (no auto-merging).
@@ -2544,6 +2547,7 @@ def add_sermon_doc_to_ppt(
       start a NEW slide and place it intact (no splitting).
     - ONLY when a paragraph itself is too long for a slide, split it into CHUNKS of sentences
       that fit. Each chunk is rendered as ONE PPT paragraph (wrapping handled by PowerPoint).
+    - Optional header_text is shown at the top of every generated slide.
     - 17×17 cm textbox (defaults), left-aligned, vertical middle, Calibri 32, white.
     """
 
@@ -2558,13 +2562,20 @@ def add_sermon_doc_to_ppt(
     except NameError:
         CPL = chars_per_line or 30
 
+    header_height = Cm(2) if header_text else Cm(0)
+    content_top = box_top + header_height
+    content_height = box_height - header_height
+    if header_text and box_height.cm > 0:
+        ML = max(1, int(ML * (content_height.cm / box_height.cm)))
+
     def _flush_notes(target_slide, notes_list):
-        if not notes_text or not notes_list:
+        if not (notes_text or header_notes_text) or not (notes_list or header_notes_text):
             return
         try:
             ntf = target_slide.notes_slide.notes_text_frame
             ntf.clear()
-            for i, note in enumerate(notes_list):
+            all_notes = ([header_notes_text] if header_notes_text else []) + list(notes_list)
+            for i, note in enumerate(all_notes):
                 if i < len(ntf.paragraphs):
                     p = ntf.paragraphs[i]
                 else:
@@ -2579,7 +2590,23 @@ def add_sermon_doc_to_ppt(
         fill.solid()
         fill.fore_color.rgb = RGBColor.from_string(bg_hex)
 
-        box = slide.shapes.add_textbox(box_left, box_top, box_width, box_height)
+        if header_text:
+            hbox = slide.shapes.add_textbox(box_left, box_top, box_width, header_height)
+            htf = hbox.text_frame
+            htf.clear()
+            htf.word_wrap = True
+            htf.auto_size = MSO_AUTO_SIZE.NONE
+            htf.vertical_anchor = MSO_ANCHOR.MIDDLE
+            hp = htf.paragraphs[0]
+            hp.alignment = PP_ALIGN.CENTER
+            hr = hp.add_run()
+            hr.text = header_text
+            hr.font.name = font_name
+            hr.font.size = Pt(header_font_size_pt)
+            hr.font.bold = True
+            hr.font.color.rgb = RGBColor(255, 255, 255)
+
+        box = slide.shapes.add_textbox(box_left, content_top, box_width, content_height)
         tf = box.text_frame
         tf.clear()
         tf.word_wrap = True
@@ -2745,10 +2772,11 @@ def add_sermon_doc_to_ppt(
     return slides_added
 
 
-def add_mededelingen_slides(prs, json_path):
+def add_mededelingen_section(prs, json_path, section_type=None):
     """
-    Read mededelingen.json and add bilingual mededelingen slides to the presentation.
-    Slide text uses the selected language; notes contain the other language.
+    Read mededelingen.json and add one or all bilingual mededelingen sections.
+    Each content slide repeats the section title at the top in Calibri 32 Bold.
+    Slide body uses the selected language; notes contain the other language.
     """
     if not os.path.exists(json_path):
         return 0
@@ -2768,42 +2796,14 @@ def add_mededelingen_slides(prs, json_path):
         return 0
 
     slides_added = 0
-
-    def _title_slide(slide_text, notes_text):
-        slide = prs.slides.add_slide(prs.slide_layouts[6])
-        fill = slide.background.fill
-        fill.solid()
-        fill.fore_color.rgb = RGBColor.from_string("1E1947")
-        box = slide.shapes.add_textbox(BOX_LEFT, Cm(1), BOX_WIDTH, Cm(16))
-        tf = box.text_frame
-        tf.clear()
-        tf.word_wrap = True
-        tf.auto_size = MSO_AUTO_SIZE.NONE
-        tf.vertical_anchor = MSO_ANCHOR.MIDDLE
-        p = tf.paragraphs[0]
-        p.alignment = PP_ALIGN.CENTER
-        r = p.add_run()
-        r.text = slide_text
-        r.font.name = "Calibri"
-        r.font.size = Pt(48)
-        r.font.color.rgb = RGBColor(255, 255, 255)
-        r.font.bold = True
-        if notes_text:
-            try:
-                ntf = slide.notes_slide.notes_text_frame
-                ntf.clear()
-                ntf.paragraphs[0].text = notes_text
-            except Exception:
-                pass
-        return slide
-
     for section in sections:
+        if section_type and section.get('type') != section_type:
+            continue
         title = section.get('title', {})
-        slide_title = title.get(language, '')
-        notes_title = title.get(other, '')
-        if slide_title:
-            _title_slide(slide_title, notes_title)
-            slides_added += 1
+        header_text = title.get(language, '')
+        header_notes_text = title.get(other, '')
+        if not header_text:
+            continue
 
         for item in section.get('items', []):
             slide_text = item.get(language, '')
@@ -2817,9 +2817,11 @@ def add_mededelingen_slides(prs, json_path):
                 box_left=BOX_LEFT, box_top=Cm(0),
                 bg_hex="1E1947", max_lines_per_slide=16,
                 notes_text=notes_text,
+                header_text=header_text,
+                header_notes_text=header_notes_text,
+                header_font_size_pt=32,
             )
             slides_added += added
-
     return slides_added
 
 
@@ -2957,8 +2959,9 @@ for line in lines:
 
 # --- MEDEDELINGEN ---
 mededelingen_json = os.path.join(dir_path, 'mededelingen.json')
-if os.path.exists(mededelingen_json):
-    add_mededelingen_slides(prs, mededelingen_json)
+mededelingen_present = os.path.exists(mededelingen_json)
+if mededelingen_present:
+    add_mededelingen_section(prs, mededelingen_json, 'welkom')
 else:
     slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
     set_background(slide)
@@ -3084,9 +3087,9 @@ tf.vertical_anchor = MSO_ANCHOR.MIDDLE
 p = tf.paragraphs[0]
 p.alignment = PP_ALIGN.CENTER
 r = p.add_run()
-r.text = "Persembahan\nGKIN Amstelveen"
+r.text = "Collecte Opbrengst / Persembahan\nGKIN Amstelveen"
 r.font.name = "Calibri"
-r.font.size = Pt(36)
+r.font.size = Pt(32)
 r.font.color.rgb = white
 r.font.bold = True
 
@@ -3178,9 +3181,9 @@ tf.vertical_anchor = MSO_ANCHOR.MIDDLE
 p = tf.paragraphs[0]
 p.alignment = PP_ALIGN.CENTER
 r = p.add_run()
-r.text = "Persembahan"
+r.text = "Collecte / Persembahan"
 r.font.name = "Calibri"
-r.font.size = Pt(36)
+r.font.size = Pt(32)
 r.font.color.rgb = white
 r.font.bold = True
 
@@ -3225,269 +3228,274 @@ r.font.color.rgb = white
 add_qr_image_to_slide(slide)
 
 
-# --- Regional ---
+if mededelingen_present:
+    add_mededelingen_section(prs, mededelingen_json, 'regionale')
+    add_mededelingen_section(prs, mededelingen_json, 'landelijke')
 
-slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
-set_background(slide)
-
-box = slide.shapes.add_textbox(BOX_LEFT, Cm(0), BOX_WIDTH, Cm(17))
-tf = box.text_frame
-tf.clear()
-tf.word_wrap = True
-tf.auto_size = MSO_AUTO_SIZE.NONE
-tf.vertical_anchor = MSO_ANCHOR.MIDDLE
-
-p = tf.paragraphs[0]
-p.alignment = PP_ALIGN.CENTER
-r = p.add_run()
-r.text = "PEMBERITAHUAN\nREGIONAL"
-r.font.name = "Calibri"
-r.font.size = Pt(48)
-r.font.color.rgb = white
-r.font.bold = True
-
-# --- Overleden ---
-slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
-set_background(slide)
-
-box = slide.shapes.add_textbox(BOX_LEFT, Cm(0), BOX_WIDTH, Cm(2))
-tf = box.text_frame
-tf.clear()
-tf.word_wrap = True
-tf.auto_size = MSO_AUTO_SIZE.NONE
-tf.vertical_anchor = MSO_ANCHOR.MIDDLE
-
-p = tf.paragraphs[0]
-p.alignment = PP_ALIGN.CENTER
-r = p.add_run()
-r.text = "Berita Duka"
-r.font.name = "Calibri"
-r.font.size = Pt(32)
-r.font.color.rgb = white
-r.font.bold = True
-
-box = slide.shapes.add_textbox(BOX_LEFT, Cm(3), BOX_WIDTH, Cm(16))
-tf = box.text_frame
-tf.clear()
-tf.word_wrap = True
-tf.auto_size = MSO_AUTO_SIZE.NONE
-tf.vertical_anchor = MSO_ANCHOR.MIDDLE
-
-p = tf.paragraphs[0]
-p.alignment = PP_ALIGN.CENTER
-r = p.add_run()
-r.text = """Telah meninggal dunia pada usia ... tahun, pada hari ..., ...: ..., dari regio Amstelveen, [isi hubungan keluarga disini].\n
-Majelis dan Jemaat GKIN mengucapkan turut berduka cita yang sedalam-dalamnya. Kiranya Tuhan senantiasa menguatkan dan menghibur keluarga yang ditinggalkan.
-"""
-r.font.name = "Calibri"
-r.font.size = Pt(32)
-r.font.color.rgb = white
-
-# --- Geboorte ---
-slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
-set_background(slide)
-
-box = slide.shapes.add_textbox(BOX_LEFT, Cm(0), BOX_WIDTH, Cm(2))
-tf = box.text_frame
-tf.clear()
-tf.word_wrap = True
-tf.auto_size = MSO_AUTO_SIZE.NONE
-tf.vertical_anchor = MSO_ANCHOR.MIDDLE
-
-p = tf.paragraphs[0]
-p.alignment = PP_ALIGN.CENTER
-r = p.add_run()
-r.text = "Berita Kelahiran"
-r.font.name = "Calibri"
-r.font.size = Pt(32)
-r.font.color.rgb = white
-r.font.bold = True
-
-box = slide.shapes.add_textbox(BOX_LEFT, Cm(3), BOX_WIDTH, Cm(16))
-tf = box.text_frame
-tf.clear()
-tf.word_wrap = True
-tf.auto_size = MSO_AUTO_SIZE.NONE
-tf.vertical_anchor = MSO_ANCHOR.MIDDLE
-
-p = tf.paragraphs[0]
-p.alignment = PP_ALIGN.CENTER
-r = p.add_run()
-r.text = """Pada hari ..., ... telah lahir di ..., ..., putra dari ... dan ..., cucu dari..., dari GKIN regio Amstelveen.\n
-Jemaat dan majelis gereja mengucapkan selamat kepada keluarga ..., kiranya Tuhan memberkati.
-"""
-r.font.name = "Calibri"
-r.font.size = Pt(32)
-r.font.color.rgb = white
-
-# --- Overige ---
-slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
-set_background(slide)
-
-box = slide.shapes.add_textbox(BOX_LEFT, Cm(0), BOX_WIDTH, Cm(2))
-tf = box.text_frame
-tf.clear()
-tf.word_wrap = True
-tf.auto_size = MSO_AUTO_SIZE.NONE
-tf.vertical_anchor = MSO_ANCHOR.MIDDLE
-
-p = tf.paragraphs[0]
-p.alignment = PP_ALIGN.CENTER
-r = p.add_run()
-r.text = "Titel"
-r.font.name = "Calibri"
-r.font.size = Pt(32)
-r.font.color.rgb = white
-r.font.bold = True
-
-box = slide.shapes.add_textbox(BOX_LEFT, Cm(3), BOX_WIDTH, Cm(16))
-tf = box.text_frame
-tf.clear()
-tf.word_wrap = True
-tf.auto_size = MSO_AUTO_SIZE.NONE
-tf.vertical_anchor = MSO_ANCHOR.MIDDLE
-
-p = tf.paragraphs[0]
-p.alignment = PP_ALIGN.CENTER
-r = p.add_run()
-r.text = """[Content... Lorem ipsum...]
-"""
-r.font.name = "Calibri"
-r.font.size = Pt(32)
-r.font.color.rgb = white
-
-# --- Landelijk ---
-
-slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
-set_background(slide)
-
-box = slide.shapes.add_textbox(BOX_LEFT, Cm(0), BOX_WIDTH, Cm(17))
-tf = box.text_frame
-tf.clear()
-tf.word_wrap = True
-tf.auto_size = MSO_AUTO_SIZE.NONE
-tf.vertical_anchor = MSO_ANCHOR.MIDDLE
-
-p = tf.paragraphs[0]
-p.alignment = PP_ALIGN.CENTER
-r = p.add_run()
-r.text = "PEMBERITAHUAN\nLANDELIJK"
-r.font.name = "Calibri"
-r.font.size = Pt(48)
-r.font.color.rgb = white
-r.font.bold = True
-
-
-# --- Overleden ---
-slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
-set_background(slide)
-
-box = slide.shapes.add_textbox(BOX_LEFT, Cm(0), BOX_WIDTH, Cm(2))
-tf = box.text_frame
-tf.clear()
-tf.word_wrap = True
-tf.auto_size = MSO_AUTO_SIZE.NONE
-tf.vertical_anchor = MSO_ANCHOR.MIDDLE
-
-p = tf.paragraphs[0]
-p.alignment = PP_ALIGN.CENTER
-r = p.add_run()
-r.text = "Berita Duka"
-r.font.name = "Calibri"
-r.font.size = Pt(32)
-r.font.color.rgb = white
-r.font.bold = True
-
-box = slide.shapes.add_textbox(BOX_LEFT, Cm(3), BOX_WIDTH, Cm(16))
-tf = box.text_frame
-tf.clear()
-tf.word_wrap = True
-tf.auto_size = MSO_AUTO_SIZE.NONE
-tf.vertical_anchor = MSO_ANCHOR.MIDDLE
-
-p = tf.paragraphs[0]
-p.alignment = PP_ALIGN.CENTER
-r = p.add_run()
-r.text = """Telah meninggal dunia pada usia ... tahun, pada hari ..., ...: ..., dari regio ..., [isi hubungan keluarga disini].\n
-Majelis dan Jemaat GKIN mengucapkan turut berduka cita yang sedalam-dalamnya. Kiranya Tuhan senantiasa menguatkan dan menghibur keluarga yang ditinggalkan.
-"""
-r.font.name = "Calibri"
-r.font.size = Pt(32)
-r.font.color.rgb = white
-
-# --- Geboorte ---
-slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
-set_background(slide)
-
-box = slide.shapes.add_textbox(BOX_LEFT, Cm(0), BOX_WIDTH, Cm(2))
-tf = box.text_frame
-tf.clear()
-tf.word_wrap = True
-tf.auto_size = MSO_AUTO_SIZE.NONE
-tf.vertical_anchor = MSO_ANCHOR.MIDDLE
-
-p = tf.paragraphs[0]
-p.alignment = PP_ALIGN.CENTER
-r = p.add_run()
-r.text = "Berita Kelahiran"
-r.font.name = "Calibri"
-r.font.size = Pt(32)
-r.font.color.rgb = white
-r.font.bold = True
-
-box = slide.shapes.add_textbox(BOX_LEFT, Cm(3), BOX_WIDTH, Cm(16))
-tf = box.text_frame
-tf.clear()
-tf.word_wrap = True
-tf.auto_size = MSO_AUTO_SIZE.NONE
-tf.vertical_anchor = MSO_ANCHOR.MIDDLE
-
-p = tf.paragraphs[0]
-p.alignment = PP_ALIGN.CENTER
-r = p.add_run()
-r.text = """Pada hari ..., ... telah lahir di ..., ..., putra dari ... dan ..., cucu dari..., dari GKIN regio ....\n
-Jemaat dan majelis gereja mengucapkan selamat kepada keluarga ..., kiranya Tuhan memberkati.
-"""
-r.font.name = "Calibri"
-r.font.size = Pt(32)
-r.font.color.rgb = white
-
-# --- Overige ---
-slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
-set_background(slide)
-
-box = slide.shapes.add_textbox(BOX_LEFT, Cm(0), BOX_WIDTH, Cm(2))
-tf = box.text_frame
-tf.clear()
-tf.word_wrap = True
-tf.auto_size = MSO_AUTO_SIZE.NONE
-tf.vertical_anchor = MSO_ANCHOR.MIDDLE
-
-p = tf.paragraphs[0]
-p.alignment = PP_ALIGN.CENTER
-r = p.add_run()
-r.text = "Titel"
-r.font.name = "Calibri"
-r.font.size = Pt(32)
-r.font.color.rgb = white
-r.font.bold = True
-
-box = slide.shapes.add_textbox(BOX_LEFT, Cm(3), BOX_WIDTH, Cm(16))
-tf = box.text_frame
-tf.clear()
-tf.word_wrap = True
-tf.auto_size = MSO_AUTO_SIZE.NONE
-tf.vertical_anchor = MSO_ANCHOR.MIDDLE
-
-p = tf.paragraphs[0]
-p.alignment = PP_ALIGN.CENTER
-r = p.add_run()
-r.text = """[Content... Lorem ipsum...]
-"""
-r.font.name = "Calibri"
-r.font.size = Pt(32)
-r.font.color.rgb = white
-
+if not mededelingen_present:
+    # --- Regional ---
+    
+    slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
+    set_background(slide)
+    
+    box = slide.shapes.add_textbox(BOX_LEFT, Cm(0), BOX_WIDTH, Cm(17))
+    tf = box.text_frame
+    tf.clear()
+    tf.word_wrap = True
+    tf.auto_size = MSO_AUTO_SIZE.NONE
+    tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+    
+    p = tf.paragraphs[0]
+    p.alignment = PP_ALIGN.CENTER
+    r = p.add_run()
+    r.text = "PEMBERITAHUAN\nREGIONAL"
+    r.font.name = "Calibri"
+    r.font.size = Pt(48)
+    r.font.color.rgb = white
+    r.font.bold = True
+    
+    # --- Overleden ---
+    slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
+    set_background(slide)
+    
+    box = slide.shapes.add_textbox(BOX_LEFT, Cm(0), BOX_WIDTH, Cm(2))
+    tf = box.text_frame
+    tf.clear()
+    tf.word_wrap = True
+    tf.auto_size = MSO_AUTO_SIZE.NONE
+    tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+    
+    p = tf.paragraphs[0]
+    p.alignment = PP_ALIGN.CENTER
+    r = p.add_run()
+    r.text = "Berita Duka"
+    r.font.name = "Calibri"
+    r.font.size = Pt(32)
+    r.font.color.rgb = white
+    r.font.bold = True
+    
+    box = slide.shapes.add_textbox(BOX_LEFT, Cm(3), BOX_WIDTH, Cm(16))
+    tf = box.text_frame
+    tf.clear()
+    tf.word_wrap = True
+    tf.auto_size = MSO_AUTO_SIZE.NONE
+    tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+    
+    p = tf.paragraphs[0]
+    p.alignment = PP_ALIGN.CENTER
+    r = p.add_run()
+    r.text = """Telah meninggal dunia pada usia ... tahun, pada hari ..., ...: ..., dari regio Amstelveen, [isi hubungan keluarga disini].\n
+    Majelis dan Jemaat GKIN mengucapkan turut berduka cita yang sedalam-dalamnya. Kiranya Tuhan senantiasa menguatkan dan menghibur keluarga yang ditinggalkan.
+    """
+    r.font.name = "Calibri"
+    r.font.size = Pt(32)
+    r.font.color.rgb = white
+    
+    # --- Geboorte ---
+    slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
+    set_background(slide)
+    
+    box = slide.shapes.add_textbox(BOX_LEFT, Cm(0), BOX_WIDTH, Cm(2))
+    tf = box.text_frame
+    tf.clear()
+    tf.word_wrap = True
+    tf.auto_size = MSO_AUTO_SIZE.NONE
+    tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+    
+    p = tf.paragraphs[0]
+    p.alignment = PP_ALIGN.CENTER
+    r = p.add_run()
+    r.text = "Berita Kelahiran"
+    r.font.name = "Calibri"
+    r.font.size = Pt(32)
+    r.font.color.rgb = white
+    r.font.bold = True
+    
+    box = slide.shapes.add_textbox(BOX_LEFT, Cm(3), BOX_WIDTH, Cm(16))
+    tf = box.text_frame
+    tf.clear()
+    tf.word_wrap = True
+    tf.auto_size = MSO_AUTO_SIZE.NONE
+    tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+    
+    p = tf.paragraphs[0]
+    p.alignment = PP_ALIGN.CENTER
+    r = p.add_run()
+    r.text = """Pada hari ..., ... telah lahir di ..., ..., putra dari ... dan ..., cucu dari..., dari GKIN regio Amstelveen.\n
+    Jemaat dan majelis gereja mengucapkan selamat kepada keluarga ..., kiranya Tuhan memberkati.
+    """
+    r.font.name = "Calibri"
+    r.font.size = Pt(32)
+    r.font.color.rgb = white
+    
+    # --- Overige ---
+    slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
+    set_background(slide)
+    
+    box = slide.shapes.add_textbox(BOX_LEFT, Cm(0), BOX_WIDTH, Cm(2))
+    tf = box.text_frame
+    tf.clear()
+    tf.word_wrap = True
+    tf.auto_size = MSO_AUTO_SIZE.NONE
+    tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+    
+    p = tf.paragraphs[0]
+    p.alignment = PP_ALIGN.CENTER
+    r = p.add_run()
+    r.text = "Titel"
+    r.font.name = "Calibri"
+    r.font.size = Pt(32)
+    r.font.color.rgb = white
+    r.font.bold = True
+    
+    box = slide.shapes.add_textbox(BOX_LEFT, Cm(3), BOX_WIDTH, Cm(16))
+    tf = box.text_frame
+    tf.clear()
+    tf.word_wrap = True
+    tf.auto_size = MSO_AUTO_SIZE.NONE
+    tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+    
+    p = tf.paragraphs[0]
+    p.alignment = PP_ALIGN.CENTER
+    r = p.add_run()
+    r.text = """[Content... Lorem ipsum...]
+    """
+    r.font.name = "Calibri"
+    r.font.size = Pt(32)
+    r.font.color.rgb = white
+    
+    # --- Landelijk ---
+    
+    slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
+    set_background(slide)
+    
+    box = slide.shapes.add_textbox(BOX_LEFT, Cm(0), BOX_WIDTH, Cm(17))
+    tf = box.text_frame
+    tf.clear()
+    tf.word_wrap = True
+    tf.auto_size = MSO_AUTO_SIZE.NONE
+    tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+    
+    p = tf.paragraphs[0]
+    p.alignment = PP_ALIGN.CENTER
+    r = p.add_run()
+    r.text = "PEMBERITAHUAN\nLANDELIJK"
+    r.font.name = "Calibri"
+    r.font.size = Pt(48)
+    r.font.color.rgb = white
+    r.font.bold = True
+    
+    
+    # --- Overleden ---
+    slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
+    set_background(slide)
+    
+    box = slide.shapes.add_textbox(BOX_LEFT, Cm(0), BOX_WIDTH, Cm(2))
+    tf = box.text_frame
+    tf.clear()
+    tf.word_wrap = True
+    tf.auto_size = MSO_AUTO_SIZE.NONE
+    tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+    
+    p = tf.paragraphs[0]
+    p.alignment = PP_ALIGN.CENTER
+    r = p.add_run()
+    r.text = "Berita Duka"
+    r.font.name = "Calibri"
+    r.font.size = Pt(32)
+    r.font.color.rgb = white
+    r.font.bold = True
+    
+    box = slide.shapes.add_textbox(BOX_LEFT, Cm(3), BOX_WIDTH, Cm(16))
+    tf = box.text_frame
+    tf.clear()
+    tf.word_wrap = True
+    tf.auto_size = MSO_AUTO_SIZE.NONE
+    tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+    
+    p = tf.paragraphs[0]
+    p.alignment = PP_ALIGN.CENTER
+    r = p.add_run()
+    r.text = """Telah meninggal dunia pada usia ... tahun, pada hari ..., ...: ..., dari regio ..., [isi hubungan keluarga disini].\n
+    Majelis dan Jemaat GKIN mengucapkan turut berduka cita yang sedalam-dalamnya. Kiranya Tuhan senantiasa menguatkan dan menghibur keluarga yang ditinggalkan.
+    """
+    r.font.name = "Calibri"
+    r.font.size = Pt(32)
+    r.font.color.rgb = white
+    
+    # --- Geboorte ---
+    slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
+    set_background(slide)
+    
+    box = slide.shapes.add_textbox(BOX_LEFT, Cm(0), BOX_WIDTH, Cm(2))
+    tf = box.text_frame
+    tf.clear()
+    tf.word_wrap = True
+    tf.auto_size = MSO_AUTO_SIZE.NONE
+    tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+    
+    p = tf.paragraphs[0]
+    p.alignment = PP_ALIGN.CENTER
+    r = p.add_run()
+    r.text = "Berita Kelahiran"
+    r.font.name = "Calibri"
+    r.font.size = Pt(32)
+    r.font.color.rgb = white
+    r.font.bold = True
+    
+    box = slide.shapes.add_textbox(BOX_LEFT, Cm(3), BOX_WIDTH, Cm(16))
+    tf = box.text_frame
+    tf.clear()
+    tf.word_wrap = True
+    tf.auto_size = MSO_AUTO_SIZE.NONE
+    tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+    
+    p = tf.paragraphs[0]
+    p.alignment = PP_ALIGN.CENTER
+    r = p.add_run()
+    r.text = """Pada hari ..., ... telah lahir di ..., ..., putra dari ... dan ..., cucu dari..., dari GKIN regio ....\n
+    Jemaat dan majelis gereja mengucapkan selamat kepada keluarga ..., kiranya Tuhan memberkati.
+    """
+    r.font.name = "Calibri"
+    r.font.size = Pt(32)
+    r.font.color.rgb = white
+    
+    # --- Overige ---
+    slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
+    set_background(slide)
+    
+    box = slide.shapes.add_textbox(BOX_LEFT, Cm(0), BOX_WIDTH, Cm(2))
+    tf = box.text_frame
+    tf.clear()
+    tf.word_wrap = True
+    tf.auto_size = MSO_AUTO_SIZE.NONE
+    tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+    
+    p = tf.paragraphs[0]
+    p.alignment = PP_ALIGN.CENTER
+    r = p.add_run()
+    r.text = "Titel"
+    r.font.name = "Calibri"
+    r.font.size = Pt(32)
+    r.font.color.rgb = white
+    r.font.bold = True
+    
+    box = slide.shapes.add_textbox(BOX_LEFT, Cm(3), BOX_WIDTH, Cm(16))
+    tf = box.text_frame
+    tf.clear()
+    tf.word_wrap = True
+    tf.auto_size = MSO_AUTO_SIZE.NONE
+    tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+    
+    p = tf.paragraphs[0]
+    p.alignment = PP_ALIGN.CENTER
+    r = p.add_run()
+    r.text = """[Content... Lorem ipsum...]
+    """
+    r.font.name = "Calibri"
+    r.font.size = Pt(32)
+    r.font.color.rgb = white
+    
 # --- DIENST ---
 
 def addBox(slide, text = "Text", left=Cm(0), top=Cm(0), width=Cm(0), height=Cm(0), color = RGBColor(255,255,255), Size = Pt(24), alignment = "CENTER", italic = False, bold = False, underline=False):
