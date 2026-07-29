@@ -3761,64 +3761,53 @@ def _translate_text_blocks(client, text_blocks):
 
 
 def _build_bilingual_preek_docx(blocks, translated_texts):
-    """Build a bilingual DOCX: left column = original, right column = translation (blue)."""
+    """Build a bilingual DOCX: one row per block, left = original, right = blue translation."""
     import io, os, tempfile, uuid
     from docx import Document
     from docx.shared import Cm, Pt, RGBColor
     from docx.oxml.ns import qn
     from docx.oxml import OxmlElement
+    from docx.enum.table import WD_ALIGN_VERTICAL
 
     BLUE = RGBColor(0x21, 0x5E, 0x99)
     FONT = 'Aptos Display'
 
     doc = Document()
-    table = doc.add_table(rows=1, cols=2)
+    table = doc.add_table(rows=0, cols=2)
     table.autofit = False
-    left_cell = table.rows[0].cells[0]
-    right_cell = table.rows[0].cells[1]
-    left_cell.width = Cm(8.0)
-    right_cell.width = Cm(8.0)
+    table.style = 'Table Grid'
 
-    def _clear_cell_borders(cell):
-        tcPr = cell._tc.get_or_add_tcPr()
-        tcBorders = OxmlElement('w:tcBorders')
-        for side in ('top', 'left', 'bottom', 'right'):
-            border = OxmlElement(f'w:{side}')
-            border.set(qn('w:val'), 'nil')
-            border.set(qn('w:sz'), '0')
-            border.set(qn('w:space'), '0')
-            tcBorders.append(border)
-        tcPr.append(tcBorders)
-
-    _clear_cell_borders(left_cell)
-    _clear_cell_borders(right_cell)
-
-    tb_idx = 0
-    first_left = True
-    first_right = True
+    col_width = Cm(8.0)
     temp_image_paths = []
+    tb_idx = 0
 
     for b in blocks:
-        if b['type'] == 'text':
-            lp = left_cell.paragraphs[0] if first_left else left_cell.add_paragraph()
-            first_left = False
-            lr = lp.add_run(b['text'])
-            lr.font.name = FONT
-            if b.get('bold'):
-                lr.bold = True
-            if b.get('italic'):
-                lr.italic = True
+        row = table.add_row()
+        left_cell = row.cells[0]
+        right_cell = row.cells[1]
+        left_cell.width = col_width
+        right_cell.width = col_width
+        left_cell.vertical_alignment = WD_ALIGN_VERTICAL.TOP
+        right_cell.vertical_alignment = WD_ALIGN_VERTICAL.TOP
 
-            rp = right_cell.paragraphs[0] if first_right else right_cell.add_paragraph()
-            first_right = False
-            right_text = translated_texts[tb_idx] if tb_idx < len(translated_texts) else ''
-            rr = rp.add_run(right_text)
-            rr.font.name = FONT
-            rr.font.color.rgb = BLUE
+        if b['type'] == 'text':
+            left_para = left_cell.paragraphs[0]
+            left_run = left_para.add_run(b['text'])
+            left_run.font.name = FONT
             if b.get('bold'):
-                rr.bold = True
+                left_run.bold = True
             if b.get('italic'):
-                rr.italic = True
+                left_run.italic = True
+
+            right_para = right_cell.paragraphs[0]
+            right_text = translated_texts[tb_idx] if tb_idx < len(translated_texts) else ''
+            right_run = right_para.add_run(right_text)
+            right_run.font.name = FONT
+            right_run.font.color.rgb = BLUE
+            if b.get('bold'):
+                right_run.bold = True
+            if b.get('italic'):
+                right_run.italic = True
 
             tb_idx += 1
 
@@ -3839,15 +3828,13 @@ def _build_bilingual_preek_docx(blocks, translated_texts):
                     f.write(img_bytes)
                 temp_image_paths.append(tmp_path)
 
-                p_left = left_cell.paragraphs[0] if first_left else left_cell.add_paragraph()
-                first_left = False
-                r_left = p_left.add_run()
-                r_left.add_picture(tmp_path, width=Cm(7.5))
+                left_para = left_cell.paragraphs[0]
+                left_run = left_para.add_run()
+                left_run.add_picture(tmp_path, width=Cm(7.3))
 
-                p_right = right_cell.paragraphs[0] if first_right else right_cell.add_paragraph()
-                first_right = False
-                r_right = p_right.add_run()
-                r_right.add_picture(tmp_path, width=Cm(7.5))
+                right_para = right_cell.paragraphs[0]
+                right_run = right_para.add_run()
+                right_run.add_picture(tmp_path, width=Cm(7.3))
 
     out = io.BytesIO()
     doc.save(out)
