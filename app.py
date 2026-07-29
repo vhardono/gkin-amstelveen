@@ -3639,11 +3639,251 @@ def _read_doc_paragraphs(file_bytes, filename=''):
         raise
 
 
+def _extract_images_from_run(run, doc):
+    """Return a list of image byte blobs found in a docx run."""
+    images = []
+    ns = {
+        'w': 'http://schemas.openxmlformats.org/wordprocessingml/2006/main',
+        'a': 'http://schemas.openxmlformats.org/drawingml/2006/main',
+        'v': 'urn:schemas-microsoft-com:vml',
+        'r': 'http://schemas.openxmlformats.org/officeDocument/2006/relationships'
+    }
+    for drawing in run._r.findall('.//w:drawing', ns):
+        blip = drawing.find('.//a:blip', ns)
+        if blip is not None:
+            rId = blip.get('{http://schemas.openxmlformats.org/officeDocument/2006/relationships}embed')
+            if rId:
+                try:
+                    images.append(doc.part.get_rel(rId).target_part.blob)
+                except Exception:
+                    pass
+    for pict in run._r.findall('.//w:pict', ns):
+        im = pict.find('.//v:imagedata', ns)
+        if im is not None:
+            rId = im.get('{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id')
+            if rId:
+                try:
+                    images.append(doc.part.get_rel(rId).target_part.blob)
+                except Exception:
+                    pass
+    return images
+
+
+def _extract_preek_blocks(file_bytes):
+    """Extract a list of text/image blocks from a .docx preek file.
+    Strips any existing translation section when a translation marker is found."""
+    import io
+    from docx import Document
+
+    doc = Document(io.BytesIO(file_bytes))
+    blocks = []
+    markers = [
+        'terjemahan ke dalam bahasa indonesia',
+        'terjemahan ke dalam bahasa belanda',
+        'terjemahan ke dalam bahasa',
+        'vertaling naar het indonesisch',
+        'vertaling naar het nederlands',
+        'indonesian translation',
+        'dutch translation',
+    ]
+    for p in doc.paragraphs:
+        text = p.text.strip()
+        if text:
+            clean = text.lower().lstrip('*_ ')
+            if any(m in clean for m in markers):
+                break
+
+        current_text = ''
+        current_bold = any(r.bold for r in p.runs) if p.runs else False
+        current_italic = any(r.italic for r in p.runs) if p.runs else False
+        any_images = False
+        for run in p.runs:
+            images = _extract_images_from_run(run, doc)
+            if images:
+                if current_text:
+                    blocks.append({'type': 'text', 'text': current_text, 'bold': current_bold, 'italic': current_italic})
+                    current_text = ''
+                blocks.append({'type': 'image', 'images': images})
+                any_images = True
+            else:
+                if run.text:
+                    current_text += run.text
+        if current_text or (not any_images and not p.runs):
+            blocks.append({'type': 'text', 'text': current_text, 'bold': current_bold, 'italic': current_italic})
+    return blocks
+
+
+def _translate_text_blocks(client, text_blocks):
+    """Translate a list of text blocks and return a list of translated strings.
+    Uses [[BLOCK_N]] markers to keep translations aligned with the original."""
+    import re
+    if not text_blocks:
+        return []
+
+    source_lines = []
+    for i, b in enumerate(text_blocks):
+        source_lines.append(f'[[BLOCK_{i}]]')
+        source_lines.append(b['text'])
+    source_text = '\n'.join(source_lines)
+
+    PROMPT = (
+        "You are a professional church sermon translator.\n"
+        "Your task: Determine the language of the text below, then translate it to the OTHER language.\n"
+        "- If the text is in Indonesian (Bahasa Indonesia) → translate to Dutch (Nederlands).\n"
+        "- If the text is in Dutch (Nederlands) → translate to Indonesian (Bahasa Indonesia).\n\n"
+        "The text is divided into blocks marked with [[BLOCK_N]].\n"
+        "Return the translation with the exact same [[BLOCK_N]] markers in the same order.\n"
+        "Do NOT add, remove, rename, or translate the markers.\n"
+        "Preserve the paragraph structure and line breaks within each block.\n"
+        "Output ONLY the translated text with the markers.\n"
+        "Use proper church and liturgical terminology in the target language.\n\n"
+        "TEXT TO TRANSLATE:\n" + source_text
+    )
+
+    response = client.models.generate_content(model='gemini-2.5-flash', contents=PROMPT)
+    translated = response.text.strip()
+
+    pattern = re.compile(r'\[\[BLOCK_(\d+)\]\]\s*(.*?)(?=\[\[BLOCK_\d+\]\]|\Z)', re.DOTALL)
+    matches = pattern.findall(translated)
+    if matches:
+        result = [''] * len(text_blocks)
+        for idx_str, text in matches:
+            idx = int(idx_str)
+            if 0 <= idx < len(text_blocks):
+                result[idx] = text.strip()
+        return result
+
+    # Fallback: if the model ignored markers, split by lines and assign in order.
+    parts = [p.strip() for p in translated.splitlines() if p.strip()]
+    if len(parts) >= len(text_blocks):
+        return parts[:len(text_blocks)]
+    return parts + [''] * (len(text_blocks) - len(parts))
+
+
+def _build_bilingual_preek_docx(blocks, translated_texts):
+    """Build a bilingual DOCX: left column = original, right column = translation (blue)."""
+    import io, os, tempfile, uuid
+    from docx import Document
+    from docx.shared import Cm, Pt, RGBColor
+    from docx.oxml.ns import qn
+    from docx.oxml import OxmlElement
+
+    BLUE = RGBColor(0x21, 0x5E, 0x99)
+    FONT = 'Aptos Display'
+
+    doc = Document()
+    table = doc.add_table(rows=1, cols=2)
+    table.autofit = False
+    left_cell = table.rows[0].cells[0]
+    right_cell = table.rows[0].cells[1]
+    left_cell.width = Cm(8.0)
+    right_cell.width = Cm(8.0)
+
+    def _clear_cell_borders(cell):
+        tcPr = cell._tc.get_or_add_tcPr()
+        tcBorders = OxmlElement('w:tcBorders')
+        for side in ('top', 'left', 'bottom', 'right'):
+            border = OxmlElement(f'w:{side}')
+            border.set(qn('w:val'), 'nil')
+            border.set(qn('w:sz'), '0')
+            border.set(qn('w:space'), '0')
+            tcBorders.append(border)
+        tcPr.append(tcBorders)
+
+    _clear_cell_borders(left_cell)
+    _clear_cell_borders(right_cell)
+
+    tb_idx = 0
+    first_left = True
+    first_right = True
+    temp_image_paths = []
+
+    for b in blocks:
+        if b['type'] == 'text':
+            lp = left_cell.paragraphs[0] if first_left else left_cell.add_paragraph()
+            first_left = False
+            lr = lp.add_run(b['text'])
+            lr.font.name = FONT
+            if b.get('bold'):
+                lr.bold = True
+            if b.get('italic'):
+                lr.italic = True
+
+            rp = right_cell.paragraphs[0] if first_right else right_cell.add_paragraph()
+            first_right = False
+            right_text = translated_texts[tb_idx] if tb_idx < len(translated_texts) else ''
+            rr = rp.add_run(right_text)
+            rr.font.name = FONT
+            rr.font.color.rgb = BLUE
+            if b.get('bold'):
+                rr.bold = True
+            if b.get('italic'):
+                rr.italic = True
+
+            tb_idx += 1
+
+        elif b['type'] == 'image':
+            for img_bytes in b['images']:
+                if img_bytes[:2] == b'\xff\xd8':
+                    ext = 'jpg'
+                elif img_bytes[:6] in (b'GIF87a', b'GIF89a'):
+                    ext = 'gif'
+                elif img_bytes[:4] == b'\x89PNG':
+                    ext = 'png'
+                elif img_bytes[:4] == b'RIFF' and img_bytes[8:12] == b'WEBP':
+                    ext = 'webp'
+                else:
+                    ext = 'png'
+                tmp_path = os.path.join(tempfile.gettempdir(), f'preek_img_{uuid.uuid4().hex}.{ext}')
+                with open(tmp_path, 'wb') as f:
+                    f.write(img_bytes)
+                temp_image_paths.append(tmp_path)
+
+                p_left = left_cell.paragraphs[0] if first_left else left_cell.add_paragraph()
+                first_left = False
+                r_left = p_left.add_run()
+                r_left.add_picture(tmp_path, width=Cm(7.5))
+
+                p_right = right_cell.paragraphs[0] if first_right else right_cell.add_paragraph()
+                first_right = False
+                r_right = p_right.add_run()
+                r_right.add_picture(tmp_path, width=Cm(7.5))
+
+    out = io.BytesIO()
+    doc.save(out)
+    for p in temp_image_paths:
+        try:
+            os.remove(p)
+        except Exception:
+            pass
+    out.seek(0)
+    return out.getvalue()
+
+
+def _bilingual_preek_from_bytes(client, file_bytes, filename=''):
+    """Extract, translate and build a bilingual Preek DOCX."""
+    ext = (filename or '').lower().rsplit('.', 1)[-1]
+    if ext == 'doc':
+        paragraphs, _ = _read_doc_paragraphs(file_bytes, filename)
+        blocks = [{'type': 'text', 'text': p, 'bold': False, 'italic': False} for p in paragraphs]
+    else:
+        blocks = _extract_preek_blocks(file_bytes)
+
+    all_text_blocks = [b for b in blocks if b['type'] == 'text']
+    non_empty_indices = [i for i, b in enumerate(all_text_blocks) if b['text'].strip()]
+    non_empty_blocks = [all_text_blocks[i] for i in non_empty_indices]
+    translated_non_empty = _translate_text_blocks(client, non_empty_blocks)
+    translated_texts = [''] * len(all_text_blocks)
+    for pos, all_idx in enumerate(non_empty_indices):
+        translated_texts[all_idx] = translated_non_empty[pos] if pos < len(translated_non_empty) else ''
+
+    return _build_bilingual_preek_docx(blocks, translated_texts)
+
+
 @app.route('/liturgie/translate-preek', methods=['POST'])
 def translate_preek():
-    """Translate an uploaded DOCX preek file using Gemini (NL↔ID) and return translated DOCX."""
+    """Translate an uploaded DOCX preek file and return a bilingual DOCX."""
     import os, io
-    from docx import Document as DocxDocument
 
     api_key = os.environ.get('GEMINI_API_KEY', '')
     if not api_key:
@@ -3658,44 +3898,14 @@ def translate_preek():
         client = genai.Client(api_key=api_key)
 
         file_bytes = file.read()
-        paragraphs, orig_doc = _read_doc_paragraphs(file_bytes, file.filename or '')
+        docx_bytes = _bilingual_preek_from_bytes(client, file_bytes, file.filename or '')
 
-        source_text = '\n'.join(p for p in paragraphs if p.strip())
-        print(f"[translate-preek] Source text length: {len(source_text)} chars, first 200: {source_text[:200]}")
-        PROMPT = (
-            "You are a professional church sermon translator.\n"
-            "Your task: Determine the language of the text below, then translate it to the OTHER language.\n"
-            "- If the text is in Indonesian (Bahasa Indonesia) → translate the ENTIRE text to Dutch (Nederlands).\n"
-            "- If the text is in Dutch (Nederlands) → translate the ENTIRE text to Indonesian (Bahasa Indonesia).\n\n"
-            "CRITICAL RULES:\n"
-            "1. Output ONLY the full translated text in the TARGET language.\n"
-            "2. Do NOT output any part of the original text.\n"
-            "3. Do NOT add titles like 'Vertaling' or 'Terjemahan' or any headers.\n"
-            "4. Do NOT add notes, explanations, or commentary.\n"
-            "5. Preserve the original paragraph structure exactly.\n"
-            "6. Use proper church and liturgical terminology in the target language.\n\n"
-            "TEXT TO TRANSLATE:\n" + source_text
-        )
-        response = client.models.generate_content(model='gemini-2.5-flash', contents=PROMPT)
-        translated_text = response.text.strip()
-        print(f"[translate-preek] Translated text length: {len(translated_text)} chars, first 200: {translated_text[:200]}")
-
-        # Build new DOCX from translated text lines only
-        new_doc = DocxDocument()
-        for line in translated_text.splitlines():
-            new_doc.add_paragraph(line)
-
-        out = io.BytesIO()
-        new_doc.save(out)
-        out.seek(0)
-
-        translated_filename = 'Preek.docx'
-
+        out = io.BytesIO(docx_bytes)
         return send_file(
             out,
             mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
             as_attachment=True,
-            download_name=translated_filename
+            download_name='Preek.docx'
         )
 
     except Exception as e:
@@ -3706,9 +3916,8 @@ def translate_preek():
 
 @app.route('/liturgie/translate-preek-inline', methods=['POST'])
 def translate_preek_inline():
-    """Translate an uploaded DOCX using Gemini and return base64 DOCX for use in liturgie generator."""
-    import os, io
-    from docx import Document as DocxDocument
+    """Translate an uploaded DOCX and return a base64 bilingual DOCX for liturgie generator."""
+    import os, io, base64
 
     api_key = os.environ.get('GEMINI_API_KEY', '')
     if not api_key:
@@ -3723,40 +3932,9 @@ def translate_preek_inline():
         client = genai.Client(api_key=api_key)
 
         file_bytes = file.read()
-        paragraphs, orig_doc = _read_doc_paragraphs(file_bytes, file.filename or '')
+        docx_bytes = _bilingual_preek_from_bytes(client, file_bytes, file.filename or '')
 
-        source_text = '\n'.join(p for p in paragraphs if p.strip())
-        print(f"[translate-preek-inline] Source text length: {len(source_text)} chars, first 200: {source_text[:200]}")
-        PROMPT = (
-            "You are a professional church sermon translator.\n"
-            "Your task: Determine the language of the text below, then translate it to the OTHER language.\n"
-            "- If the text is in Indonesian (Bahasa Indonesia) → translate the ENTIRE text to Dutch (Nederlands).\n"
-            "- If the text is in Dutch (Nederlands) → translate the ENTIRE text to Indonesian (Bahasa Indonesia).\n\n"
-            "CRITICAL RULES:\n"
-            "1. Output ONLY the full translated text in the TARGET language.\n"
-            "2. Do NOT output any part of the original text.\n"
-            "3. Do NOT add titles like 'Vertaling' or 'Terjemahan' or any headers.\n"
-            "4. Do NOT add notes, explanations, or commentary.\n"
-            "5. Preserve the original paragraph structure exactly.\n"
-            "6. Use proper church and liturgical terminology in the target language.\n\n"
-            "TEXT TO TRANSLATE:\n" + source_text
-        )
-
-        response = client.models.generate_content(model='gemini-2.5-flash', contents=PROMPT)
-        translated_text = response.text.strip()
-        print(f"[translate-preek-inline] Translated text length: {len(translated_text)} chars, first 200: {translated_text[:200]}")
-
-        # Build new DOCX from translated text lines only
-        new_doc = DocxDocument()
-        for line in translated_text.splitlines():
-            new_doc.add_paragraph(line)
-
-        out = io.BytesIO()
-        new_doc.save(out)
-        out.seek(0)
-
-        import base64
-        docx_b64 = base64.b64encode(out.getvalue()).decode('utf-8')
+        docx_b64 = base64.b64encode(docx_bytes).decode('utf-8')
 
         return jsonify({
             'success': True,

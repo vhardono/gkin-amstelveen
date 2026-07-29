@@ -4203,7 +4203,24 @@ path_sermon = os.path.join(dir_path + '/file mingguan/', PREEK_NAME)
 
 if os.path.exists(path_sermon):
     preek_doc = Document(path_sermon)
+
+    # Backward-compatible paragraph extraction
     full_text = "\n".join(p.text for p in preek_doc.paragraphs)
+
+    # If the body is empty but the doc contains a table (bilingual Preek), use
+    # the right column (translated version) as the sermon text for the slides.
+    if not full_text.strip() and preek_doc.tables:
+        first_table = preek_doc.tables[0]
+        if len(first_table.columns) > 1:
+            col_idx = 1
+        else:
+            col_idx = 0
+        cell_texts = []
+        for cell in first_table.columns[col_idx].cells:
+            for p in cell.paragraphs:
+                if p.text.strip():
+                    cell_texts.append(p.text)
+        full_text = "\n".join(cell_texts)
 
     # Remove final AMEN/AMIN
     clean_text, removed_amen = strip_final_amen(full_text)
