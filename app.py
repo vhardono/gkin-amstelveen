@@ -3775,7 +3775,19 @@ def _build_bilingual_preek_docx(blocks, translated_texts):
     doc = Document()
     table = doc.add_table(rows=0, cols=2)
     table.autofit = False
-    table.style = 'Table Grid'
+    # No table style, so we can control borders manually.
+
+    def _set_borders(cell, left='nil', right='nil', top='nil', bottom='nil'):
+        tcPr = cell._tc.get_or_add_tcPr()
+        tcBorders = OxmlElement('w:tcBorders')
+        for side, val in (('left', left), ('right', right), ('top', top), ('bottom', bottom)):
+            border = OxmlElement(f'w:{side}')
+            border.set(qn('w:val'), val)
+            border.set(qn('w:sz'), '4')
+            border.set(qn('w:space'), '0')
+            border.set(qn('w:color'), '000000')
+            tcBorders.append(border)
+        tcPr.append(tcBorders)
 
     col_width = Cm(8.0)
     temp_image_paths = []
@@ -3789,6 +3801,10 @@ def _build_bilingual_preek_docx(blocks, translated_texts):
         right_cell.width = col_width
         left_cell.vertical_alignment = WD_ALIGN_VERTICAL.TOP
         right_cell.vertical_alignment = WD_ALIGN_VERTICAL.TOP
+
+        # Only a vertical separator between the two columns; no horizontal lines.
+        _set_borders(left_cell, left='nil', right='single', top='nil', bottom='nil')
+        _set_borders(right_cell, left='single', right='nil', top='nil', bottom='nil')
 
         if b['type'] == 'text':
             left_para = left_cell.paragraphs[0]
