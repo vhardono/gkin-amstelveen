@@ -2565,8 +2565,8 @@ def add_sermon_doc_to_ppt(
     header_height = Cm(2) if header_text else Cm(0)
     content_top = box_top + header_height
     content_height = box_height - header_height
-    if header_text and box_height.cm > 0:
-        ML = max(1, int(ML * (content_height.cm / box_height.cm)))
+    if header_text and float(box_height) > 0:
+        ML = max(1, int(ML * (float(content_height) / float(box_height))))
 
     def _flush_notes(target_slide, notes_list):
         if not (notes_text or header_notes_text) or not (notes_list or header_notes_text):
