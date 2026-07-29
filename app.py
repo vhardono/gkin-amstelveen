@@ -5,6 +5,7 @@ Redeploy trigger
 
 import base64
 import builtins
+import json
 import os
 import shutil
 import tempfile
