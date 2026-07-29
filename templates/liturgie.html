@@ -938,8 +938,9 @@
                 const resp = await fetch('/liturgie/generate', { method: 'POST', body: fd });
 
                 if (resp.ok) {
-                    // Parse the JSON list of {name, data_b64} objects
-                    const files = await resp.json();
+                    const payload = await resp.json();
+                    const files = Array.isArray(payload) ? payload : (payload.files || []);
+                    const warnings = Array.isArray(payload.warnings) ? payload.warnings : [];
                     for (let i = 0; i < files.length; i++) {
                         const f = files[i];
                         await new Promise(resolve => setTimeout(resolve, i === 0 ? 0 : 800));
@@ -954,7 +955,13 @@
                         a.remove();
                         URL.revokeObjectURL(url);
                     }
-                    showStatus(`✓ ${files.length} bestand(en) gedownload.`, 'success');
+                    let msg = `✓ ${files.length} bestand(en) gedownload.`;
+                    if (warnings.length) {
+                        msg += ' Waarschuwing: ' + warnings.join(' ');
+                        showStatus(msg, 'warning');
+                    } else {
+                        showStatus(msg, 'success');
+                    }
                 } else {
                     const data = await resp.json().catch(() => ({ error: 'Onbekende fout.' }));
                     showStatus('Fout: ' + (data.error || resp.statusText), 'error');
