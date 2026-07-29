@@ -2674,6 +2674,9 @@ def add_sermon_doc_to_ppt(
 
         # 3) Paragraph itself is longer than a slide → split into sentence CHUNKS that fit
         sents = _sentences(para)
+        original_sents = _sentences(notes_para)
+        orig_idx = 0
+        orig_total = max(len(original_sents), 1)
         idx = 0
         while idx < len(sents):
             # if there is already content, move to a fresh slide
@@ -2711,9 +2714,19 @@ def add_sermon_doc_to_ppt(
                 idx += 1
                 made_progress = True
 
+            # Determine which part of the original paragraph corresponds to this translated chunk.
+            if original_sents:
+                orig_end = int((idx / len(sents)) * orig_total)
+                if orig_end == orig_idx and orig_end < orig_total:
+                    orig_end = min(orig_idx + 1, orig_total)
+                orig_chunk = " ".join(original_sents[orig_idx:orig_end])
+                orig_idx = min(orig_end, orig_total)
+            else:
+                orig_chunk = ""
+
             # Render this chunk as ONE PPT paragraph
             _add_one_paragraph(tf, chunk_text)
-            current_notes.append(notes_para)
+            current_notes.append(orig_chunk)
             used_lines = chunk_lines
 
             # If more sentences remain, go to a fresh slide
