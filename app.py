@@ -1230,7 +1230,7 @@ def _run_liturgi(excel_bytes: bytes, preek_bytes, work_dir: str) -> dict:
             reader = OutlookCollecteReader()
             if reader.is_authenticated():
                 email_data = reader.fetch_collecte_data(target_date=service_date, since_days=60)
-                qr_b64_data = email_data.get('dankoffer_qr_b64', '') or email_data.get('ole_qr_b64', '')
+                qr_b64_data = email_data.get('dankoffer_qr_b64', '')
                 if qr_b64_data and qr_b64_data.startswith('data:'):
                     import base64 as _base64
                     header, _, b64 = qr_b64_data.partition(',')

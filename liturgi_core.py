@@ -725,12 +725,16 @@ right_cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
 p_qr = right_cell.add_paragraph()
 p_qr.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
 
-# Look for a QR image file in the working folder or via QR_IMAGE_PATH
+# Look for a Tikkie QR image file in the working folder or via QR_IMAGE_PATH.
+# We deliberately only accept files whose names start with dankoffer/tikkie,
+# so we never fall back to an OLE QR or other unrelated QR.
 _qr_path = None
 if 'QR_IMAGE_PATH' in globals() and QR_IMAGE_PATH and os.path.exists(QR_IMAGE_PATH):
-    _qr_path = QR_IMAGE_PATH
-else:
-    for _qr_name in ['dankoffer_qr.png', 'dankoffer_qr.jpg', 'qr_code.png', 'qr_code.jpg', 'qr.png', 'qr.jpg']:
+    _qr_basename = os.path.basename(QR_IMAGE_PATH).lower()
+    if _qr_basename.startswith(('dankoffer', 'tikkie')):
+        _qr_path = QR_IMAGE_PATH
+if not _qr_path:
+    for _qr_name in ['dankoffer_qr.png', 'dankoffer_qr.jpg', 'tikkie_qr.png', 'tikkie_qr.jpg']:
         _candidate = os.path.join(dir_path, 'file mingguan', _qr_name)
         if os.path.exists(_candidate):
             _qr_path = _candidate
@@ -2031,6 +2035,11 @@ def add_qr_image_to_slide(slide, qr_path=None, width=Cm(7), height=Cm(7), bottom
     """Add the Tikkie QR image centered near the bottom of a slide if available."""
     if qr_path is None:
         qr_path = globals().get('_qr_path') or globals().get('QR_IMAGE_PATH')
+    # Only accept a Tikkie/dankoffer QR image, never an OLE/other QR.
+    if qr_path and os.path.exists(qr_path):
+        _qr_basename = os.path.basename(qr_path).lower()
+        if not _qr_basename.startswith(('dankoffer', 'tikkie')):
+            qr_path = None
     if qr_path and os.path.exists(qr_path):
         left = (SLIDE_WIDTH - width) / 2
         top = SLIDE_HEIGHT - height - bottom_margin
