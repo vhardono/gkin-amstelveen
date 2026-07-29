@@ -1604,11 +1604,27 @@ def prepare_songs_and_images(excel_path: str, sheet_name: str = "Data"):
     if ws is None:
         raise RuntimeError(f"Could not find a worksheet named '{sheet_name}'.")
 
-    # Detect 4th block
+    # Detect blocks and find the one that contains the song (Liederen) table.
+    # We select the block whose header row contains a song-title column instead of
+    # assuming a fixed block index, because adding a 'Tekst' column to table2 can
+    # merge the earlier blocks together.
     blocks = detect_blocks(ws, min_non_empty_per_row=1)
-    if len(blocks) < 4:
-        raise RuntimeError("Could not locate the fourth table/block on the 'Data' sheet.")
-    target_block = blocks[3]
+    target_block = None
+    for block in blocks:
+        df_test = block_to_df(ws, block)
+        if df_test.empty:
+            continue
+        for col in df_test.columns:
+            if isinstance(col, str) and any(k in col.lower() for k in ["titel", "song", "title", "lagu", "lied", "liederen"]):
+                target_block = block
+                break
+        if target_block:
+            break
+    if target_block is None and len(blocks) >= 4:
+        # Fallback to the original 4th block heuristic
+        target_block = blocks[3]
+    if target_block is None:
+        raise RuntimeError("Could not locate the songs table on the 'Data' sheet.")
     (t_min_row, t_min_col, t_max_row, t_max_col) = target_block
     df = block_to_df(ws, target_block)
 
