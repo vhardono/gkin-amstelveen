@@ -2562,11 +2562,31 @@ def add_sermon_doc_to_ppt(
     except NameError:
         CPL = chars_per_line or 30
 
-    header_height = Cm(2) if header_text else Cm(0)
+    # --- Geometry-derived caps so text can never overflow the textbox ---
+    PT_PER_CM = 28.3465
+    EMU_PER_CM = 360000.0
+
+    box_w_cm = float(box_width) / EMU_PER_CM
+    box_h_cm = float(box_height) / EMU_PER_CM
+    usable_w_cm = max(1.0, box_w_cm - 0.6)          # minus left/right text margins
+
+    body_line_cm = (font_size_pt * 1.20) / PT_PER_CM
+    body_char_cm = (font_size_pt * 0.50) / PT_PER_CM
+    CPL = min(CPL, max(10, int(usable_w_cm / body_char_cm)))
+
+    if header_text:
+        head_line_cm = (header_font_size_pt * 1.20) / PT_PER_CM
+        head_char_cm = (header_font_size_pt * 0.52) / PT_PER_CM
+        head_cpl = max(8, int(usable_w_cm / head_char_cm))
+        head_lines = max(1, len(textwrap.wrap(" ".join(header_text.split()), width=head_cpl)))
+        header_height = Cm(min(box_h_cm * 0.45, head_lines * head_line_cm + 0.6))
+    else:
+        header_height = Cm(0)
+
     content_top = box_top + header_height
     content_height = box_height - header_height
-    if header_text and float(box_height) > 0:
-        ML = max(1, int(ML * (float(content_height) / float(box_height))))
+    content_h_cm = box_h_cm - (float(header_height) / EMU_PER_CM)
+    ML = min(ML, max(1, int((content_h_cm - 0.4) / body_line_cm)))
 
     def _flush_notes(target_slide, notes_list):
         if not (notes_text or header_notes_text) or not (notes_list or header_notes_text):
@@ -2624,15 +2644,36 @@ def add_sermon_doc_to_ppt(
     def _estimate_lines(s: str) -> int:
         return max(1, len(_wrap_lines(s)))
 
+    ABBREVIATIONS = {
+        "ds", "br", "zr", "dr", "ir", "mr", "mw", "prof", "bijv", "enz", "ca",
+        "incl", "excl", "evt", "blz", "nr", "no", "vs", "jl", "bv", "resp",
+        "bpk", "ibu", "sdr", "sdri", "dll", "dsb", "pkl", "rp", "hal", "yth",
+    }
+
+    def _ends_with_abbreviation(part: str) -> bool:
+        if not part.endswith('.'):
+            return False
+        last = part.split()[-1] if part.split() else ""
+        if re.fullmatch(r'(?:[A-Z]\.)+', last):      # initials, e.g. V.K.
+            return True
+        return last.rstrip('.').lower() in ABBREVIATIONS
+
     def _sentences(s: str) -> list[str]:
         """
-        Split into sentences; keep punctuation. Handles ., ?, ! (optionally followed by closing quote/bracket).
+        Split into sentences; keep punctuation. Handles ., ?, ! (optionally followed by closing
+        quote/bracket). Abbreviations and initials (ds., br., zr., V.K.) do not end a sentence.
         """
         text = " ".join((s or "").split())
         if not text:
             return []
-        parts = re.findall(r'.+?(?:[.?!][\'")\]]?(?=\s|$)|$)', text)
-        return [p.strip() for p in parts if p.strip()]
+        parts = [p.strip() for p in re.findall(r'.+?(?:[.?!][\'")\]]?(?=\s|$)|$)', text) if p.strip()]
+        merged: list[str] = []
+        for part in parts:
+            if merged and _ends_with_abbreviation(merged[-1]):
+                merged[-1] = merged[-1] + " " + part
+            else:
+                merged.append(part)
+        return merged
 
     def _add_blank_line(tf):
         p = tf.add_paragraph()
