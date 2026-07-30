@@ -2846,6 +2846,18 @@ def add_mededelingen_divider_slide(prs, slide_text, notes_text=None):
     return slide
 
 
+def get_mededelingen_language(json_path, default='id'):
+    """Return the presentation language ('nl' or 'id') chosen for the mededelingen."""
+    if not os.path.exists(json_path):
+        return default
+    try:
+        with open(json_path, 'r', encoding='utf-8') as f:
+            language = json.load(f).get('language', default)
+    except Exception:
+        return default
+    return language if language in ('nl', 'id') else default
+
+
 def add_mededelingen_section(prs, json_path, section_type=None):
     """
     Read mededelingen.json and add one or all bilingual mededelingen sections.
@@ -2901,8 +2913,8 @@ def add_mededelingen_section(prs, json_path, section_type=None):
             slide_text = item.get(language, '')
             notes_text = item.get(other, '')
             if is_welkom:
-                header_text = None
-                header_notes_text = None
+                header_text = section_title
+                header_notes_text = section_title_other
                 body_text = slide_text
                 body_notes = notes_text
             else:
@@ -2915,7 +2927,7 @@ def add_mededelingen_section(prs, json_path, section_type=None):
                 continue
             added = add_sermon_doc_to_ppt(
                 prs, body_text,
-                font_name="Calibri", font_size_pt=32,
+                font_name="Calibri", font_size_pt=30,
                 box_width=BOX_WIDTH, box_height=Cm(17),
                 box_left=BOX_LEFT, box_top=Cm(0),
                 bg_hex="1E1947", max_lines_per_slide=16,
@@ -3063,6 +3075,75 @@ for line in lines:
 # --- MEDEDELINGEN ---
 mededelingen_json = os.path.join(dir_path, 'mededelingen.json')
 mededelingen_present = os.path.exists(mededelingen_json)
+meded_lang = get_mededelingen_language(mededelingen_json, default='id')
+meded_lang_other = 'id' if meded_lang == 'nl' else 'nl'
+
+COLLECTE_TEXTS = {
+    'nl': {
+        'opbrengst_titel': "Collecte Opbrengst\nGKIN Amstelveen",
+        'zondag': "Zondag {d}",
+        'rows': [
+            "1. Contant geld",
+            "2. Collectebonnen",
+            "3. Overboeking via de bank",
+            "4. TIKKIE",
+        ],
+        'totaal': "Totaal collecte",
+        'aanwezig': "Aantal aanwezigen ... personen: ... volwassenen, ... kinderen.",
+        'bijbelstudie': "Opbrengst Gemeente Bijbelstudie ...",
+        'ole': "Opbrengst OLE {d}",
+        'collecte_titel': "Collecte",
+        'uitleg': (
+            "U kunt uw gave voor het werk van de kerk in deze dienst op 3 manieren geven:\n"
+            "1.  In de collectezak die in de kerk rondgaat.\n"
+            "2.\tDoor een overboeking naar de rekening van GKIN Amstelveen,\n"
+            "IBAN: {iban}, \n"
+            "met de vermelding \u201cCollecte {datum}\u201d\n"
+        ),
+        'qr': "3.\tMet de QR-code of de betaallink:",
+    },
+    'id': {
+        'opbrengst_titel': "Persembahan\nGKIN Amstelveen",
+        'zondag': "Minggu {d}",
+        'rows': [
+            "1. Uang kontan",
+            "2. Bon persembahan",
+            "3. Transfer melalui bank",
+            "4. TIKKIE",
+        ],
+        'totaal': "Total Persembahan",
+        'aanwezig': "Jumlah jemaat yang hadir ... orang: ... dewasa, ... anak-anak.",
+        'bijbelstudie': "Penerimaan Gemeente Bijbelstudie ...",
+        'ole': "Penerimaan OLE {d}",
+        'collecte_titel': "Persembahan",
+        'uitleg': (
+            "Persembahan untuk pelayanan gereja dapat anda berikan dalam ibadah ini lewat 3 cara:\n"
+            "1.  Memasukkan dalam kantong persembahan yang ada di gereja.\n"
+            "2.\tMelakukan transfer ke rekening GKIN Amstelveen,\n"
+            "IBAN: {iban}, \n"
+            "Dengan mencantumkan tulisan \u201cCollecte {datum}\u201d\n"
+        ),
+        'qr': "3.\tMenggunakan QR-code atau tautan pembayaran:",
+    },
+}
+CT = COLLECTE_TEXTS[meded_lang]
+CT_OTHER = COLLECTE_TEXTS[meded_lang_other]
+
+
+def set_slide_notes(target_slide, text):
+    """Put the other-language version of a slide in its speaker notes."""
+    if not text:
+        return
+    try:
+        ntf = target_slide.notes_slide.notes_text_frame
+        ntf.clear()
+        for i, line in enumerate(str(text).split("\n")):
+            para = ntf.paragraphs[i] if i < len(ntf.paragraphs) else ntf.add_paragraph()
+            para.text = line
+    except Exception:
+        pass
+
+
 if mededelingen_present:
     add_mededelingen_section(prs, mededelingen_json, 'welkom')
 else:
@@ -3190,11 +3271,13 @@ tf.vertical_anchor = MSO_ANCHOR.MIDDLE
 p = tf.paragraphs[0]
 p.alignment = PP_ALIGN.CENTER
 r = p.add_run()
-r.text = "Collecte Opbrengst / Persembahan\nGKIN Amstelveen"
+r.text = CT['opbrengst_titel']
 r.font.name = "Calibri"
 r.font.size = Pt(32)
 r.font.color.rgb = white
 r.font.bold = True
+
+set_slide_notes(slide, CT_OTHER['opbrengst_titel'])
 
 rows, cols = 9, 3
 table = slide.shapes.add_table(rows, cols, BOX_LEFT, Cm(4), BOX_WIDTH, Cm(10)).table
@@ -3208,15 +3291,15 @@ lastweek = dienst_date + timedelta(days = -7)
 long_datepw = format_date_long_nl(lastweek)
 
 content = [
-    [f"Minggu {long_datepw}", "", ""],
-    ["1. Uang kontan", "€", "..."],
-    ["2. Bon persembahan", "€", "..."],
-    ["3. Transfer melalui bank", "€", "..."],
-    ["4. TIKKIE", "€", "..."],
-    ["Total Persembahan", "€", "..."],
-    ["Jumlah jemaat yang hadir ... orang: ... dewasa, ... anak-anak.", "", ""],
-    ["Penerimaan Gemeente Bijbelstudie ...", "€", "..."],
-    [f"Penerimaan OLE {long_datepw}", "€", "..."]
+    [CT['zondag'].format(d=long_datepw), "", ""],
+    [CT['rows'][0], "€", "..."],
+    [CT['rows'][1], "€", "..."],
+    [CT['rows'][2], "€", "..."],
+    [CT['rows'][3], "€", "..."],
+    [CT['totaal'], "€", "..."],
+    [CT['aanwezig'], "", ""],
+    [CT['bijbelstudie'], "€", "..."],
+    [CT['ole'].format(d=long_datepw), "€", "..."]
 ]
 
 # --- Title row (merge columns 0–2) ---
@@ -3284,7 +3367,7 @@ tf.vertical_anchor = MSO_ANCHOR.MIDDLE
 p = tf.paragraphs[0]
 p.alignment = PP_ALIGN.CENTER
 r = p.add_run()
-r.text = "Collecte / Persembahan"
+r.text = CT['collecte_titel']
 r.font.name = "Calibri"
 r.font.size = Pt(32)
 r.font.color.rgb = white
@@ -3300,15 +3383,15 @@ tf.vertical_anchor = MSO_ANCHOR.MIDDLE
 p = tf.paragraphs[0]
 p.alignment = PP_ALIGN.CENTER
 r = p.add_run()
-r.text = f"""Persembahan untuk pelayanan gereja dapat anda berikan dalam ibadah ini lewat 3 cara:
-1.  Memasukkan dalam kantong persembahan yang ada di gereja.
-2.	Melakukan transfer ke rekening GKIN Amstelveen,
-IBAN: {IBAN}, 
-Dengan mencantumkan tulisan “Collecte {short_date}”
-"""
+r.text = CT['uitleg'].format(iban=IBAN, datum=short_date)
 r.font.name = "Calibri"
 r.font.size = Pt(32)
 r.font.color.rgb = white
+
+set_slide_notes(
+    slide,
+    CT_OTHER['collecte_titel'] + "\n\n" + CT_OTHER['uitleg'].format(iban=IBAN, datum=short_date),
+)
 
 slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
 set_background(slide)
@@ -3323,10 +3406,12 @@ tf.vertical_anchor = MSO_ANCHOR.TOP
 p = tf.paragraphs[0]
 p.alignment = PP_ALIGN.CENTER
 r = p.add_run()
-r.text = f"""3.	Menggunakan QR-code atau tautan pembayaran:"""
+r.text = CT['qr']
 r.font.name = "Calibri"
 r.font.size = Pt(32)
 r.font.color.rgb = white
+
+set_slide_notes(slide, CT_OTHER['qr'])
 
 add_qr_image_to_slide(slide)
 
