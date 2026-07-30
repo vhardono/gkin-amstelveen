@@ -1252,6 +1252,38 @@ def _run_liturgi(excel_bytes: bytes, preek_bytes, work_dir: str,
     except Exception as e:
         print(f'[Liturgi] Could not retrieve Tikkie QR image from email: {e}')
 
+    # Fetch collecte opbrengst amounts of the previous service for the dankoffer table
+    try:
+        from data_sources.email_reader import OutlookCollecteReader
+
+        if service_date:
+            reader = OutlookCollecteReader()
+            if reader.is_authenticated():
+                data = reader.fetch_opbrengst_data(target_date=service_date, since_days=60)
+                entries = data.get('entries', [])
+                chosen = next((e for e in reversed(entries) if e.get('type') == 'regulier'),
+                              entries[-1] if entries else None)
+                if chosen:
+                    opbrengst = {
+                        'service_date': chosen.get('service_date', ''),
+                        'collecte_contant': chosen.get('collecte_contant', ''),
+                        'collecte_bonnen': chosen.get('collecte_bonnen', ''),
+                        'collecte_bank': chosen.get('collecte_bank', ''),
+                        'collecte_tikkie': chosen.get('collecte_tikkie', ''),
+                        'collecte_ole': chosen.get('collecte_ole', ''),
+                        'bezoekers_volwassenen': chosen.get('bezoekers_volwassenen', ''),
+                        'bezoekers_kinderen': chosen.get('bezoekers_kinderen', ''),
+                        'extra_items': chosen.get('extra_items', []),
+                    }
+                    with open(os.path.join(work_dir, 'opbrengst.json'), 'w', encoding='utf-8') as f:
+                        json.dump(opbrengst, f, ensure_ascii=False, indent=2)
+                    print(f"[Liturgi] Prepared collecte opbrengst for {opbrengst['service_date']}")
+                else:
+                    warnings.append('Geen collecte opbrengst e-mail gevonden; bedragen blijven leeg.')
+    except Exception as e:
+        warnings.append(f'Kon collecte opbrengst niet ophalen: {e}')
+        print(f'[Liturgi] Could not retrieve collecte opbrengst from email: {e}')
+
     # Prepare mededelingen data for LiturgieP if requested
     if include_mededelingen:
         if not service_date:

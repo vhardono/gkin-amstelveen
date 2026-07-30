@@ -2523,6 +2523,41 @@ def add_verses_to_ppt_indo(
     
     return slides_added
 
+NBSP = "\u00a0"
+
+# A name is a courtesy title followed by 1-4 name tokens (words or initials),
+# e.g. "zr. Wenny Kavadjaja", "ds. J. Linandi", "br. V.K. Wenno".
+_NAME_TITLE = r"(?:(?i:ds|dr|drs|br|zr|mw|mr|ir|prof|pdt|sdr|sdri|bpk|ibu|dhr|hr))\."
+_NAME_TOKEN = r"(?:[A-Z][a-z\u00e0-\u00f6\u00f8-\u00ff'\u2019\-]+|[A-Z]\.(?:[A-Z]\.)*)"
+NAME_PATTERN = re.compile(
+    r"\b" + _NAME_TITLE + r"[ \u00a0]*" + _NAME_TOKEN + r"(?:[ \u00a0]+" + _NAME_TOKEN + r"){0,3}"
+)
+
+
+def _collapse_spaces(text):
+    """Collapse whitespace to single spaces while preserving non-breaking spaces."""
+    return re.sub(r"[^\S\u00a0]+", " ", (text or "")).strip()
+
+
+def protect_names(text):
+    """Join names with non-breaking spaces so they never wrap across two lines."""
+    return NAME_PATTERN.sub(lambda m: re.sub(r"[ \u00a0]+", NBSP, m.group(0)), text or "")
+
+
+def split_name_segments(text):
+    """Split text into [(segment, is_name), ...] so names can be rendered bold."""
+    text = text or ""
+    segments, pos = [], 0
+    for m in NAME_PATTERN.finditer(text):
+        if m.start() > pos:
+            segments.append((text[pos:m.start()], False))
+        segments.append((m.group(0), True))
+        pos = m.end()
+    if pos < len(text):
+        segments.append((text[pos:], False))
+    return segments or [(text, False)]
+
+
 def add_sermon_doc_to_ppt(
     prs,
     sermon_text,   # now receives text, not a file path
@@ -2637,8 +2672,10 @@ def add_sermon_doc_to_ppt(
         return slide, tf
 
     def _wrap_lines(s: str) -> list[str]:
-        norm = re.sub(r"\s+", " ", (s or "").strip())
-        lines = textwrap.wrap(norm, width=CPL, break_long_words=False, break_on_hyphens=True)
+        norm = _collapse_spaces(s)
+        # NBSP-joined names must be measured as one unbreakable word, like PowerPoint does
+        lines = textwrap.wrap(norm.replace(NBSP, "~"), width=CPL,
+                              break_long_words=False, break_on_hyphens=True)
         return lines or [""]
 
     def _estimate_lines(s: str) -> int:
@@ -2663,7 +2700,7 @@ def add_sermon_doc_to_ppt(
         Split into sentences; keep punctuation. Handles ., ?, ! (optionally followed by closing
         quote/bracket). Abbreviations and initials (ds., br., zr., V.K.) do not end a sentence.
         """
-        text = " ".join((s or "").split())
+        text = _collapse_spaces(s)
         if not text:
             return []
         parts = [p.strip() for p in re.findall(r'.+?(?:[.?!][\'")\]]?(?=\s|$)|$)', text) if p.strip()]
@@ -2690,14 +2727,18 @@ def add_sermon_doc_to_ppt(
         else:
             p = tf.add_paragraph()
         p.alignment = PP_ALIGN.LEFT
-        r = p.add_run()
-        r.text = " ".join((text or "").split())
-        r.font.name = font_name
-        r.font.size = Pt(font_size_pt)
-        r.font.color.rgb = RGBColor(255, 255, 255)
+        for segment, is_name in split_name_segments(_collapse_spaces(text)):
+            if not segment:
+                continue
+            r = p.add_run()
+            r.text = segment
+            r.font.name = font_name
+            r.font.size = Pt(font_size_pt)
+            r.font.bold = True if is_name else None
+            r.font.color.rgb = RGBColor(255, 255, 255)
 
     # --- Convert sermon_text into paragraphs; preserve as-is ---
-    paragraphs = [p.strip() for p in sermon_text.split("\n") if p.strip()]
+    paragraphs = [protect_names(p.strip()) for p in sermon_text.split("\n") if p.strip()]
     if not paragraphs:
         return 0
 
@@ -3089,7 +3130,7 @@ COLLECTE_TEXTS = {
             "4. TIKKIE",
         ],
         'totaal': "Totaal collecte",
-        'aanwezig': "Aantal aanwezigen ... personen: ... volwassenen, ... kinderen.",
+        'aanwezig': "Aantal aanwezigen {tot} personen: {vw} volwassenen, {ki} kinderen.",
         'bijbelstudie': "Opbrengst Gemeente Bijbelstudie ...",
         'ole': "Opbrengst OLE {d}",
         'collecte_titel': "Collecte",
@@ -3112,7 +3153,7 @@ COLLECTE_TEXTS = {
             "4. TIKKIE",
         ],
         'totaal': "Total Persembahan",
-        'aanwezig': "Jumlah jemaat yang hadir ... orang: ... dewasa, ... anak-anak.",
+        'aanwezig': "Jumlah jemaat yang hadir {tot} orang: {vw} dewasa, {ki} anak-anak.",
         'bijbelstudie': "Penerimaan Gemeente Bijbelstudie ...",
         'ole': "Penerimaan OLE {d}",
         'collecte_titel': "Persembahan",
@@ -3128,6 +3169,68 @@ COLLECTE_TEXTS = {
 }
 CT = COLLECTE_TEXTS[meded_lang]
 CT_OTHER = COLLECTE_TEXTS[meded_lang_other]
+
+# --- Collecte opbrengst amounts (from the Outlook opbrengst e-mails, via app.py) ---
+opbrengst_json = os.path.join(dir_path, 'opbrengst.json')
+OPBRENGST = {}
+if os.path.exists(opbrengst_json):
+    try:
+        with open(opbrengst_json, 'r', encoding='utf-8') as f:
+            OPBRENGST = json.load(f) or {}
+    except Exception as _e:
+        print(f'[Liturgi] Could not read opbrengst.json: {_e}')
+
+PLACEHOLDER = "..."
+
+
+def parse_nl_amount(raw):
+    """Parse '1.234,56' / '181,35' / '120' into a float, or None when unusable."""
+    s = str(raw or '').strip().rstrip('-').rstrip(',')
+    if not s:
+        return None
+    if re.search(r',\d{1,2}$', s):
+        s = s.replace('.', '')
+    s = s.replace(',', '.')
+    try:
+        return float(s)
+    except ValueError:
+        return None
+
+
+def format_nl_amount(value):
+    return f'{value:,.2f}'.replace(',', 'X').replace('.', ',').replace('X', '.')
+
+
+def opbrengst_amount(key):
+    value = parse_nl_amount(OPBRENGST.get(key, ''))
+    return format_nl_amount(value) if value is not None else PLACEHOLDER
+
+
+def opbrengst_total():
+    values = [parse_nl_amount(OPBRENGST.get(k, '')) for k in
+              ('collecte_contant', 'collecte_bonnen', 'collecte_bank', 'collecte_tikkie')]
+    values = [v for v in values if v is not None]
+    return format_nl_amount(sum(values)) if values else PLACEHOLDER
+
+
+def opbrengst_extra_amount(pattern):
+    """Amount of an extra collecte line (e.g. bijbelstudie) matching the pattern."""
+    for item in OPBRENGST.get('extra_items') or []:
+        if re.search(pattern, item.get('desc', ''), re.IGNORECASE):
+            value = parse_nl_amount(item.get('amount', ''))
+            if value is not None:
+                return format_nl_amount(value)
+    return PLACEHOLDER
+
+
+def opbrengst_bezoekers(template):
+    vw = str(OPBRENGST.get('bezoekers_volwassenen', '') or '').strip()
+    ki = str(OPBRENGST.get('bezoekers_kinderen', '') or '').strip()
+    try:
+        tot = str(int(vw) + int(ki))
+    except ValueError:
+        tot = PLACEHOLDER
+    return template.format(tot=tot, vw=vw or PLACEHOLDER, ki=ki or PLACEHOLDER)
 
 
 def set_slide_notes(target_slide, text):
@@ -3292,14 +3395,14 @@ long_datepw = format_date_long_nl(lastweek)
 
 content = [
     [CT['zondag'].format(d=long_datepw), "", ""],
-    [CT['rows'][0], "€", "..."],
-    [CT['rows'][1], "€", "..."],
-    [CT['rows'][2], "€", "..."],
-    [CT['rows'][3], "€", "..."],
-    [CT['totaal'], "€", "..."],
-    [CT['aanwezig'], "", ""],
-    [CT['bijbelstudie'], "€", "..."],
-    [CT['ole'].format(d=long_datepw), "€", "..."]
+    [CT['rows'][0], "€", opbrengst_amount('collecte_contant')],
+    [CT['rows'][1], "€", opbrengst_amount('collecte_bonnen')],
+    [CT['rows'][2], "€", opbrengst_amount('collecte_bank')],
+    [CT['rows'][3], "€", opbrengst_amount('collecte_tikkie')],
+    [CT['totaal'], "€", opbrengst_total()],
+    [opbrengst_bezoekers(CT['aanwezig']), "", ""],
+    [CT['bijbelstudie'], "€", opbrengst_extra_amount(r'bijbelstudie')],
+    [CT['ole'].format(d=long_datepw), "€", opbrengst_amount('collecte_ole')]
 ]
 
 # --- Title row (merge columns 0–2) ---
