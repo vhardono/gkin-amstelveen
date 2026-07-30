@@ -2772,10 +2772,45 @@ def add_sermon_doc_to_ppt(
     return slides_added
 
 
+def add_mededelingen_divider_slide(prs, slide_text, notes_text=None):
+    """Full-screen centered section divider slide, uppercase, Calibri 48 Bold."""
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+    fill = slide.background.fill
+    fill.solid()
+    fill.fore_color.rgb = RGBColor.from_string("1E1947")
+
+    box = slide.shapes.add_textbox(BOX_LEFT, Cm(0), BOX_WIDTH, Cm(17))
+    tf = box.text_frame
+    tf.clear()
+    tf.word_wrap = True
+    tf.auto_size = MSO_AUTO_SIZE.NONE
+    tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+
+    p = tf.paragraphs[0]
+    p.alignment = PP_ALIGN.CENTER
+    r = p.add_run()
+    r.text = (slide_text or "").upper()
+    r.font.name = "Calibri"
+    r.font.size = Pt(48)
+    r.font.color.rgb = RGBColor(255, 255, 255)
+    r.font.bold = True
+
+    if notes_text:
+        try:
+            ntf = slide.notes_slide.notes_text_frame
+            ntf.clear()
+            ntf.paragraphs[0].text = (notes_text or "").upper()
+        except Exception:
+            pass
+    return slide
+
+
 def add_mededelingen_section(prs, json_path, section_type=None):
     """
     Read mededelingen.json and add one or all bilingual mededelingen sections.
-    Each content slide repeats the section title at the top in Calibri 32 Bold.
+    Non-welkom sections get an uppercase centered divider slide, then one or more
+    content slides per announcement. The first line of each announcement becomes
+    the bold title at the top of its slide(s).
     Slide body uses the selected language; notes contain the other language.
     """
     if not os.path.exists(json_path):
@@ -2795,28 +2830,55 @@ def add_mededelingen_section(prs, json_path, section_type=None):
     if not sections:
         return 0
 
+    def _split_title_body(text):
+        lines = [ln.strip() for ln in (text or "").split("\n")]
+        lines = [ln for ln in lines if ln]
+        if not lines:
+            return "", ""
+        return lines[0], "\n".join(lines[1:])
+
     slides_added = 0
     for section in sections:
         if section_type and section.get('type') != section_type:
             continue
         title = section.get('title', {})
-        header_text = title.get(language, '')
-        header_notes_text = title.get(other, '')
-        if not header_text:
+        section_title = title.get(language, '')
+        section_title_other = title.get(other, '')
+        if not section_title:
             continue
 
-        for item in section.get('items', []):
+        items = [it for it in section.get('items', []) if it.get(language, '').strip()]
+        if not items:
+            continue
+
+        is_welkom = section.get('type') == 'welkom'
+        if not is_welkom:
+            add_mededelingen_divider_slide(prs, section_title, section_title_other)
+            slides_added += 1
+
+        for item in items:
             slide_text = item.get(language, '')
             notes_text = item.get(other, '')
-            if not slide_text:
+            if is_welkom:
+                header_text = None
+                header_notes_text = None
+                body_text = slide_text
+                body_notes = notes_text
+            else:
+                header_text, body_text = _split_title_body(slide_text)
+                header_notes_text, body_notes = _split_title_body(notes_text)
+                if not body_text:
+                    body_text, header_text = header_text, None
+                    body_notes, header_notes_text = header_notes_text, None
+            if not body_text:
                 continue
             added = add_sermon_doc_to_ppt(
-                prs, slide_text,
+                prs, body_text,
                 font_name="Calibri", font_size_pt=32,
                 box_width=BOX_WIDTH, box_height=Cm(17),
                 box_left=BOX_LEFT, box_top=Cm(0),
                 bg_hex="1E1947", max_lines_per_slide=16,
-                notes_text=notes_text,
+                notes_text=body_notes,
                 header_text=header_text,
                 header_notes_text=header_notes_text,
                 header_font_size_pt=32,
