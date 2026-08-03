@@ -956,8 +956,10 @@
                         URL.revokeObjectURL(url);
                     }
                     let msg = `✓ ${files.length} bestand(en) gedownload.`;
+                    const overview = buildOverview(payload.summary);
+                    if (overview) msg += '\n' + overview;
                     if (warnings.length) {
-                        msg += ' Waarschuwing: ' + warnings.join(' ');
+                        msg += '\n⚠️ ' + warnings.join('\n⚠️ ');
                         showStatus(msg, 'warning');
                     } else {
                         showStatus(msg, 'success');
@@ -973,6 +975,40 @@
             }
         });
 
+        function buildOverview(summary) {
+            if (!summary || Object.keys(summary).length === 0) return '';
+            const lines = [];
+
+            if (summary.mededelingen) {
+                const lang = summary.mededelingen_language === 'id' ? 'Indonesisch' : 'Nederlands';
+                lines.push(`• Welkomstwoord: ${summary.welkomstwoord ? 'geladen' : 'niet geladen'} (${lang})`);
+                lines.push(`• Regionale mededelingen: ${summary.regionale || 0}`);
+                lines.push(`• Landelijke mededelingen: ${summary.landelijke || 0}`);
+            } else {
+                lines.push('• Mededelingen: niet toegevoegd');
+            }
+
+            if (summary.collecte_filled > 0) {
+                let collecte = `• Collecte opbrengst: ${summary.collecte_filled} bedrag(en) geladen`;
+                if (summary.collecte_total && summary.collecte_total !== '...') {
+                    collecte += ` — totaal € ${summary.collecte_total}`;
+                }
+                if (!summary.collecte_bezoekers) collecte += ' (aantal bezoekers ontbreekt)';
+                lines.push(collecte);
+            } else {
+                lines.push('• Collecte opbrengst: geen bedragen gevonden');
+            }
+
+            if (summary.preek) {
+                lines.push(`• Preek: ${summary.preek_slides || 0} slide(s)` +
+                    (summary.preek_translation ? ', vertaling in de notities' : ', geen vertaling in de notities'));
+            } else {
+                lines.push('• Preek: niet geladen');
+            }
+
+            return lines.join('\n');
+        }
+
         function setLoading(on) {
             document.getElementById('genBtn').disabled = on;
             document.getElementById('btnIcon').classList.toggle('hidden', on);
@@ -982,7 +1018,7 @@
 
         function showStatus(msg, type) {
             const box = document.getElementById('statusBox');
-            const baseClasses = 'mt-5 text-xs rounded-lg p-2 border';
+            const baseClasses = 'mt-5 text-xs rounded-lg p-2 border whitespace-pre-line';
             if (type === 'error') {
                 box.className = baseClasses + ' bg-red-50 text-red-700 border-red-200';
             } else if (type === 'warning') {

@@ -1376,6 +1376,7 @@ def _run_liturgi(excel_bytes: bytes, preek_bytes, work_dir: str,
             result['liturgieP'] = os.path.join(file_mingguan, fname)
             result['liturgieP_name'] = fname
     result['warnings'] = warnings
+    result['summary'] = ns.get('LITURGI_SUMMARY') or {}
     return result
 
 
@@ -1439,7 +1440,9 @@ def liturgie_generate():
 
         if not files_out:
             return jsonify({'error': 'Geen geselecteerde bestanden gevonden in output.'}), 500
-        return jsonify({'files': files_out, 'warnings': result.get('warnings', [])})
+        return jsonify({'files': files_out,
+                        'warnings': result.get('warnings', []),
+                        'summary': result.get('summary', {})})
 
     except Exception as e:
         traceback.print_exc()

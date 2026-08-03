@@ -3124,7 +3124,7 @@ COLLECTE_TEXTS = {
         'opbrengst_titel': "Collecte Opbrengst\nGKIN Amstelveen",
         'zondag': "Zondag {d}",
         'rows': [
-            "1. Contant geld",
+            "1. Contant",
             "2. Collectebonnen",
             "3. Overboeking via de bank",
             "4. TIKKIE",
@@ -3376,82 +3376,62 @@ p.alignment = PP_ALIGN.CENTER
 r = p.add_run()
 r.text = CT['opbrengst_titel']
 r.font.name = "Calibri"
-r.font.size = Pt(32)
+r.font.size = Pt(30)
 r.font.color.rgb = white
 r.font.bold = True
 
 set_slide_notes(slide, CT_OTHER['opbrengst_titel'])
-
-rows, cols = 9, 3
-table = slide.shapes.add_table(rows, cols, BOX_LEFT, Cm(4), BOX_WIDTH, Cm(10)).table
-table.columns[0].width = Inches(4.6)
-table.columns[1].width = Inches(0.7)
-table.columns[2].width = Inches(1.0)
 
 dark_blue = RGBColor(22, 25, 90)
 
 lastweek = dienst_date + timedelta(days = -7)
 long_datepw = format_date_long_nl(lastweek)
 
+bijbelstudie_amount = opbrengst_extra_amount(r'bijbelstudie')
+
 content = [
-    [CT['zondag'].format(d=long_datepw), "", ""],
-    [CT['rows'][0], "€", opbrengst_amount('collecte_contant')],
-    [CT['rows'][1], "€", opbrengst_amount('collecte_bonnen')],
-    [CT['rows'][2], "€", opbrengst_amount('collecte_bank')],
-    [CT['rows'][3], "€", opbrengst_amount('collecte_tikkie')],
-    [CT['totaal'], "€", opbrengst_total()],
-    [opbrengst_bezoekers(CT['aanwezig']), "", ""],
-    [CT['bijbelstudie'], "€", opbrengst_extra_amount(r'bijbelstudie')],
-    [CT['ole'].format(d=long_datepw), "€", opbrengst_amount('collecte_ole')]
+    {'text': CT['zondag'].format(d=long_datepw), 'merge': True, 'bold': True},
+    {'text': CT['rows'][0], 'amount': opbrengst_amount('collecte_contant')},
+    {'text': CT['rows'][1], 'amount': opbrengst_amount('collecte_bonnen')},
+    {'text': CT['rows'][2], 'amount': opbrengst_amount('collecte_bank')},
+    {'text': CT['rows'][3], 'amount': opbrengst_amount('collecte_tikkie')},
+    {'text': CT['totaal'], 'amount': opbrengst_total(), 'bold': True},
+    {'text': opbrengst_bezoekers(CT['aanwezig']), 'merge': True, 'size': 16},
 ]
+# Only show the bijbelstudie line when an amount was reported
+if bijbelstudie_amount != PLACEHOLDER:
+    content.append({'text': CT['bijbelstudie'], 'amount': bijbelstudie_amount})
+content.append({'text': CT['ole'].format(d=long_datepw),
+                'amount': opbrengst_amount('collecte_ole')})
 
-# --- Title row (merge columns 0–2) ---
-cell_start = table.cell(0, 0)
-cell_end = table.cell(0, 2)
-cell_start.merge(cell_end)  # merge done in-place
-merged = cell_start          # keep reference to the surviving cell
+table = slide.shapes.add_table(len(content), 3, BOX_LEFT, Cm(4), BOX_WIDTH, Cm(10)).table
+table.columns[0].width = Inches(4.6)
+table.columns[1].width = Inches(0.7)
+table.columns[2].width = Inches(1.0)
 
-merged.text = content[0][0]
-p = merged.text_frame.paragraphs[0]
-p.font.name = "Calibri"
-p.font.bold = True
-p.font.size = Pt(20)
-p.font.color.rgb = white
-merged.fill.background()
-
-# --- Attendance row (merge columns 0–2) ---
-cell_start = table.cell(6, 0)
-cell_end = table.cell(6, 2)
-cell_start.merge(cell_end)
-merged = cell_start
-
-merged.text = content[6][0]
-p = merged.text_frame.paragraphs[0]
-p.font.name = "Calibri"
-p.font.size = Pt(16)
-p.font.color.rgb = white
-merged.fill.background()
-
-# --- Handle the rest ---
 for i, row_data in enumerate(content):
-    if i in (0, 6):
-        continue  # already merged and handled
-    for j, text in enumerate(row_data):
+    font_size = Pt(row_data.get('size', 20))
+    if row_data.get('merge'):
+        # Full-width row (service date, bezoekers)
+        cell = table.cell(i, 0)
+        cell.merge(table.cell(i, 2))
+        cell.text = row_data['text']
+        p = cell.text_frame.paragraphs[0]
+        p.font.name = "Calibri"
+        p.font.bold = row_data.get('bold', False)
+        p.font.size = font_size
+        p.font.color.rgb = white
+        cell.fill.background()
+        continue
+    for j, text in enumerate([row_data['text'], "€", row_data['amount']]):
         cell = table.cell(i, j)
         cell.text = text
         p = cell.text_frame.paragraphs[0]
         p.font.color.rgb = white
         p.font.name = "Calibri"
+        p.font.bold = row_data.get('bold', False)
+        p.font.size = font_size
         cell.fill.background()
-
-        # font size and style
-        if i == 5:
-            p.font.bold = True
-            p.font.size = Pt(20)
-        else:
-            p.font.size = Pt(20)
-
-        # alignment
         p.alignment = PP_ALIGN.RIGHT if j in (1, 2) else PP_ALIGN.LEFT
 
 
@@ -3472,7 +3452,7 @@ p.alignment = PP_ALIGN.CENTER
 r = p.add_run()
 r.text = CT['collecte_titel']
 r.font.name = "Calibri"
-r.font.size = Pt(32)
+r.font.size = Pt(30)
 r.font.color.rgb = white
 r.font.bold = True
 
@@ -3488,7 +3468,7 @@ p.alignment = PP_ALIGN.CENTER
 r = p.add_run()
 r.text = CT['uitleg'].format(iban=IBAN, datum=short_date)
 r.font.name = "Calibri"
-r.font.size = Pt(32)
+r.font.size = Pt(30)
 r.font.color.rgb = white
 
 set_slide_notes(
@@ -3511,7 +3491,7 @@ p.alignment = PP_ALIGN.CENTER
 r = p.add_run()
 r.text = CT['qr']
 r.font.name = "Calibri"
-r.font.size = Pt(32)
+r.font.size = Pt(30)
 r.font.color.rgb = white
 
 set_slide_notes(slide, CT_OTHER['qr'])
@@ -4669,7 +4649,7 @@ if os.path.exists(path_sermon):
     if original_clean is not None:
         original_clean = original_clean.rstrip()
 
-    add_sermon_doc_to_ppt(
+    preek_slides = add_sermon_doc_to_ppt(
         prs,
         clean_text,
         box_width=BOX_WIDTH,
@@ -4679,6 +4659,8 @@ if os.path.exists(path_sermon):
         max_lines_per_slide=16,
         notes_text=original_clean,
     )
+    preek_loaded = bool(clean_text.strip())
+    preek_translation = bool(original_clean and original_clean.strip())
 
     # --- Add final AMEN slide if needed ---
     if removed_amen:
@@ -4702,6 +4684,9 @@ if os.path.exists(path_sermon):
         r.font.bold = True
         r.font.color.rgb = white
 else:
+    preek_slides = 0
+    preek_loaded = False
+    preek_translation = False
     print(f"WAARSCHUWING: Preek.docx niet gevonden op {path_sermon} — "
           f"preek-slides overgeslagen.")
     slide = prs.slides.add_slide(prs.slide_layouts[6])
@@ -5316,3 +5301,45 @@ prs_name = f"LiturgieP {short_date}_{REGIO}.pptx"
 out_path = os.path.join(dir_path + '/file mingguan/', prs_name)
 prs.save(out_path)
 print(f"Powerpoint presentation generated: {out_path}")
+
+
+# --- Overview of what ended up in the presentation (read back by app.py) ---
+def _build_liturgi_summary():
+    sections = {}
+    if mededelingen_present:
+        try:
+            with open(mededelingen_json, 'r', encoding='utf-8') as f:
+                for section in (json.load(f) or {}).get('sections', []):
+                    items = [i for i in section.get('items', [])
+                             if (i.get(meded_lang) or '').strip()]
+                    sections[section.get('type', '')] = len(items)
+        except Exception as exc:
+            print(f'[Liturgi] Could not summarise mededelingen: {exc}')
+
+    collecte_fields = {
+        'contant': opbrengst_amount('collecte_contant'),
+        'bonnen': opbrengst_amount('collecte_bonnen'),
+        'bank': opbrengst_amount('collecte_bank'),
+        'tikkie': opbrengst_amount('collecte_tikkie'),
+        'ole': opbrengst_amount('collecte_ole'),
+        'bijbelstudie': bijbelstudie_amount,
+    }
+    filled = {k: v for k, v in collecte_fields.items() if v != PLACEHOLDER}
+    return {
+        'mededelingen': mededelingen_present,
+        'mededelingen_language': meded_lang if mededelingen_present else '',
+        'welkomstwoord': sections.get('welkom', 0) > 0,
+        'regionale': sections.get('regionale', 0),
+        'landelijke': sections.get('landelijke', 0),
+        'collecte_filled': len(filled),
+        'collecte_fields': sorted(filled),
+        'collecte_total': opbrengst_total(),
+        'collecte_bezoekers': opbrengst_bezoekers('{tot}|{vw}|{ki}').split('|')[0] != PLACEHOLDER,
+        'preek': preek_loaded,
+        'preek_slides': preek_slides,
+        'preek_translation': preek_translation,
+    }
+
+
+LITURGI_SUMMARY = _build_liturgi_summary()
+print(f"Summary: {LITURGI_SUMMARY}")
