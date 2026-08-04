@@ -5279,7 +5279,7 @@ r.font.italic = True
 slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
 set_background(slide)
 
-box = slide.shapes.add_textbox(BOX_LEFT, Cm(1), BOX_WIDTH, Cm(16))
+box = slide.shapes.add_textbox(BOX_LEFT, Cm(0), BOX_WIDTH, Cm(19.05))
 tf = box.text_frame
 tf.clear()
 tf.word_wrap = True
@@ -5304,7 +5304,7 @@ r.font.italic = True
 slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
 set_background(slide)
 
-box = slide.shapes.add_textbox(BOX_LEFT, Cm(1), BOX_WIDTH, Cm(16))
+box = slide.shapes.add_textbox(BOX_LEFT, Cm(0), BOX_WIDTH, Cm(19.05))
 tf = box.text_frame
 tf.clear()
 tf.word_wrap = True
@@ -5338,9 +5338,9 @@ set_background(slide)
 
 box = slide.shapes.add_textbox(
     BOX_LEFT,
-    Cm(0.5),
+    Cm(0),
     BOX_WIDTH,
-    Cm(13)
+    Cm(19.05)
 )
 
 tf = box.text_frame
@@ -5355,7 +5355,7 @@ p.alignment = PP_ALIGN.CENTER
 r = p.add_run()
 r.text = "Gezegende zondag"
 r.font.name = "Calibri"
-r.font.size = Pt(32)
+r.font.size = Pt(40)
 r.font.bold = True
 r.font.color.rgb = white
 
@@ -5370,7 +5370,7 @@ p.alignment = PP_ALIGN.CENTER
 r = p.add_run()
 r.text = "Selamat Hari Minggu\nTuhan Yesus Memberkati"
 r.font.name = "Calibri"
-r.font.size = Pt(32)
+r.font.size = Pt(40)
 r.font.bold = True
 r.font.italic = True
 r.font.color.rgb = white
