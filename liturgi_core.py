@@ -2111,16 +2111,16 @@ def _estimate_wrapped_lines(text: str, chars_per_line: int = CHARS_PER_LINE) -> 
     return max(1, len(wrapped))
 
 def _new_slide_with_box(prs):
-    """Create a blank slide with background and a centered 17×17 cm text box (vertical middle, left-aligned)."""
+    """Create a blank slide with background and a 17×16.55 cm text box at top 2.5cm."""
     slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
     # background
     fill = slide.background.fill
     fill.solid()
     fill.fore_color.rgb = RGBColor.from_string(BG_HEX)
-    # center the 17×17 box on the slide
     left = (prs.slide_width - BOX_W) / 2
-    top = (prs.slide_height - BOX_H) / 2
-    box = slide.shapes.add_textbox(left, top, BOX_W, BOX_H)
+    top = Cm(2.5)
+    height = Cm(16.55)
+    box = slide.shapes.add_textbox(left, top, BOX_W, height)
     tf = box.text_frame
     tf.clear()
     tf.word_wrap = True
@@ -2578,6 +2578,7 @@ def add_sermon_doc_to_ppt(
     content_top=None,
     content_height=None,
     content_anchor=MSO_ANCHOR.MIDDLE,
+    content_alignment=PP_ALIGN.LEFT,
 ):
     """
     - Preserve Word paragraphing (no auto-merging).
@@ -2721,7 +2722,7 @@ def add_sermon_doc_to_ppt(
 
     def _add_blank_line(tf):
         p = tf.add_paragraph()
-        p.alignment = PP_ALIGN.LEFT
+        p.alignment = content_alignment
         r = p.add_run(); r.text = ""
         r.font.name = font_name
         r.font.size = Pt(font_size_pt)
@@ -2733,7 +2734,7 @@ def add_sermon_doc_to_ppt(
             p = tf.paragraphs[0]
         else:
             p = tf.add_paragraph()
-        p.alignment = PP_ALIGN.LEFT
+        p.alignment = content_alignment
         for segment, is_name in split_name_segments(_collapse_spaces(text)):
             if not segment:
                 continue
@@ -2987,6 +2988,7 @@ def add_mededelingen_section(prs, json_path, section_type=None):
                 content_top=Cm(3.02),
                 content_height=Cm(16),
                 content_anchor=MSO_ANCHOR.TOP,
+                content_alignment=PP_ALIGN.CENTER,
             )
             slides_added += added
     return slides_added
@@ -3946,13 +3948,13 @@ def add_song_slides(songNumber = 1, presentation = prs, staan = False):
                     lyric_box_height = Cm(8)
                 else:
                     lyric_box_top = Cm(2)
-                    lyric_box_height = Cm(13.5)
+                    lyric_box_height = Cm(17.05)
                 box = slide.shapes.add_textbox(BOX_LEFT, lyric_box_top, BOX_WIDTH, lyric_box_height)
                 tf = box.text_frame
                 tf.clear()
                 tf.word_wrap = True
                 tf.auto_size = MSO_AUTO_SIZE.NONE
-                tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+                tf.vertical_anchor = MSO_ANCHOR.TOP
 
                 is_last_chunk_of_block = (ci == len(chunks) - 1)
                 for li, line in enumerate(chunk_lines):
