@@ -2969,8 +2969,8 @@ def add_mededelingen_section(prs, json_path, section_type=None):
             added = add_sermon_doc_to_ppt(
                 prs, body_text,
                 font_name="Calibri", font_size_pt=30,
-                box_width=BOX_WIDTH, box_height=Cm(17),
-                box_left=BOX_LEFT, box_top=Cm(0),
+                box_width=BOX_WIDTH, box_height=Cm(15.74),
+                box_left=BOX_LEFT, box_top=SLIDE_HEIGHT - Cm(15.74),
                 bg_hex="1E1947", max_lines_per_slide=16,
                 notes_text=body_notes,
                 header_text=header_text,
@@ -3387,7 +3387,10 @@ else:
 slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
 set_background(slide)
 
-box = slide.shapes.add_textbox(BOX_LEFT, Cm(0), BOX_WIDTH, Cm(4))
+# All mededelingen-style headers start at the same top to keep placement consistent
+HEADER_TOP = SLIDE_HEIGHT - Cm(15.74)
+
+box = slide.shapes.add_textbox(BOX_LEFT, HEADER_TOP, BOX_WIDTH, Cm(3.0))
 tf = box.text_frame
 tf.clear()
 tf.word_wrap = True
@@ -3427,7 +3430,7 @@ if bijbelstudie_amount != PLACEHOLDER:
 content.append({'text': CT['ole'].format(d=long_datepw),
                 'amount': opbrengst_amount('collecte_ole')})
 
-table = slide.shapes.add_table(len(content), 3, BOX_LEFT, Cm(4), BOX_WIDTH, Cm(10)).table
+table = slide.shapes.add_table(len(content), 3, BOX_LEFT, HEADER_TOP + Cm(3.0), BOX_WIDTH, Cm(10)).table
 table.columns[0].width = Inches(4.6)
 table.columns[1].width = Inches(0.7)
 table.columns[2].width = Inches(1.0)
@@ -3463,7 +3466,7 @@ for i, row_data in enumerate(content):
 slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
 set_background(slide)
 
-box = slide.shapes.add_textbox(BOX_LEFT, Cm(0), BOX_WIDTH, Cm(4))
+box = slide.shapes.add_textbox(BOX_LEFT, HEADER_TOP, BOX_WIDTH, Cm(2.0))
 tf = box.text_frame
 tf.clear()
 tf.word_wrap = True
@@ -3479,7 +3482,9 @@ r.font.size = Pt(32)
 r.font.color.rgb = white
 r.font.bold = True
 
-box = slide.shapes.add_textbox(BOX_LEFT, Cm(3), BOX_WIDTH, Cm(16))
+body_top = HEADER_TOP + Cm(2.0)
+body_height = SLIDE_HEIGHT - body_top - Cm(0.5)
+box = slide.shapes.add_textbox(BOX_LEFT, body_top, BOX_WIDTH, body_height)
 tf = box.text_frame
 tf.clear()
 tf.word_wrap = True
@@ -3502,7 +3507,7 @@ set_slide_notes(
 slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
 set_background(slide)
 
-box = slide.shapes.add_textbox(BOX_LEFT, Cm(3), BOX_WIDTH, Cm(7.5))
+box = slide.shapes.add_textbox(BOX_LEFT, HEADER_TOP, BOX_WIDTH, Cm(2.0))
 tf = box.text_frame
 tf.clear()
 tf.word_wrap = True
