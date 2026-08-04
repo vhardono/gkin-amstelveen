@@ -1,0 +1,494 @@
+{
+   "data": {
+      "chapter": {
+         "bibleId": "01b58d476a09e6a6-01",
+         "bookId": "PSA",
+         "id": "PSA.100",
+         "content": [
+            {
+               "type": "paragraph",
+               "style": "d",
+               "content": [
+                  {
+                     "type": "verse-number",
+                     "style": "v",
+                     "verseId": "PSA.100.1",
+                     "verseOrgId": [
+                        "PSA.100.1"
+                     ],
+                     "content": "1"
+                  },
+                  {
+                     "type": "text",
+                     "content": "Een psalm voor het dankoffer."
+                  }
+               ]
+            },
+            {
+               "type": "paragraph",
+               "style": "b"
+            },
+            {
+               "type": "paragraph",
+               "style": "q",
+               "content": [
+                  {
+                     "type": "verse-text",
+                     "verseId": "PSA.100.1",
+                     "verseOrgId": [
+                        "PSA.100.1"
+                     ],
+                     "content": "Juich de "
+                  },
+                  {
+                     "type": "verse-text",
+                     "verseId": "PSA.100.1",
+                     "verseOrgId": [
+                        "PSA.100.1"
+                     ],
+                     "content": "HEER",
+                     "style": "nd"
+                  },
+                  {
+                     "type": "verse-text",
+                     "verseId": "PSA.100.1",
+                     "verseOrgId": [
+                        "PSA.100.1"
+                     ],
+                     "content": " toe, heel de aarde,"
+                  }
+               ]
+            },
+            {
+               "type": "paragraph",
+               "style": "q",
+               "content": [
+                  {
+                     "type": "verse-number",
+                     "style": "v",
+                     "verseId": "PSA.100.2",
+                     "verseOrgId": [
+                        "PSA.100.2"
+                     ],
+                     "content": "2"
+                  },
+                  {
+                     "type": "verse-text",
+                     "verseId": "PSA.100.2",
+                     "verseOrgId": [
+                        "PSA.100.2"
+                     ],
+                     "content": "dien de "
+                  },
+                  {
+                     "type": "verse-text",
+                     "verseId": "PSA.100.2",
+                     "verseOrgId": [
+                        "PSA.100.2"
+                     ],
+                     "content": "HEER",
+                     "style": "nd"
+                  },
+                  {
+                     "type": "verse-text",
+                     "verseId": "PSA.100.2",
+                     "verseOrgId": [
+                        "PSA.100.2"
+                     ],
+                     "content": " met vreugde,"
+                  }
+               ]
+            },
+            {
+               "type": "paragraph",
+               "style": "q",
+               "content": [
+                  {
+                     "type": "verse-text",
+                     "verseId": "PSA.100.2",
+                     "verseOrgId": [
+                        "PSA.100.2"
+                     ],
+                     "content": "kom tot Hem met jubelzang."
+                  }
+               ]
+            },
+            {
+               "type": "paragraph",
+               "style": "q",
+               "content": [
+                  {
+                     "type": "verse-number",
+                     "style": "v",
+                     "verseId": "PSA.100.3",
+                     "verseOrgId": [
+                        "PSA.100.3"
+                     ],
+                     "content": "3"
+                  },
+                  {
+                     "id": "CR.1",
+                     "type": "study",
+                     "subtype": "crossreference",
+                     "verseId": "PSA.100.3",
+                     "verseOrgId": [
+                        "PSA.100.3"
+                     ]
+                  },
+                  {
+                     "type": "verse-text",
+                     "verseId": "PSA.100.3",
+                     "verseOrgId": [
+                        "PSA.100.3"
+                     ],
+                     "content": "Erken het: de "
+                  },
+                  {
+                     "type": "verse-text",
+                     "verseId": "PSA.100.3",
+                     "verseOrgId": [
+                        "PSA.100.3"
+                     ],
+                     "content": "HEER",
+                     "style": "nd"
+                  },
+                  {
+                     "type": "verse-text",
+                     "verseId": "PSA.100.3",
+                     "verseOrgId": [
+                        "PSA.100.3"
+                     ],
+                     "content": " is God,"
+                  }
+               ]
+            },
+            {
+               "type": "paragraph",
+               "style": "q",
+               "content": [
+                  {
+                     "type": "verse-text",
+                     "verseId": "PSA.100.3",
+                     "verseOrgId": [
+                        "PSA.100.3"
+                     ],
+                     "content": "Hij heeft ons gemaakt, Hem behoren wij toe,"
+                  }
+               ]
+            },
+            {
+               "type": "paragraph",
+               "style": "q",
+               "content": [
+                  {
+                     "type": "verse-text",
+                     "verseId": "PSA.100.3",
+                     "verseOrgId": [
+                        "PSA.100.3"
+                     ],
+                     "content": "zijn volk zijn wij, de kudde die Hij weidt."
+                  }
+               ]
+            },
+            {
+               "type": "paragraph",
+               "style": "b"
+            },
+            {
+               "type": "paragraph",
+               "style": "q",
+               "content": [
+                  {
+                     "type": "verse-number",
+                     "style": "v",
+                     "verseId": "PSA.100.4",
+                     "verseOrgId": [
+                        "PSA.100.4"
+                     ],
+                     "content": "4"
+                  },
+                  {
+                     "type": "verse-text",
+                     "verseId": "PSA.100.4",
+                     "verseOrgId": [
+                        "PSA.100.4"
+                     ],
+                     "content": "Kom zijn poorten binnen met een loflied,"
+                  }
+               ]
+            },
+            {
+               "type": "paragraph",
+               "style": "q",
+               "content": [
+                  {
+                     "type": "verse-text",
+                     "verseId": "PSA.100.4",
+                     "verseOrgId": [
+                        "PSA.100.4"
+                     ],
+                     "content": "hef in zijn voorhoven een lofzang aan,"
+                  }
+               ]
+            },
+            {
+               "type": "paragraph",
+               "style": "q",
+               "content": [
+                  {
+                     "type": "verse-text",
+                     "verseId": "PSA.100.4",
+                     "verseOrgId": [
+                        "PSA.100.4"
+                     ],
+                     "content": "breng Hem hulde, prijs zijn naam:"
+                  }
+               ]
+            },
+            {
+               "type": "paragraph",
+               "style": "q",
+               "content": [
+                  {
+                     "type": "verse-number",
+                     "style": "v",
+                     "verseId": "PSA.100.5",
+                     "verseOrgId": [
+                        "PSA.100.5"
+                     ],
+                     "content": "5"
+                  },
+                  {
+                     "id": "CR.2",
+                     "type": "study",
+                     "subtype": "crossreference",
+                     "verseId": "PSA.100.5",
+                     "verseOrgId": [
+                        "PSA.100.5"
+                     ]
+                  },
+                  {
+                     "type": "verse-text",
+                     "verseId": "PSA.100.5",
+                     "verseOrgId": [
+                        "PSA.100.5"
+                     ],
+                     "content": "de "
+                  },
+                  {
+                     "type": "verse-text",
+                     "verseId": "PSA.100.5",
+                     "verseOrgId": [
+                        "PSA.100.5"
+                     ],
+                     "content": "HEER",
+                     "style": "nd"
+                  },
+                  {
+                     "type": "verse-text",
+                     "verseId": "PSA.100.5",
+                     "verseOrgId": [
+                        "PSA.100.5"
+                     ],
+                     "content": " is goed,"
+                  }
+               ]
+            },
+            {
+               "type": "paragraph",
+               "style": "q",
+               "content": [
+                  {
+                     "type": "verse-text",
+                     "verseId": "PSA.100.5",
+                     "verseOrgId": [
+                        "PSA.100.5"
+                     ],
+                     "content": "zijn liefde duurt eeuwig,"
+                  }
+               ]
+            },
+            {
+               "type": "paragraph",
+               "style": "q",
+               "content": [
+                  {
+                     "type": "verse-text",
+                     "verseId": "PSA.100.5",
+                     "verseOrgId": [
+                        "PSA.100.5"
+                     ],
+                     "content": "zijn trouw van geslacht op geslacht."
+                  }
+               ]
+            },
+            {
+               "type": "paragraph",
+               "style": "b"
+            },
+            {
+               "type": "paragraph",
+               "style": "b"
+            }
+         ],
+         "number": "100",
+         "next": {
+            "id": "PSA.101",
+            "bookId": "PSA",
+            "number": "101"
+         },
+         "previous": {
+            "id": "PSA.99",
+            "bookId": "PSA",
+            "number": "99"
+         },
+         "copyright": "\u00a9 2021 Nederlands Bijbelgenootschap",
+         "verseCount": 5,
+         "title": "Psalmen 100"
+      },
+      "studyContent": {
+         "footNotes": {},
+         "crossReferences": {
+            "PSA.100.3-CR.1": {
+               "type": "note",
+               "style": "x",
+               "caller": "-",
+               "content": [
+                  {
+                     "type": "char",
+                     "content": "100:3 ",
+                     "style": "xo",
+                     "closed": "false"
+                  },
+                  {
+                     "type": "char",
+                     "style": "xt",
+                     "content": [
+                        {
+                           "type": "ref",
+                           "text": "Ps. 95:7",
+                           "loc": "PSA 95:7"
+                        },
+                        {
+                           "type": "text",
+                           "content": "; "
+                        },
+                        {
+                           "type": "ref",
+                           "text": "Jes. 64:7",
+                           "loc": "ISA 64:7"
+                        }
+                     ],
+                     "closed": "false"
+                  }
+               ],
+               "verseId": "PSA.100.3",
+               "verseOrgId": [
+                  "PSA.100.3"
+               ],
+               "id": "PSA.100.3-CR.1"
+            },
+            "PSA.100.5-CR.2": {
+               "type": "note",
+               "style": "x",
+               "caller": "-",
+               "content": [
+                  {
+                     "type": "char",
+                     "content": "100:5 ",
+                     "style": "xo",
+                     "closed": "false"
+                  },
+                  {
+                     "type": "char",
+                     "style": "xt",
+                     "content": [
+                        {
+                           "type": "ref",
+                           "text": "1 Kron. 16:34",
+                           "loc": "1CH 16:34"
+                        },
+                        {
+                           "type": "text",
+                           "content": "; "
+                        },
+                        {
+                           "type": "ref",
+                           "text": "Ezra 3:11",
+                           "loc": "EZR 3:11"
+                        },
+                        {
+                           "type": "text",
+                           "content": "; "
+                        },
+                        {
+                           "type": "ref",
+                           "text": "Ps. 106:1",
+                           "loc": "PSA 106:1"
+                        },
+                        {
+                           "type": "text",
+                           "content": "; "
+                        },
+                        {
+                           "type": "ref",
+                           "text": "107:1",
+                           "loc": "PSA 107:1"
+                        },
+                        {
+                           "type": "text",
+                           "content": "; "
+                        },
+                        {
+                           "type": "ref",
+                           "text": "118:1",
+                           "loc": "PSA 118:1"
+                        },
+                        {
+                           "type": "text",
+                           "content": "; "
+                        },
+                        {
+                           "type": "ref",
+                           "text": "136:1",
+                           "loc": "PSA 136:1"
+                        },
+                        {
+                           "type": "text",
+                           "content": "; "
+                        },
+                        {
+                           "type": "ref",
+                           "text": "138:8",
+                           "loc": "PSA 138:8"
+                        },
+                        {
+                           "type": "text",
+                           "content": "; "
+                        },
+                        {
+                           "type": "ref",
+                           "text": "Jer. 33:11",
+                           "loc": "JER 33:11"
+                        }
+                     ],
+                     "closed": "false"
+                  }
+               ],
+               "verseId": "PSA.100.5",
+               "verseOrgId": [
+                  "PSA.100.5"
+               ],
+               "id": "PSA.100.5-CR.2"
+            }
+         },
+         "sidebars": {},
+         "extendedFootnotes": {},
+         "bibleId": "01b58d476a09e6a6-01",
+         "bookId": "PSA",
+         "copyright": "\u00a9 2021 Nederlands Bijbelgenootschap",
+         "id": "PSA.100"
+      },
+      "chapterImage": null
+   }
+}

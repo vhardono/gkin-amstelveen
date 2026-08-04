@@ -3016,6 +3016,16 @@ add_textbox(
     "Garamond", italics=True
 )
 
+# --- Service info (used for slide 2) ---
+dienst_json = os.path.join(dir_path, 'dienst.json')
+is_ole_week = False
+if os.path.exists(dienst_json):
+    try:
+        with open(dienst_json, 'r', encoding='utf-8') as f:
+            is_ole_week = (json.load(f) or {}).get('is_ole', False)
+    except Exception:
+        pass
+
 # --- Slide 2 ---
 slide2 = prs.slides.add_slide(prs.slide_layouts[6])  # blank
 set_background(slide2)
@@ -3024,14 +3034,18 @@ add_textbox(
     BOX_LEFT, BOX_TOP, BOX_WIDTH, Cm(2), "GKIN Eredienst", "Calibri", 54, False
 )
 
-add_textbox(
-    slide2,
-    BOX_LEFT, Cm(1.8), BOX_WIDTH, Cm(2), "Online Landelijke Eredienst", "Calibri", 32, False
-)
+subtitle_top = Cm(1.8)
+if is_ole_week:
+    add_textbox(
+        slide2,
+        BOX_LEFT, Cm(1.8), BOX_WIDTH, Cm(2),
+        "Online Landelijke Eredienst", "Calibri", 32, False
+    )
+    subtitle_top = Cm(3.0)
 
 add_textbox(
     slide2,
-    BOX_LEFT, Cm(3.0), BOX_WIDTH, Cm(2), long_date, "Calibri", 32, False
+    BOX_LEFT, subtitle_top, BOX_WIDTH, Cm(2), long_date, "Calibri", 32, False
 )
 
 # add pictures
@@ -3043,11 +3057,14 @@ logo2_path = os.path.join(dir_path,"logo2.png")
 if os.path.exists(logo2_path):
     slide2.shapes.add_picture(logo2_path, Cm(23), Cm(16), Cm(2.47), Cm(2.47))
 
-# add table
-box = slide2.shapes.add_textbox(BOX_LEFT, Cm(5.1), BOX_WIDTH, Cm(16))
+# add table — fit box exactly to the slide bottom, then scale font if needed
+people_top = Cm(5.1)
+people_height = SLIDE_HEIGHT - people_top
+box = slide2.shapes.add_textbox(BOX_LEFT, people_top, BOX_WIDTH, people_height)
 tf = box.text_frame
 tf.word_wrap = True
 tf.clear()
+tf.vertical_anchor = MSO_ANCHOR.TOP
 
 lines = [
     f"Voorganger\t:\t{voorganger}",
@@ -3100,6 +3117,12 @@ if is_empty(leden[0]) == False:
 
 counter = 0
 
+# Auto-shrink font so all names fit in the slide without overflowing.
+# 1 pt ≈ 1/72 in; reserve ~15 % for line spacing/wrapping.
+people_height_pt = (people_height / 914400.0) * 72
+lines_count = max(1, len(lines))
+font_pt = min(18, max(11, int(people_height_pt * 0.85 / lines_count)))
+
 for line in lines:
     if counter == 0:
         p = tf.paragraphs[0]
@@ -3108,7 +3131,7 @@ for line in lines:
     counter = counter + 1
     set_tabs(p, [6.5, 7.0])
     p.text = line
-    p.font.size = Pt(18)
+    p.font.size = Pt(font_pt)
     p.font.name = "Calibri"
     p.font.color.rgb = white
 
@@ -3376,7 +3399,7 @@ p.alignment = PP_ALIGN.CENTER
 r = p.add_run()
 r.text = CT['opbrengst_titel']
 r.font.name = "Calibri"
-r.font.size = Pt(30)
+r.font.size = Pt(32)
 r.font.color.rgb = white
 r.font.bold = True
 
@@ -3452,7 +3475,7 @@ p.alignment = PP_ALIGN.CENTER
 r = p.add_run()
 r.text = CT['collecte_titel']
 r.font.name = "Calibri"
-r.font.size = Pt(30)
+r.font.size = Pt(32)
 r.font.color.rgb = white
 r.font.bold = True
 
@@ -3491,7 +3514,7 @@ p.alignment = PP_ALIGN.CENTER
 r = p.add_run()
 r.text = CT['qr']
 r.font.name = "Calibri"
-r.font.size = Pt(30)
+r.font.size = Pt(32)
 r.font.color.rgb = white
 
 set_slide_notes(slide, CT_OTHER['qr'])

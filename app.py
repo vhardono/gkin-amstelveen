@@ -1252,6 +1252,20 @@ def _run_liturgi(excel_bytes: bytes, preek_bytes, work_dir: str,
     except Exception as e:
         print(f'[Liturgi] Could not retrieve Tikkie QR image from email: {e}')
 
+    # Look up the takenrooster entry once (used for mededelingen and OLE detection)
+    entry = None
+    if service_date:
+        try:
+            taken = _get_takenrooster()
+            entry = next((
+                e for e in taken.get('entries', [])
+                if e.get('date') and e['date'].date() == service_date.date()
+            ), None)
+            if not entry:
+                warnings.append(f'Geen takenrooster entry gevonden voor {service_date.date()}.')
+        except Exception as e:
+            print(f'[Liturgi] Could not load takenrooster: {e}')
+
     # Fetch collecte opbrengst amounts of the previous service for the dankoffer table
     try:
         from data_sources.email_reader import OutlookCollecteReader
@@ -1290,56 +1304,65 @@ def _run_liturgi(excel_bytes: bytes, preek_bytes, work_dir: str,
             warnings.append('Kon geen dienstdatum uit de Excel halen; mededelingen worden niet toegevoegd.')
         elif mededelingen_language not in ('nl', 'id'):
             warnings.append('Geen geldige mededelingentaal ontvangen; mededelingen worden niet toegevoegd.')
+        elif not entry:
+            warnings.append(f'Geen takenrooster entry gevonden voor {service_date.date()}; mededelingen worden niet toegevoegd.')
         else:
             try:
-                taken = _get_takenrooster()
-                entry = next((
-                    e for e in taken.get('entries', [])
-                    if e.get('date') and e['date'].date() == service_date.date()
-                ), None)
-                if not entry:
-                    warnings.append(f'Geen takenrooster entry gevonden voor {service_date.date()}; mededelingen worden niet toegevoegd.')
-                else:
-                    reader = DropboxExcelReader()
-                    meded = reader.get_mededelingen(mededelingen_date=service_date)
-                    welkom_paras = _extract_welkom_paragraphs(service_date, entry, meded, taken.get('entries'))
-                    gen = VoorleesGenerator()
-                    nl_welkom, id_welkom = gen.build_welkom_texts(service_date, entry, welkom_paras)
+                reader = DropboxExcelReader()
+                meded = reader.get_mededelingen(mededelingen_date=service_date)
+                welkom_paras = _extract_welkom_paragraphs(service_date, entry, meded, taken.get('entries'))
+                gen = VoorleesGenerator()
+                nl_welkom, id_welkom = gen.build_welkom_texts(service_date, entry, welkom_paras)
 
-                    def _build_section(section_type, title_nl, title_id, nl_raw, id_raw):
-                        nl_blocks = parse_meded_blocks(nl_raw)
-                        id_blocks = align_id_blocks(nl_blocks, parse_meded_blocks(id_raw))
-                        items = []
-                        for nb, ib in zip(nl_blocks, id_blocks):
-                            nl_text = '\n'.join(p for p in [nb.get('heading', ''), nb.get('body', '')] if p)
-                            id_text = '\n'.join(p for p in [ib.get('heading', ''), ib.get('body', '')] if p)
-                            items.append({'nl': nl_text, 'id': id_text})
-                        return {'type': section_type, 'title': {'nl': title_nl, 'id': title_id}, 'items': items}
+                def _build_section(section_type, title_nl, title_id, nl_raw, id_raw):
+                    nl_blocks = parse_meded_blocks(nl_raw)
+                    id_blocks = align_id_blocks(nl_blocks, parse_meded_blocks(id_raw))
+                    items = []
+                    for nb, ib in zip(nl_blocks, id_blocks):
+                        nl_text = '\n'.join(p for p in [nb.get('heading', ''), nb.get('body', '')] if p)
+                        id_text = '\n'.join(p for p in [ib.get('heading', ''), ib.get('body', '')] if p)
+                        items.append({'nl': nl_text, 'id': id_text})
+                    return {'type': section_type, 'title': {'nl': title_nl, 'id': title_id}, 'items': items}
 
-                    mededelingen_data = {
-                        'language': mededelingen_language,
-                        'date': service_date.strftime('%Y-%m-%d'),
-                        'sections': [
-                            {
-                                'type': 'welkom',
-                                'title': {'nl': 'Welkomstwoord', 'id': 'Kata Sambutan'},
-                                'items': [{'nl': nl_welkom, 'id': id_welkom}],
-                            },
-                            _build_section('regionale', 'Regionale Mededelingen', 'Berita Regional',
-                                           meded.get('regionale_nl', ''), meded.get('regionale_id', '')),
-                            _build_section('landelijke', 'Landelijke Mededelingen', 'Berita Nasional',
-                                           meded.get('landelijke_nl', ''), meded.get('landelijke_id', '')),
-                        ],
-                    }
-                    with open(os.path.join(work_dir, 'mededelingen.json'), 'w', encoding='utf-8') as f:
-                        json.dump(mededelingen_data, f, ensure_ascii=False, indent=2)
-                    print(f'[Liturgi] Prepared mededelingen data for {service_date}')
+                mededelingen_data = {
+                    'language': mededelingen_language,
+                    'date': service_date.strftime('%Y-%m-%d'),
+                    'sections': [
+                        {
+                            'type': 'welkom',
+                            'title': {'nl': 'Welkomstwoord', 'id': 'Kata Sambutan'},
+                            'items': [{'nl': nl_welkom, 'id': id_welkom}],
+                        },
+                        _build_section('regionale', 'Regionale Mededelingen', 'Berita Regional',
+                                       meded.get('regionale_nl', ''), meded.get('regionale_id', '')),
+                        _build_section('landelijke', 'Landelijke Mededelingen', 'Berita Nasional',
+                                       meded.get('landelijke_nl', ''), meded.get('landelijke_id', '')),
+                    ],
+                }
+                with open(os.path.join(work_dir, 'mededelingen.json'), 'w', encoding='utf-8') as f:
+                    json.dump(mededelingen_data, f, ensure_ascii=False, indent=2)
+                print(f'[Liturgi] Prepared mededelingen data for {service_date}')
             except Exception as e:
                 warning_msg = f'Kon mededelingen niet voorbereiden: {e}'
                 warnings.append(warning_msg)
                 print(f'[Liturgi] {warning_msg}')
                 import traceback
                 traceback.print_exc()
+
+    # Write a small service-info file for slide 2 and other unconditional slides
+    try:
+        is_ole = 'OLE' in str(entry.get('opmerking', '')).upper() if entry else False
+        dienst_info = {
+            'is_ole': is_ole,
+            'opmerking': str(entry.get('opmerking', '')).strip() if entry else '',
+            'mededelingen_language': mededelingen_language or '',
+        }
+        with open(os.path.join(work_dir, 'dienst.json'), 'w', encoding='utf-8') as f:
+            json.dump(dienst_info, f, ensure_ascii=False, indent=2)
+        print(f'[Liturgi] Dienst info: OLE={is_ole}')
+    except Exception as e:
+        warnings.append(f'Kon dienstinformatie niet opslaan: {e}')
+        print(f'[Liturgi] Could not save dienst info: {e}')
 
     for name, src in [('bible', _LITURGIE_CACHE), ('logo.png', _LITURGIE_LOGO), ('telephone.gif', _LITURGIE_PHONE)]:
         link = os.path.join(work_dir, name)
