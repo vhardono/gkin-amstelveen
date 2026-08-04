@@ -2118,7 +2118,7 @@ def _new_slide_with_box(prs):
     fill.solid()
     fill.fore_color.rgb = RGBColor.from_string(BG_HEX)
     left = (prs.slide_width - BOX_W) / 2
-    top = Cm(2.5)
+    top = Cm(2.0)
     height = Cm(16.55)
     box = slide.shapes.add_textbox(left, top, BOX_W, height)
     tf = box.text_frame
@@ -2201,11 +2201,14 @@ def add_verses_to_ppt(prs: Presentation, dutch_book_name: str, chapter_number, v
         label_text = f"{dutch_book_name} {chapter_number} (NBV 21)"
         label_w = BOX_WIDTH
         label_h = Cm(2.0)
-        label_left = BOX_LEFT   # 1 cm right margin
-        label_top = Cm(0.5)                                # 0.5 cm from top
+        label_left = BOX_LEFT
+        label_top = Cm(0)
         box = slide.shapes.add_textbox(label_left, label_top, label_w, label_h)
         tf = box.text_frame
         tf.clear()
+        tf.word_wrap = True
+        tf.auto_size = MSO_AUTO_SIZE.NONE
+        tf.vertical_anchor = MSO_ANCHOR.MIDDLE
         p = tf.paragraphs[0]
         p.alignment = PP_ALIGN.RIGHT
         r = p.add_run()
@@ -2456,10 +2459,13 @@ def add_verses_to_ppt_indo(
     def _add_top_right_label(slide):
         w, h = BOX_WIDTH, Cm(2.0)
         left = BOX_LEFT
-        top = Cm(0.5)
+        top = Cm(0)
         box = slide.shapes.add_textbox(left, top, w, h)
         tf = box.text_frame
         tf.clear()
+        tf.word_wrap = True
+        tf.auto_size = MSO_AUTO_SIZE.NONE
+        tf.vertical_anchor = MSO_ANCHOR.MIDDLE
         p = tf.paragraphs[0]
         p.alignment = PP_ALIGN.RIGHT
         r = p.add_run()
@@ -3934,18 +3940,26 @@ def add_song_slides(songNumber = 1, presentation = prs, staan = False):
                 else:
                     tt1 = f'{s["Boek"]} {s["Nummer"]}'
 
-                addBox(
-                    slide,
-                    text=tt1,
-                    left=Cm(17), top=Cm(0.5), width=Cm(6.7), height=Cm(2),
-                    alignment="RIGHT",
-                    color=RGBColor(255,173,3), bold=True, Size=Pt(24)
-                )
+                # Orange song number label
+                label_box = slide.shapes.add_textbox(BOX_LEFT, Cm(0), BOX_WIDTH, Cm(2))
+                ltf = label_box.text_frame
+                ltf.clear()
+                ltf.word_wrap = True
+                ltf.auto_size = MSO_AUTO_SIZE.NONE
+                ltf.vertical_anchor = MSO_ANCHOR.MIDDLE
+                lp = ltf.paragraphs[0]
+                lp.alignment = PP_ALIGN.RIGHT
+                lr = lp.add_run()
+                lr.text = tt1
+                lr.font.name = "Calibri"
+                lr.font.size = Pt(24)
+                lr.font.bold = True
+                lr.font.color.rgb = RGBColor(255, 173, 3)
 
                 # Reduce lyric box height for dankoffer song to make room for 7cm QR at bottom
                 if songNumber == 6:
-                    lyric_box_top = Cm(2.5)
-                    lyric_box_height = Cm(8)
+                    lyric_box_top = Cm(2)
+                    lyric_box_height = Cm(8.5)
                 else:
                     lyric_box_top = Cm(2)
                     lyric_box_height = Cm(17.05)
