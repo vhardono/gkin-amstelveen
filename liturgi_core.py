@@ -2119,7 +2119,7 @@ def _new_slide_with_box(prs):
     fill.fore_color.rgb = RGBColor.from_string(BG_HEX)
     left = (prs.slide_width - BOX_W) / 2
     top = Cm(2.0)
-    height = Cm(16.55)
+    height = Cm(17.05)
     box = slide.shapes.add_textbox(left, top, BOX_W, height)
     tf = box.text_frame
     tf.clear()
@@ -2868,34 +2868,55 @@ def add_sermon_doc_to_ppt(
     return slides_added
 
 
-def add_mededelingen_divider_slide(prs, slide_text, notes_text=None):
-    """Full-screen centered section divider slide, uppercase, Calibri 48 Bold."""
+def add_mededelingen_divider_slide(prs, nl_title, id_title=None):
+    """Full-screen centered section divider: Dutch (bold) + blank + Indonesian (italic), 40 pt."""
     slide = prs.slides.add_slide(prs.slide_layouts[6])
     fill = slide.background.fill
     fill.solid()
     fill.fore_color.rgb = RGBColor.from_string("1E1947")
 
-    box = slide.shapes.add_textbox(BOX_LEFT, Cm(0), BOX_WIDTH, Cm(17))
+    box = slide.shapes.add_textbox(BOX_LEFT, Cm(0), BOX_WIDTH, SLIDE_HEIGHT)
     tf = box.text_frame
     tf.clear()
     tf.word_wrap = True
     tf.auto_size = MSO_AUTO_SIZE.NONE
     tf.vertical_anchor = MSO_ANCHOR.MIDDLE
 
-    p = tf.paragraphs[0]
-    p.alignment = PP_ALIGN.CENTER
-    r = p.add_run()
-    r.text = (slide_text or "").upper()
-    r.font.name = "Calibri"
-    r.font.size = Pt(48)
-    r.font.color.rgb = RGBColor(255, 255, 255)
-    r.font.bold = True
+    # Dutch (first row)
+    p1 = tf.paragraphs[0]
+    p1.alignment = PP_ALIGN.CENTER
+    r1 = p1.add_run()
+    r1.text = (nl_title or "").upper()
+    r1.font.name = "Calibri"
+    r1.font.size = Pt(40)
+    r1.font.color.rgb = RGBColor(255, 255, 255)
+    r1.font.bold = True
 
-    if notes_text:
+    # spacing row
+    p2 = tf.add_paragraph()
+    p2.alignment = PP_ALIGN.CENTER
+    r2 = p2.add_run()
+    r2.text = ""
+    r2.font.name = "Calibri"
+    r2.font.size = Pt(40)
+
+    # Indonesian (third row, italic)
+    if id_title:
+        p3 = tf.add_paragraph()
+        p3.alignment = PP_ALIGN.CENTER
+        r3 = p3.add_run()
+        r3.text = (id_title or "").upper()
+        r3.font.name = "Calibri"
+        r3.font.size = Pt(40)
+        r3.font.italic = True
+        r3.font.color.rgb = RGBColor(255, 255, 255)
+
+    # notes: keep the selected translation visible
+    if id_title:
         try:
             ntf = slide.notes_slide.notes_text_frame
             ntf.clear()
-            ntf.paragraphs[0].text = (notes_text or "").upper()
+            ntf.paragraphs[0].text = (id_title or "").upper()
         except Exception:
             pass
     return slide
@@ -2961,7 +2982,9 @@ def add_mededelingen_section(prs, json_path, section_type=None):
 
         is_welkom = section.get('type') == 'welkom'
         if not is_welkom:
-            add_mededelingen_divider_slide(prs, section_title, section_title_other)
+            nl_title = title.get('nl', '') or section_title
+            id_title = title.get('id', '') or section_title_other
+            add_mededelingen_divider_slide(prs, nl_title, id_title)
             slides_added += 1
 
         for item in items:
