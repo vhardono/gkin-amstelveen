@@ -2577,6 +2577,7 @@ def add_sermon_doc_to_ppt(
     header_height=None,
     content_top=None,
     content_height=None,
+    content_anchor=MSO_ANCHOR.MIDDLE,
 ):
     """
     - Preserve Word paragraphing (no auto-merging).
@@ -2672,7 +2673,7 @@ def add_sermon_doc_to_ppt(
         tf.clear()
         tf.word_wrap = True
         tf.auto_size = MSO_AUTO_SIZE.NONE
-        tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+        tf.vertical_anchor = content_anchor
         tf.margin_left = tf.margin_right = Cm(0.3)
         tf.margin_top = tf.margin_bottom = Cm(0.2)
         return slide, tf
@@ -2985,6 +2986,7 @@ def add_mededelingen_section(prs, json_path, section_type=None):
                 header_height=Cm(3),
                 content_top=Cm(3.02),
                 content_height=Cm(16),
+                content_anchor=MSO_ANCHOR.TOP,
             )
             slides_added += added
     return slides_added
@@ -3442,7 +3444,7 @@ if bijbelstudie_amount != PLACEHOLDER:
 content.append({'text': CT['ole'].format(d=long_datepw),
                 'amount': opbrengst_amount('collecte_ole')})
 
-table = slide.shapes.add_table(len(content), 3, BOX_LEFT, CONTENT_TOP, BOX_WIDTH, CONTENT_HEIGHT).table
+table = slide.shapes.add_table(len(content), 3, BOX_LEFT, HEADER_TOP + HEADER_HEIGHT, BOX_WIDTH, Cm(10)).table
 table.columns[0].width = Inches(4.6)
 table.columns[1].width = Inches(0.7)
 table.columns[2].width = Inches(1.0)
@@ -4692,7 +4694,8 @@ if os.path.exists(path_sermon):
         clean_text,
         box_width=BOX_WIDTH,
         box_left=BOX_LEFT,
-        box_top=Cm(0.5),
+        box_top=Cm(0),
+        box_height=SLIDE_HEIGHT,
         font_size_pt=28,
         max_lines_per_slide=16,
         notes_text=original_clean,
