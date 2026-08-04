@@ -2574,6 +2574,9 @@ def add_sermon_doc_to_ppt(
     header_text=None,
     header_notes_text=None,
     header_font_size_pt=32,
+    header_height=None,
+    content_top=None,
+    content_height=None,
 ):
     """
     - Preserve Word paragraphing (no auto-merging).
@@ -2610,17 +2613,20 @@ def add_sermon_doc_to_ppt(
     CPL = min(CPL, max(10, int(usable_w_cm / body_char_cm)))
 
     if header_text:
-        head_line_cm = (header_font_size_pt * 1.20) / PT_PER_CM
-        head_char_cm = (header_font_size_pt * 0.52) / PT_PER_CM
-        head_cpl = max(8, int(usable_w_cm / head_char_cm))
-        head_lines = max(1, len(textwrap.wrap(" ".join(header_text.split()), width=head_cpl)))
-        header_height = Cm(min(box_h_cm * 0.45, head_lines * head_line_cm + 0.6))
+        if header_height is not None:
+            header_height = header_height
+        else:
+            head_line_cm = (header_font_size_pt * 1.20) / PT_PER_CM
+            head_char_cm = (header_font_size_pt * 0.52) / PT_PER_CM
+            head_cpl = max(8, int(usable_w_cm / head_char_cm))
+            head_lines = max(1, len(textwrap.wrap(" ".join(header_text.split()), width=head_cpl)))
+            header_height = Cm(min(box_h_cm * 0.45, head_lines * head_line_cm + 0.6))
     else:
         header_height = Cm(0)
 
-    content_top = box_top + header_height
-    content_height = box_height - header_height
-    content_h_cm = box_h_cm - (float(header_height) / EMU_PER_CM)
+    content_top = content_top if content_top is not None else box_top + header_height
+    content_height = content_height if content_height is not None else box_height - header_height
+    content_h_cm = float(content_height) / EMU_PER_CM
     ML = min(ML, max(1, int((content_h_cm - 0.4) / body_line_cm)))
 
     def _flush_notes(target_slide, notes_list):
@@ -2969,13 +2975,16 @@ def add_mededelingen_section(prs, json_path, section_type=None):
             added = add_sermon_doc_to_ppt(
                 prs, body_text,
                 font_name="Calibri", font_size_pt=30,
-                box_width=BOX_WIDTH, box_height=Cm(15.74),
-                box_left=BOX_LEFT, box_top=SLIDE_HEIGHT - Cm(15.74),
+                box_width=BOX_WIDTH, box_height=Cm(19),
+                box_left=BOX_LEFT, box_top=Cm(0),
                 bg_hex="1E1947", max_lines_per_slide=16,
                 notes_text=body_notes,
                 header_text=header_text,
                 header_notes_text=header_notes_text,
                 header_font_size_pt=32,
+                header_height=Cm(3),
+                content_top=Cm(3.02),
+                content_height=Cm(16),
             )
             slides_added += added
     return slides_added
@@ -3387,10 +3396,13 @@ else:
 slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
 set_background(slide)
 
-# All mededelingen-style headers start at the same top to keep placement consistent
-HEADER_TOP = SLIDE_HEIGHT - Cm(15.74)
+# All mededelingen-style headers: top 0, height 3cm; content starts at 3.02
+HEADER_TOP = Cm(0)
+HEADER_HEIGHT = Cm(3)
+CONTENT_TOP = Cm(3.02)
+CONTENT_HEIGHT = Cm(16)
 
-box = slide.shapes.add_textbox(BOX_LEFT, HEADER_TOP, BOX_WIDTH, Cm(3.0))
+box = slide.shapes.add_textbox(BOX_LEFT, HEADER_TOP, BOX_WIDTH, HEADER_HEIGHT)
 tf = box.text_frame
 tf.clear()
 tf.word_wrap = True
@@ -3430,7 +3442,7 @@ if bijbelstudie_amount != PLACEHOLDER:
 content.append({'text': CT['ole'].format(d=long_datepw),
                 'amount': opbrengst_amount('collecte_ole')})
 
-table = slide.shapes.add_table(len(content), 3, BOX_LEFT, HEADER_TOP + Cm(3.0), BOX_WIDTH, Cm(10)).table
+table = slide.shapes.add_table(len(content), 3, BOX_LEFT, CONTENT_TOP, BOX_WIDTH, CONTENT_HEIGHT).table
 table.columns[0].width = Inches(4.6)
 table.columns[1].width = Inches(0.7)
 table.columns[2].width = Inches(1.0)
@@ -3466,7 +3478,7 @@ for i, row_data in enumerate(content):
 slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
 set_background(slide)
 
-box = slide.shapes.add_textbox(BOX_LEFT, HEADER_TOP, BOX_WIDTH, Cm(2.0))
+box = slide.shapes.add_textbox(BOX_LEFT, HEADER_TOP, BOX_WIDTH, HEADER_HEIGHT)
 tf = box.text_frame
 tf.clear()
 tf.word_wrap = True
@@ -3482,9 +3494,7 @@ r.font.size = Pt(32)
 r.font.color.rgb = white
 r.font.bold = True
 
-body_top = HEADER_TOP + Cm(2.0)
-body_height = SLIDE_HEIGHT - body_top - Cm(0.5)
-box = slide.shapes.add_textbox(BOX_LEFT, body_top, BOX_WIDTH, body_height)
+box = slide.shapes.add_textbox(BOX_LEFT, CONTENT_TOP, BOX_WIDTH, CONTENT_HEIGHT)
 tf = box.text_frame
 tf.clear()
 tf.word_wrap = True
@@ -3507,7 +3517,7 @@ set_slide_notes(
 slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
 set_background(slide)
 
-box = slide.shapes.add_textbox(BOX_LEFT, HEADER_TOP, BOX_WIDTH, Cm(2.0))
+box = slide.shapes.add_textbox(BOX_LEFT, CONTENT_TOP, BOX_WIDTH, CONTENT_HEIGHT)
 tf = box.text_frame
 tf.clear()
 tf.word_wrap = True
