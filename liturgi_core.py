@@ -2908,6 +2908,7 @@ def add_mededelingen_divider_slide(prs, nl_title, id_title=None):
         r3.text = (id_title or "").upper()
         r3.font.name = "Calibri"
         r3.font.size = Pt(40)
+        r3.font.bold = True
         r3.font.italic = True
         r3.font.color.rgb = RGBColor(255, 255, 255)
 
@@ -3317,7 +3318,7 @@ if mededelingen_present:
 else:
     slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
     set_background(slide)
-    box = slide.shapes.add_textbox(BOX_LEFT, Cm(1), BOX_WIDTH, Cm(16))
+    box = slide.shapes.add_textbox(BOX_LEFT, Cm(0), BOX_WIDTH, Cm(19.05))
     tf = box.text_frame
     tf.clear()
     tf.word_wrap = True
@@ -3347,7 +3348,7 @@ else:
 
     slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
     set_background(slide)
-    box = slide.shapes.add_textbox(BOX_LEFT, Cm(1), BOX_WIDTH, Cm(16))
+    box = slide.shapes.add_textbox(BOX_LEFT, Cm(0), BOX_WIDTH, Cm(19.05))
     tf = box.text_frame
     tf.clear()
     tf.word_wrap = True
@@ -3372,7 +3373,7 @@ else:
 
     slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
     set_background(slide)
-    box = slide.shapes.add_textbox(BOX_LEFT, Cm(1), BOX_WIDTH, Cm(16))
+    box = slide.shapes.add_textbox(BOX_LEFT, Cm(0), BOX_WIDTH, Cm(19.05))
     tf = box.text_frame
     tf.clear()
     tf.word_wrap = True
@@ -3400,7 +3401,7 @@ else:
 
     slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
     set_background(slide)
-    box = slide.shapes.add_textbox(BOX_LEFT, Cm(1), BOX_WIDTH, Cm(16))
+    box = slide.shapes.add_textbox(BOX_LEFT, Cm(0), BOX_WIDTH, Cm(19.05))
     tf = box.text_frame
     tf.clear()
     tf.word_wrap = True
@@ -3580,7 +3581,7 @@ if not mededelingen_present:
     slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
     set_background(slide)
     
-    box = slide.shapes.add_textbox(BOX_LEFT, Cm(0), BOX_WIDTH, Cm(17))
+    box = slide.shapes.add_textbox(BOX_LEFT, Cm(0), BOX_WIDTH, Cm(19.05))
     tf = box.text_frame
     tf.clear()
     tf.word_wrap = True
@@ -3711,7 +3712,7 @@ if not mededelingen_present:
     slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
     set_background(slide)
     
-    box = slide.shapes.add_textbox(BOX_LEFT, Cm(0), BOX_WIDTH, Cm(17))
+    box = slide.shapes.add_textbox(BOX_LEFT, Cm(0), BOX_WIDTH, Cm(19.05))
     tf = box.text_frame
     tf.clear()
     tf.word_wrap = True
@@ -4043,7 +4044,7 @@ r.font.size = Pt(27)
 r.font.color.rgb = yellow
 r.font.italic = True
 
-box = slide.shapes.add_textbox(BOX_LEFT, Cm(5), BOX_WIDTH, Cm(7))
+box = slide.shapes.add_textbox(BOX_LEFT, Cm(0), BOX_WIDTH, Cm(19.05))
 tf = box.text_frame
 tf.clear()
 tf.word_wrap = True
@@ -4126,7 +4127,7 @@ r.font.italic = True
 slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
 set_background(slide)
 
-box = slide.shapes.add_textbox(BOX_LEFT, Cm(1), BOX_WIDTH, Cm(16))
+box = slide.shapes.add_textbox(BOX_LEFT, Cm(0), BOX_WIDTH, Cm(19.05))
 tf = box.text_frame
 tf.clear()
 tf.word_wrap = True
@@ -4163,7 +4164,7 @@ r.font.italic = True
 slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
 set_background(slide)
 
-box = slide.shapes.add_textbox(BOX_LEFT, Cm(1), BOX_WIDTH, Cm(16))
+box = slide.shapes.add_textbox(BOX_LEFT, Cm(0), BOX_WIDTH, Cm(19.05))
 tf = box.text_frame
 tf.clear()
 tf.word_wrap = True
@@ -4200,7 +4201,7 @@ r.font.italic = True
 slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
 set_background(slide)
 
-box = slide.shapes.add_textbox(BOX_LEFT, Cm(1), BOX_WIDTH, Cm(16))
+box = slide.shapes.add_textbox(BOX_LEFT, Cm(0), BOX_WIDTH, Cm(19.05))
 tf = box.text_frame
 tf.clear()
 tf.word_wrap = True
@@ -4242,7 +4243,7 @@ boek_id2 = dutch_to_indonesian_bible.get(boek2, boek2)
 slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
 set_background(slide)
 
-box = slide.shapes.add_textbox(BOX_LEFT, Cm(1), BOX_WIDTH, Cm(16))
+box = slide.shapes.add_textbox(BOX_LEFT, Cm(0), BOX_WIDTH, Cm(19.05))
 tf = box.text_frame
 tf.clear()
 tf.word_wrap = True
@@ -4323,7 +4324,7 @@ set_background(slide)
 slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
 set_background(slide)
 
-box = slide.shapes.add_textbox(BOX_LEFT, Cm(1), BOX_WIDTH, Cm(16))
+box = slide.shapes.add_textbox(BOX_LEFT, Cm(0), BOX_WIDTH, Cm(19.05))
 tf = box.text_frame
 tf.clear()
 tf.word_wrap = True
@@ -4346,7 +4347,7 @@ r.font.bold = True
 slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
 set_background(slide)
 
-box = slide.shapes.add_textbox(BOX_LEFT, Cm(1), BOX_WIDTH, Cm(16))
+box = slide.shapes.add_textbox(BOX_LEFT, Cm(0), BOX_WIDTH, Cm(19.05))
 tf = box.text_frame
 tf.clear()
 tf.word_wrap = True
@@ -4393,7 +4394,7 @@ boek_id2 = dutch_to_indonesian_bible.get(boek2, boek2)
 slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
 set_background(slide)
 
-box = slide.shapes.add_textbox(BOX_LEFT, Cm(1), BOX_WIDTH, Cm(16))
+box = slide.shapes.add_textbox(BOX_LEFT, Cm(0), BOX_WIDTH, Cm(19.05))
 tf = box.text_frame
 tf.clear()
 tf.word_wrap = True
@@ -4466,7 +4467,7 @@ boek_id2 = dutch_to_indonesian_bible.get(boek2, boek2)
 slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
 set_background(slide)
 
-box = slide.shapes.add_textbox(BOX_LEFT, Cm(1), BOX_WIDTH, Cm(16))
+box = slide.shapes.add_textbox(BOX_LEFT, Cm(0), BOX_WIDTH, Cm(19.05))
 tf = box.text_frame
 tf.clear()
 tf.word_wrap = True
@@ -4544,7 +4545,7 @@ boek_id2 = dutch_to_indonesian_bible.get(boek2, boek2)
 
 slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
 set_background(slide)
-box = slide.shapes.add_textbox(BOX_LEFT, Cm(1), BOX_WIDTH, Cm(16))
+box = slide.shapes.add_textbox(BOX_LEFT, Cm(0), BOX_WIDTH, Cm(19.05))
 tf = box.text_frame
 tf.clear()
 tf.word_wrap = True
@@ -4568,12 +4569,12 @@ r.font.bold = True
 
 slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
 set_background(slide)
-box = slide.shapes.add_textbox(BOX_LEFT, Cm(1), BOX_WIDTH, Cm(16))
+box = slide.shapes.add_textbox(BOX_LEFT, Cm(0), BOX_WIDTH, Cm(19.05))
 tf = box.text_frame
 tf.clear()
 tf.word_wrap = True
 tf.auto_size = MSO_AUTO_SIZE.NONE
-tf.vertical_anchor = MSO_ANCHOR.TOP
+tf.vertical_anchor = MSO_ANCHOR.MIDDLE
 p = tf.paragraphs[0]
 p.alignment = PP_ALIGN.CENTER
 r = p.add_run()
@@ -4622,7 +4623,7 @@ if is_empty(boek2) == False:
     
 slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
 set_background(slide)
-box = slide.shapes.add_textbox(BOX_LEFT, Cm(1), BOX_WIDTH, Cm(16))
+box = slide.shapes.add_textbox(BOX_LEFT, Cm(0), BOX_WIDTH, Cm(19.05))
 tf = box.text_frame
 tf.clear()
 tf.word_wrap = True
@@ -4660,7 +4661,7 @@ r.font.name = "Calibri"
 r.font.size = Pt(40)
 r.font.color.rgb = yellow
 
-box = slide.shapes.add_textbox(BOX_LEFT, Cm(3), BOX_WIDTH, Cm(13))
+box = slide.shapes.add_textbox(BOX_LEFT, Cm(0), BOX_WIDTH, Cm(19.05))
 tf = box.text_frame
 tf.clear()
 tf.word_wrap = True
@@ -4747,7 +4748,7 @@ if os.path.exists(path_sermon):
         slide = prs.slides.add_slide(prs.slide_layouts[6])
         set_background(slide)
 
-        box = slide.shapes.add_textbox(BOX_LEFT, Cm(4), BOX_WIDTH, Cm(6))
+        box = slide.shapes.add_textbox(BOX_LEFT, Cm(0), BOX_WIDTH, Cm(19.05))
         tf = box.text_frame
         tf.clear()
         tf.word_wrap = True
@@ -4771,7 +4772,7 @@ else:
           f"preek-slides overgeslagen.")
     slide = prs.slides.add_slide(prs.slide_layouts[6])
     set_background(slide)
-    box = slide.shapes.add_textbox(BOX_LEFT, Cm(4), BOX_WIDTH, Cm(6))
+    box = slide.shapes.add_textbox(BOX_LEFT, Cm(0), BOX_WIDTH, Cm(19.05))
     tf = box.text_frame
     tf.clear()
     tf.word_wrap = True
@@ -4790,7 +4791,7 @@ else:
     slide = prs.slides.add_slide(prs.slide_layouts[6])
     set_background(slide)
 
-    box = slide.shapes.add_textbox(BOX_LEFT, Cm(4), BOX_WIDTH, Cm(6))
+    box = slide.shapes.add_textbox(BOX_LEFT, Cm(0), BOX_WIDTH, Cm(19.05))
     tf = box.text_frame
     tf.clear()
     tf.word_wrap = True
@@ -4811,7 +4812,7 @@ else:
 # --- Meditatief moment ---
 slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
 set_background(slide)
-box = slide.shapes.add_textbox(BOX_LEFT, Cm(1), BOX_WIDTH, Cm(16))
+box = slide.shapes.add_textbox(BOX_LEFT, Cm(0), BOX_WIDTH, Cm(19.05))
 tf = box.text_frame
 tf.clear()
 tf.word_wrap = True
@@ -4831,7 +4832,7 @@ set_background(slide)
 slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
 set_background(slide)
 addBox(slide, "(staande)", BOX_LEFT, Cm(3), BOX_WIDTH, Cm(2), RGBColor(255,173,3), italic=True, Size=Pt(32))
-box = slide.shapes.add_textbox(BOX_LEFT, Cm(1), BOX_WIDTH, Cm(16))
+box = slide.shapes.add_textbox(BOX_LEFT, Cm(0), BOX_WIDTH, Cm(19.05))
 tf = box.text_frame
 tf.clear()
 tf.word_wrap = True
@@ -4855,7 +4856,7 @@ r.font.bold = True
 
 slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
 set_background(slide)
-box = slide.shapes.add_textbox(BOX_LEFT, Cm(1), BOX_WIDTH, Cm(16))
+box = slide.shapes.add_textbox(BOX_LEFT, Cm(0), BOX_WIDTH, Cm(19.05))
 tf = box.text_frame
 tf.clear()
 tf.word_wrap = True
@@ -4871,7 +4872,7 @@ r.font.color.rgb = white
 
 slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
 set_background(slide)
-box = slide.shapes.add_textbox(BOX_LEFT, Cm(1), BOX_WIDTH, Cm(16))
+box = slide.shapes.add_textbox(BOX_LEFT, Cm(0), BOX_WIDTH, Cm(19.05))
 tf = box.text_frame
 tf.clear()
 tf.word_wrap = True
@@ -4887,7 +4888,7 @@ r.font.color.rgb = white
 
 slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
 set_background(slide)
-box = slide.shapes.add_textbox(BOX_LEFT, Cm(1), BOX_WIDTH, Cm(16))
+box = slide.shapes.add_textbox(BOX_LEFT, Cm(0), BOX_WIDTH, Cm(19.05))
 tf = box.text_frame
 tf.clear()
 tf.word_wrap = True
@@ -4912,7 +4913,7 @@ set_background(slide)
 # --- Voorbeden ---
 slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
 set_background(slide)
-box = slide.shapes.add_textbox(BOX_LEFT, Cm(1), BOX_WIDTH, Cm(16))
+box = slide.shapes.add_textbox(BOX_LEFT, Cm(0), BOX_WIDTH, Cm(19.05))
 tf = box.text_frame
 tf.clear()
 tf.word_wrap = True
@@ -4950,7 +4951,7 @@ r.font.italic = True
 
 slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
 set_background(slide)
-box = slide.shapes.add_textbox(BOX_LEFT, Cm(1), BOX_WIDTH, Cm(16))
+box = slide.shapes.add_textbox(BOX_LEFT, Cm(0), BOX_WIDTH, Cm(19.05))
 tf = box.text_frame
 tf.clear()
 tf.word_wrap = True
@@ -4995,7 +4996,7 @@ if boek and ':' in str(boek):
 
 slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
 set_background(slide)
-box = slide.shapes.add_textbox(BOX_LEFT, Cm(1), BOX_WIDTH, Cm(16))
+box = slide.shapes.add_textbox(BOX_LEFT, Cm(0), BOX_WIDTH, Cm(19.05))
 tf = box.text_frame
 tf.clear()
 tf.word_wrap = True
@@ -5020,7 +5021,7 @@ r.font.size = Pt(32)
 if verse_text and str(verse_text).strip():
     slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
     set_background(slide)
-    box = slide.shapes.add_textbox(BOX_LEFT, Cm(1), BOX_WIDTH, Cm(16))
+    box = slide.shapes.add_textbox(BOX_LEFT, Cm(0), BOX_WIDTH, Cm(19.05))
     tf = box.text_frame
     tf.clear()
     tf.word_wrap = True
@@ -5038,7 +5039,7 @@ add_verses_to_ppt(prs, boek, hs, vfrom, vto)
 
 slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
 set_background(slide)
-box = slide.shapes.add_textbox(BOX_LEFT, Cm(1), BOX_WIDTH, Cm(8.5))
+box = slide.shapes.add_textbox(BOX_LEFT, Cm(0), BOX_WIDTH, Cm(19.05))
 tf = box.text_frame
 tf.clear()
 tf.word_wrap = True
@@ -5058,7 +5059,7 @@ add_song_slides(6, prs, False)
 
 slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
 set_background(slide)
-box = slide.shapes.add_textbox(BOX_LEFT, Cm(1), BOX_WIDTH, Cm(9.5))
+box = slide.shapes.add_textbox(BOX_LEFT, Cm(0), BOX_WIDTH, Cm(19.05))
 tf = box.text_frame
 tf.clear()
 tf.word_wrap = True
