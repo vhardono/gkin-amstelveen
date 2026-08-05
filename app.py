@@ -1204,6 +1204,50 @@ def _resolve_main_liturgy_path(dbx=None, requested=None):
     return WORKING_FILE_PATH
 
 
+PREEK_PATTERN = re.compile(r'^Preek.*\.docx$', re.IGNORECASE)
+PREEK_DEFAULT = f'{WORKING_FOLDER}/Preek.docx'
+
+
+def _list_preek_files(dbx=None):
+    """Return a sorted list of Preek*.docx files in the working folder.
+    Files with an YYYYMMDD date in the name are sorted newest-first."""
+    if dbx is None:
+        try:
+            dbx = _get_dbx_liturgie()
+        except Exception:
+            return []
+    try:
+        result = dbx.files_list_folder(WORKING_FOLDER, include_non_downloadable_files=False)
+    except Exception:
+        return []
+    files = []
+    for entry in result.entries:
+        if not isinstance(entry, dropbox.files.FileMetadata):
+            continue
+        name = os.path.basename(entry.path_lower or '')
+        if PREEK_PATTERN.match(name):
+            date_m = re.search(r'(\d{4})(\d{2})(\d{2})', name)
+            date_key = date_m.group(0) if date_m else '00000000'
+            files.append({'name': name, 'path': entry.path_display or f'{WORKING_FOLDER}/{name}', 'date_key': date_key})
+    # Newest-first; undated / fallback last
+    files.sort(key=lambda x: x['date_key'], reverse=True)
+    return files
+
+
+def _resolve_preek_path(dbx=None, requested=None):
+    """Return the Dropbox path to use for a Preek file.
+    If requested matches the pattern, use it; otherwise pick the latest
+    Preek*.docx; finally fall back to PREEK_DEFAULT."""
+    if requested:
+        name = os.path.basename(requested)
+        if PREEK_PATTERN.match(name):
+            return f'{WORKING_FOLDER}/{name}'
+    files = _list_preek_files(dbx)
+    if files:
+        return files[0]['path']
+    return PREEK_DEFAULT
+
+
 def _ensure_liturgie_file(remote_path: str, local_path: str):
     """Download a single file from Dropbox if not cached locally."""
     if os.path.exists(local_path):
@@ -1463,6 +1507,12 @@ def liturgie_list_main_files():
     return jsonify({'files': _list_main_liturgy_files(dbx)})
 
 
+@app.route('/liturgie/list-preek-files', methods=['GET'])
+def liturgie_list_preek_files():
+    dbx = _get_dbx_liturgie()
+    return jsonify({'files': _list_preek_files(dbx)})
+
+
 @app.route('/liturgie/generate', methods=['POST'])
 def liturgie_generate():
     excel_source = request.form.get('excel_source', 'upload')
@@ -1492,7 +1542,8 @@ def liturgie_generate():
     if preek_source == 'dropbox':
         try:
             dbx = _get_dbx_liturgie()
-            _, resp = dbx.files_download(PREEK_DROPBOX_PATH)
+            preek_path = _resolve_preek_path(dbx, request.form.get('preek_file'))
+            _, resp = dbx.files_download(preek_path)
             preek_bytes = resp.content
         except Exception as e:
             preek_bytes = None  # Preek is optional, continue without it
@@ -4054,6 +4105,34 @@ def _build_bilingual_preek_docx(blocks, translated_texts):
     return out.getvalue()
 
 
+def _detect_text_language_id_nl(text):
+    """Quick heuristic to decide whether a preek is mostly Indonesian or Dutch."""
+    words = re.findall(r'\w+', (text or '').lower())
+    if not words:
+        return 'N'
+    NL_HINTS = {'de','het','een','en','van','voor','dat','die','in','te','met','op','zijn','als','door','over','naar','maar','om','uit','nog','dan','zal','kan','tot','wij','u','je','dit','deze','zullen','hebben','heeft','was','waren','ben','jij'}
+    ID_HINTS = {'yang','dan','untuk','dengan','dari','pada','ini','itu','di','ke','akan','atau','juga','oleh','kita','kami','anda','saya','mereka','telah','sudah','sedang','dapat','bisa','adalah','sebagai','dalam','bagi','ada','tidak','bahwa','menjadi','saja','hanya','karena','sudahlah'}
+    nl = sum(1 for w in words if w in NL_HINTS)
+    id = sum(1 for w in words if w in ID_HINTS)
+    return 'I' if id > nl else 'N'
+
+
+def _preek_service_date(filename='', dt=None):
+    """Return a YYYYMMDD string for the preek date.
+    Try to parse the date from the filename, otherwise fall back to the
+    upcoming Sunday from dt (or now)."""
+    m = re.search(r'(\d{4})(\d{2})(\d{2})', (filename or ''))
+    if m:
+        y, mo, d = int(m.group(1)), int(m.group(2)), int(m.group(3))
+        if 2020 <= y <= 2050 and 1 <= mo <= 12 and 1 <= d <= 31:
+            return f'{y}{mo:02d}{d:02d}'
+    from datetime import timedelta
+    now = dt or datetime.now()
+    days_to_sunday = (6 - now.weekday()) % 7
+    sunday = now + timedelta(days=days_to_sunday)
+    return sunday.strftime('%Y%m%d')
+
+
 def _bilingual_preek_from_bytes(client, file_bytes, filename=''):
     """Extract, translate and build a bilingual Preek DOCX."""
     ext = (filename or '').lower().rsplit('.', 1)[-1]
@@ -4071,7 +4150,11 @@ def _bilingual_preek_from_bytes(client, file_bytes, filename=''):
     for pos, all_idx in enumerate(non_empty_indices):
         translated_texts[all_idx] = translated_non_empty[pos] if pos < len(translated_non_empty) else ''
 
-    return _build_bilingual_preek_docx(blocks, translated_texts)
+    docx_bytes = _build_bilingual_preek_docx(blocks, translated_texts)
+    source_sample = ' '.join(b['text'] for b in non_empty_blocks)[:5000]
+    source_lang = _detect_text_language_id_nl(source_sample)
+    target_lang = 'N' if source_lang == 'I' else 'I'
+    return {'docx_bytes': docx_bytes, 'source_lang': source_lang, 'target_lang': target_lang}
 
 
 @app.route('/liturgie/translate-preek', methods=['POST'])
@@ -4092,9 +4175,9 @@ def translate_preek():
         client = genai.Client(api_key=api_key)
 
         file_bytes = file.read()
-        docx_bytes = _bilingual_preek_from_bytes(client, file_bytes, file.filename or '')
+        result = _bilingual_preek_from_bytes(client, file_bytes, file.filename or '')
 
-        out = io.BytesIO(docx_bytes)
+        out = io.BytesIO(result['docx_bytes'])
         return send_file(
             out,
             mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -4126,13 +4209,24 @@ def translate_preek_inline():
         client = genai.Client(api_key=api_key)
 
         file_bytes = file.read()
-        docx_bytes = _bilingual_preek_from_bytes(client, file_bytes, file.filename or '')
+        result = _bilingual_preek_from_bytes(client, file_bytes, file.filename or '')
 
-        docx_b64 = base64.b64encode(docx_bytes).decode('utf-8')
+        save_name = f"Preek {result['source_lang']}+{result['target_lang']} {_preek_service_date(file.filename or '')}.docx"
+        save_path = f'{WORKING_FOLDER}/{save_name}'
+
+        dbx = _get_dbx_liturgie()
+        dbx.files_upload(
+            result['docx_bytes'],
+            save_path,
+            mode=dropbox.files.WriteMode.overwrite
+        )
+
+        docx_b64 = base64.b64encode(result['docx_bytes']).decode('utf-8')
 
         return jsonify({
             'success': True,
-            'translated_filename': 'Preek.docx',
+            'translated_filename': save_name,
+            'saved_to_dropbox': save_path,
             'docx_b64': docx_b64
         })
 

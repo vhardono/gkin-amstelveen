@@ -160,6 +160,13 @@
                     </label>
                 </div>
 
+                <!-- Preek file version dropdown -->
+                <div id="preekFileSelectSection" class="mt-3">
+                    <label for="preekFileSelect" class="block text-sm font-medium text-gray-700 mb-1" data-i18n="lit.preek_file_select">Versie van Preek</label>
+                    <select id="preekFileSelect" name="preek_file" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"></select>
+                    <p class="text-xs text-gray-500 mt-1" data-i18n="lit.preek_file_hint">Laatste preek wordt automatisch geselecteerd.</p>
+                </div>
+
                 <!-- Upload Area (hidden by default) -->
                 <div id="preekUploadSection" class="hidden mt-3">
                     <input type="file" id="preekFile" accept=".docx,.doc" class="hidden">
@@ -491,11 +498,15 @@
         loadMainFileList();
         updateMainFileSelectVisibility();
 
+        // Populate the preek dropdown on load
+        loadPreekList();
+        updatePreekSelectVisibility();
+
         // --- Radio button: Preek source ---
         document.querySelectorAll('input[name="preekSource"]').forEach(radio => {
             radio.addEventListener('change', () => {
-                const isUpload = document.querySelector('input[name="preekSource"]:checked').value === 'upload';
-                document.getElementById('preekUploadSection').classList.toggle('hidden', !isUpload);
+                updatePreekSelectVisibility();
+                if (getPreekSource() === 'dropbox') loadPreekList();
             });
         });
 
@@ -558,6 +569,15 @@
                     _translatedFilename = data.translated_filename;
                     document.getElementById('translatedFileName').textContent = _translatedFilename;
                     document.getElementById('translateResult').classList.remove('hidden');
+
+                    // The translated preek is now in Dropbox; switch to it
+                    if (data.saved_to_dropbox) {
+                        await loadPreekList();
+                        document.querySelector('input[name="preekSource"][value="dropbox"]').checked = true;
+                        updatePreekSelectVisibility();
+                        const sel = document.getElementById('preekFileSelect');
+                        if (sel) sel.value = _translatedFilename;
+                    }
                 } else {
                     document.getElementById('translateError').textContent = data.error || 'Onbekende fout';
                     document.getElementById('translateError').classList.remove('hidden');
@@ -585,21 +605,29 @@
             a.click();
         });
 
-        // Use translation: replace the preek file input with the translated DOCX blob
+        // Use translation: prefer the Dropbox version; fall back to the local file blob
         document.getElementById('btnUseTranslation').addEventListener('click', () => {
             if (!_translatedDocxB64 || !_translatedFilename) return;
-            const byteChars = atob(_translatedDocxB64);
-            const byteArr = new Uint8Array(byteChars.length);
-            for (let i = 0; i < byteChars.length; i++) byteArr[i] = byteChars.charCodeAt(i);
-            const blob = new Blob([byteArr], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
-            const translatedFile = new File([blob], _translatedFilename, { type: blob.type });
-            // Replace preekFile input with translated file
-            const dt = new DataTransfer();
-            dt.items.add(translatedFile);
-            document.getElementById('preekFile').files = dt.files;
-            // Update displayed filename
-            document.getElementById('preekNameText').textContent = _translatedFilename;
-            document.getElementById('preekName').classList.remove('hidden');
+            const sel = document.getElementById('preekFileSelect');
+            const alreadyInList = sel && Array.from(sel.options).some(o => o.value === _translatedFilename);
+            if (alreadyInList) {
+                document.querySelector('input[name="preekSource"][value="dropbox"]').checked = true;
+                updatePreekSelectVisibility();
+                sel.value = _translatedFilename;
+            } else {
+                const byteChars = atob(_translatedDocxB64);
+                const byteArr = new Uint8Array(byteChars.length);
+                for (let i = 0; i < byteChars.length; i++) byteArr[i] = byteChars.charCodeAt(i);
+                const blob = new Blob([byteArr], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+                const translatedFile = new File([blob], _translatedFilename, { type: blob.type });
+                const dt = new DataTransfer();
+                dt.items.add(translatedFile);
+                document.getElementById('preekFile').files = dt.files;
+                document.querySelector('input[name="preekSource"][value="upload"]').checked = true;
+                updatePreekSelectVisibility();
+                document.getElementById('preekNameText').textContent = _translatedFilename;
+                document.getElementById('preekName').classList.remove('hidden');
+            }
             document.getElementById('preekTranslatePanel').classList.add('hidden');
         });
 
@@ -648,6 +676,49 @@
             const isDropbox = getExcelSource() === 'dropbox';
             const section = document.getElementById('mainFileSelectSection');
             if (section) section.classList.toggle('hidden', !isDropbox);
+        }
+
+        function getPreekSource() {
+            return document.querySelector('input[name="preekSource"]:checked')?.value || 'dropbox';
+        }
+
+        function getSelectedPreekFile() {
+            const sel = document.getElementById('preekFileSelect');
+            return sel ? sel.value : '';
+        }
+
+        async function loadPreekList() {
+            const select = document.getElementById('preekFileSelect');
+            if (!select) return;
+            try {
+                const resp = await fetch('/liturgie/list-preek-files');
+                if (!resp.ok) return;
+                const data = await resp.json();
+                const files = data.files || [];
+                select.innerHTML = '';
+                files.forEach(f => {
+                    const opt = document.createElement('option');
+                    opt.value = f.name;
+                    opt.textContent = f.name;
+                    select.appendChild(opt);
+                });
+                if (files.length === 0) {
+                    const opt = document.createElement('option');
+                    opt.value = 'Preek.docx';
+                    opt.textContent = 'Preek.docx';
+                    select.appendChild(opt);
+                }
+            } catch (err) {
+                console.warn('Kon Preek bestanden niet ophalen:', err);
+            }
+        }
+
+        function updatePreekSelectVisibility() {
+            const isDropbox = getPreekSource() === 'dropbox';
+            const section = document.getElementById('preekFileSelectSection');
+            const uploadSection = document.getElementById('preekUploadSection');
+            if (section) section.classList.toggle('hidden', !isDropbox);
+            if (uploadSection) uploadSection.classList.toggle('hidden', isDropbox);
         }
 
         function populatePreviewModal(previewData) {
@@ -982,8 +1053,12 @@
                 fd.append('main_file', getSelectedMainFile());
             }
             fd.append('preek_source', preekSource);
-            const preekFile = document.getElementById('preekFile').files[0];
-            if (preekSource === 'upload' && preekFile) fd.append('preek_file', preekFile);
+            if (preekSource === 'upload') {
+                const preekFile = document.getElementById('preekFile').files[0];
+                if (preekFile) fd.append('preek_file', preekFile);
+            } else {
+                fd.append('preek_file', getSelectedPreekFile());
+            }
             fd.append('want_a', wantA ? '1' : '0');
             fd.append('want_b', wantB ? '1' : '0');
             fd.append('want_p', wantP ? '1' : '0');
