@@ -1158,6 +1158,52 @@ def _get_dbx_liturgie():
     )
 
 
+WORKING_FOLDER = '/working folder/file mingguan'
+WORKING_FILE_PATH = f'{WORKING_FOLDER}/Main Liturgy file.xlsx'
+MAIN_LITURGY_PATTERN = re.compile(r'^Main Liturgy file(?: (\d{8}))?\.xlsx$')
+
+
+def _list_main_liturgy_files(dbx=None):
+    """Return a sorted list of Main Liturgy file versions in the working folder.
+    Ordered newest-first by the YYYYMMDD suffix; the un-dated fallback is last."""
+    if dbx is None:
+        try:
+            dbx = _get_dbx_liturgie()
+        except Exception:
+            return []
+    try:
+        result = dbx.files_list_folder(WORKING_FOLDER, include_non_downloadable_files=False)
+    except Exception:
+        return []
+    files = []
+    for entry in result.entries:
+        if not isinstance(entry, dropbox.files.FileMetadata):
+            continue
+        name = os.path.basename(entry.path_lower or '')
+        match = MAIN_LITURGY_PATTERN.match(name)
+        if match:
+            date_suffix = match.group(1) or '00000000'
+            files.append({'name': name, 'path': entry.path_display or f'{WORKING_FOLDER}/{name}', 'suffix': date_suffix})
+    # Newest dated first, fallback '00000000' last
+    files.sort(key=lambda x: x['suffix'], reverse=True)
+    return files
+
+
+def _resolve_main_liturgy_path(dbx=None, requested=None):
+    """Return the Dropbox path to use for a Main Liturgy file.
+    If requested is provided and exists, use it; otherwise pick the latest
+    dated version; finally fall back to WORKING_FILE_PATH."""
+    if requested:
+        # Allow both file name and full path; make sure it's in the working folder
+        name = os.path.basename(requested)
+        if MAIN_LITURGY_PATTERN.match(name):
+            return f'{WORKING_FOLDER}/{name}'
+    files = _list_main_liturgy_files(dbx)
+    if files:
+        return files[0]['path']
+    return WORKING_FILE_PATH
+
+
 def _ensure_liturgie_file(remote_path: str, local_path: str):
     """Download a single file from Dropbox if not cached locally."""
     if os.path.exists(local_path):
@@ -1410,6 +1456,13 @@ def liturgie_index():
 
 PREEK_DROPBOX_PATH = '/working folder/file mingguan/Preek.docx'
 
+
+@app.route('/liturgie/list-main-files', methods=['GET'])
+def liturgie_list_main_files():
+    dbx = _get_dbx_liturgie()
+    return jsonify({'files': _list_main_liturgy_files(dbx)})
+
+
 @app.route('/liturgie/generate', methods=['POST'])
 def liturgie_generate():
     excel_source = request.form.get('excel_source', 'upload')
@@ -1424,7 +1477,8 @@ def liturgie_generate():
     if excel_source == 'dropbox':
         try:
             dbx = _get_dbx_liturgie()
-            _, resp = dbx.files_download(WORKING_FILE_PATH)
+            main_file_path = _resolve_main_liturgy_path(dbx, request.form.get('main_file'))
+            _, resp = dbx.files_download(main_file_path)
             excel_bytes = resp.content
         except Exception as e:
             return jsonify({'error': f'Kon Main Liturgy file niet laden van Dropbox: {e}'}), 500
@@ -2124,9 +2178,10 @@ def liturgie_fill_data():
                 'cells': dankoffer_cells
             }
 
+        filename = f'Main Liturgy file {service_date.strftime("%Y%m%d")}.xlsx'
         return jsonify({
             'excel_data': excel_b64,
-            'filename': 'Main Liturgy file.xlsx',
+            'filename': filename,
             'alerts': alerts,
             'service_date': service_date.strftime('%d-%m-%Y'),
             'dankoffer_verse': dankoffer['full_text'] if dankoffer else None,
@@ -2396,8 +2451,6 @@ def preview_liturgie_fill_data():
 # Liturgie Auto-Fill Working File Endpoint (Dropbox Direct)
 # ---------------------------------------------------------------------------
 
-WORKING_FILE_PATH = '/working folder/file mingguan/Main Liturgy file.xlsx'
-
 @app.route('/liturgie/auto-fill-working-file', methods=['POST'])
 def auto_fill_working_file():
     """Auto-fill the Main Liturgy file from Dropbox working folder"""
@@ -2415,9 +2468,11 @@ def auto_fill_working_file():
         if not dbx:
             return jsonify({'error': 'Dropbox niet geconfigureerd'}), 500
         
-        # Read Main Liturgy file from Dropbox
+        # Read Main Liturgy file from Dropbox (latest dated version or fallback)
+        data = request.get_json() or {}
+        main_file_path = _resolve_main_liturgy_path(dbx, data.get('main_file'))
         try:
-            resp = dbx.files_download(WORKING_FILE_PATH)
+            resp = dbx.files_download(main_file_path)
             file_bytes = resp[1].content
         except Exception as e:
             return jsonify({'error': f'Kon Main Liturgy file niet laden van Dropbox: {str(e)}'}), 500
@@ -2613,15 +2668,18 @@ def auto_fill_working_file():
         else:
             alerts['not_found'].append('Geen Dankoffer verzen gevonden')
         
-        # Save back to Dropbox
+        # Save back to Dropbox with a dated filename
         output = BytesIO()
         wb.save(output)
         output.seek(0)
         
+        save_name = f'Main Liturgy file {service_date.strftime("%Y%m%d")}.xlsx'
+        save_path = f'{WORKING_FOLDER}/{save_name}'
+        
         try:
             dbx.files_upload(
                 output.getvalue(),
-                WORKING_FILE_PATH,
+                save_path,
                 mode=dropbox.files.WriteMode.overwrite
             )
         except Exception as e:
@@ -2630,9 +2688,10 @@ def auto_fill_working_file():
         return jsonify({
             'success': True,
             'service_date': service_date.strftime('%d-%m-%Y'),
+            'saved_as': save_name,
             'alerts': alerts,
             'dankoffer_info': dankoffer_info,
-            'message': f'Bestand bijgewerkt op Dropbox: {WORKING_FILE_PATH}'
+            'message': f'Bestand bijgewerkt op Dropbox: {save_path}'
         })
         
     except Exception as e:
@@ -2654,9 +2713,10 @@ def preview_working_file():
         if not dbx:
             return jsonify({'error': 'Dropbox niet geconfigureerd'}), 500
         
-        # Read file
+        # Read file (latest dated version or selected/fallback)
+        main_file_path = _resolve_main_liturgy_path(dbx, request.args.get('main_file'))
         try:
-            resp = dbx.files_download(WORKING_FILE_PATH)
+            resp = dbx.files_download(main_file_path)
             excel_bytes = resp[1].content
         except Exception as e:
             return jsonify({'error': f'Kon bestand niet laden: {str(e)}'}), 500

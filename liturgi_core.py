@@ -194,6 +194,10 @@ NL_MONTHS = [
     "januari","februari","maart","april","mei","juni",
     "juli","augustus","september","oktober","november","december"
 ]
+ID_MONTHS = [
+    "Januari","Februari","Maret","April","Mei","Juni",
+    "Juli","Agustus","September","Oktober","November","Desember"
+]
 
 def normalize_spaces(txt: str) -> str:
     # Quote characters we treat as starting/ending quoted sections
@@ -319,6 +323,9 @@ def is_empty(value):
 
 def format_date_long_nl(dt: datetime) -> str:
     return f"{dt.day} {NL_MONTHS[dt.month - 1]} {dt.year}"
+
+def format_date_long_id(dt: datetime) -> str:
+    return f"{dt.day} {ID_MONTHS[dt.month - 1]} {dt.year}"
 
 def format_date_short_nl(dt: datetime) -> str:
     return f"{dt.day}-{dt.month}-{dt.year}"
@@ -3236,6 +3243,14 @@ COLLECTE_TEXTS = {
 CT = COLLECTE_TEXTS[meded_lang]
 CT_OTHER = COLLECTE_TEXTS[meded_lang_other]
 
+# Use Indonesian or Dutch long dates in slides based on the chosen mededelingen language
+if meded_lang == 'id':
+    long_date = format_date_long_id(dienst_date)
+    long_datenw = format_date_long_id(next_week)
+else:
+    long_date = format_date_long_nl(dienst_date)
+    long_datenw = format_date_long_nl(next_week)
+
 # --- Collecte opbrengst amounts (from the Outlook opbrengst e-mails, via app.py) ---
 opbrengst_json = os.path.join(dir_path, 'opbrengst.json')
 OPBRENGST = {}
@@ -3457,7 +3472,7 @@ set_slide_notes(slide, CT_OTHER['opbrengst_titel'])
 dark_blue = RGBColor(22, 25, 90)
 
 lastweek = dienst_date + timedelta(days = -7)
-long_datepw = format_date_long_nl(lastweek)
+long_datepw = format_date_long_id(lastweek) if meded_lang == 'id' else format_date_long_nl(lastweek)
 
 bijbelstudie_amount = opbrengst_extra_amount(r'bijbelstudie')
 

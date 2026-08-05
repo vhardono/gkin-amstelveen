@@ -82,6 +82,13 @@
                     </label>
                 </div>
 
+                <!-- Main Liturgy file version dropdown -->
+                <div id="mainFileSelectSection" class="mb-5">
+                    <label for="mainFileSelect" class="block text-sm font-medium text-gray-700 mb-1" data-i18n="lit.main_file_select">Versie van Main Liturgy file</label>
+                    <select id="mainFileSelect" name="main_file" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"></select>
+                    <p class="text-xs text-gray-500 mt-1" data-i18n="lit.main_file_hint">Laatste versie wordt automatisch geselecteerd.</p>
+                </div>
+
                 <!-- Upload Area (hidden by default) -->
                 <div id="uploadSection" class="hidden">
                     <input type="file" id="excelFile" accept=".xlsx,.xls" class="hidden">
@@ -475,8 +482,14 @@
             radio.addEventListener('change', () => {
                 const isUpload = document.querySelector('input[name="excelSource"]:checked').value === 'upload';
                 document.getElementById('uploadSection').classList.toggle('hidden', !isUpload);
+                updateMainFileSelectVisibility();
+                if (!isUpload) loadMainFileList();
             });
         });
+
+        // Populate the main file dropdown on load
+        loadMainFileList();
+        updateMainFileSelectVisibility();
 
         // --- Radio button: Preek source ---
         document.querySelectorAll('input[name="preekSource"]').forEach(radio => {
@@ -600,6 +613,43 @@
             return document.querySelector('input[name="excelSource"]:checked').value;
         }
 
+        function getSelectedMainFile() {
+            const sel = document.getElementById('mainFileSelect');
+            return sel ? sel.value : '';
+        }
+
+        async function loadMainFileList() {
+            const select = document.getElementById('mainFileSelect');
+            if (!select) return;
+            try {
+                const resp = await fetch('/liturgie/list-main-files');
+                if (!resp.ok) return;
+                const data = await resp.json();
+                const files = data.files || [];
+                select.innerHTML = '';
+                files.forEach(f => {
+                    const opt = document.createElement('option');
+                    opt.value = f.name;
+                    opt.textContent = f.name;
+                    select.appendChild(opt);
+                });
+                if (files.length === 0) {
+                    const opt = document.createElement('option');
+                    opt.value = 'Main Liturgy file.xlsx';
+                    opt.textContent = 'Main Liturgy file.xlsx';
+                    select.appendChild(opt);
+                }
+            } catch (err) {
+                console.warn('Kon Main Liturgy bestanden niet ophalen:', err);
+            }
+        }
+
+        function updateMainFileSelectVisibility() {
+            const isDropbox = getExcelSource() === 'dropbox';
+            const section = document.getElementById('mainFileSelectSection');
+            if (section) section.classList.toggle('hidden', !isDropbox);
+        }
+
         function populatePreviewModal(previewData) {
             document.getElementById('previewDate').textContent = previewData.service_date;
 
@@ -680,7 +730,8 @@
             try {
                 let previewData;
                 if (source === 'dropbox') {
-                    const resp = await fetch('/liturgie/preview-working-file');
+                    const mainFile = encodeURIComponent(getSelectedMainFile());
+                    const resp = await fetch('/liturgie/preview-working-file?main_file=' + mainFile);
                     previewData = await resp.json();
                     if (!resp.ok) {
                         showStatus('Fout bij laden preview: ' + (previewData.error || 'Onbekende fout'), 'error');
@@ -743,7 +794,7 @@
                 const resp = await fetch('/liturgie/auto-fill-working-file', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ selected_changes: selectedChanges })
+                    body: JSON.stringify({ selected_changes: selectedChanges, main_file: getSelectedMainFile() })
                 });
                 const data = await resp.json();
                 if (resp.ok && data.success) {
@@ -922,6 +973,8 @@
             fd.append('excel_source', excelSource);
             if (excelSource === 'upload') {
                 fd.append('excel_file', document.getElementById('excelFile').files[0]);
+            } else {
+                fd.append('main_file', getSelectedMainFile());
             }
             fd.append('preek_source', preekSource);
             const preekFile = document.getElementById('preekFile').files[0];
