@@ -1160,7 +1160,7 @@ def _get_dbx_liturgie():
 
 WORKING_FOLDER = '/working folder/file mingguan'
 WORKING_FILE_PATH = f'{WORKING_FOLDER}/Main Liturgy file.xlsx'
-MAIN_LITURGY_PATTERN = re.compile(r'^Main Liturgy file(?: (\d{8}))?\.xlsx$')
+MAIN_LITURGY_PATTERN = re.compile(r'^Main Liturgy file(?: (\d{8}))?\.xlsx$', re.IGNORECASE)
 
 
 def _list_main_liturgy_files(dbx=None):
@@ -2682,6 +2682,11 @@ def auto_fill_working_file():
                 save_path,
                 mode=dropbox.files.WriteMode.overwrite
             )
+            # Remove the un-dated original so only the dated version remains
+            try:
+                dbx.files_delete_v2(WORKING_FILE_PATH)
+            except Exception:
+                pass
         except Exception as e:
             return jsonify({'error': f'Kon bestand niet opslaan naar Dropbox: {str(e)}'}), 500
         

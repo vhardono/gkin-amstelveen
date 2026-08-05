@@ -800,6 +800,11 @@
                 if (resp.ok && data.success) {
                     showAutoFillAlerts(data.alerts, data.dankoffer_info, false);
                     showStatus(`✓ Bestand bijgewerkt op Dropbox voor ${data.service_date}`, 'success');
+                    await loadMainFileList();
+                    if (data.saved_as) {
+                        const sel = document.getElementById('mainFileSelect');
+                        if (sel) sel.value = data.saved_as;
+                    }
                 } else {
                     showStatus('Fout bij bijwerken: ' + (data.error || 'Onbekende fout'), 'error');
                 }
