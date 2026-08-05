@@ -561,6 +561,7 @@
             try {
                 const fd = new FormData();
                 fd.append('preek_file', file);
+                fd.append('main_file', getSelectedMainFile());
                 const resp = await fetch('/liturgie/translate-preek-inline', { method: 'POST', body: fd });
                 const data = await resp.json();
 

@@ -4117,17 +4117,43 @@ def _detect_text_language_id_nl(text):
     return 'I' if id > nl else 'N'
 
 
-def _preek_service_date(filename='', dt=None):
+def _date_from_main_liturgy_file(dbx, main_file=None):
+    """Read the service date from a Main Liturgy file's Data!B3 cell."""
+    from io import BytesIO
+    from openpyxl import load_workbook
+    try:
+        main_path = _resolve_main_liturgy_path(dbx, main_file)
+        _, resp = dbx.files_download(main_path)
+        wb = load_workbook(BytesIO(resp.content), data_only=True)
+        ws = wb['Data'] if 'Data' in wb.sheetnames else wb.active
+        date_val = ws.cell(row=3, column=2).value
+        if date_val:
+            if isinstance(date_val, datetime):
+                return date_val
+            if isinstance(date_val, str):
+                for fmt in ('%d-%m-%Y', '%Y-%m-%d'):
+                    try:
+                        return datetime.strptime(date_val, fmt)
+                    except ValueError:
+                        pass
+    except Exception as e:
+        print(f'[Preek date] Could not read Main Liturgy date: {e}')
+    return None
+
+
+def _preek_service_date(filename='', main_date=None):
     """Return a YYYYMMDD string for the preek date.
-    Try to parse the date from the filename, otherwise fall back to the
-    upcoming Sunday from dt (or now)."""
+    Try the filename, then the selected Main Liturgy date, finally the
+    upcoming Sunday."""
     m = re.search(r'(\d{4})(\d{2})(\d{2})', (filename or ''))
     if m:
         y, mo, d = int(m.group(1)), int(m.group(2)), int(m.group(3))
         if 2020 <= y <= 2050 and 1 <= mo <= 12 and 1 <= d <= 31:
             return f'{y}{mo:02d}{d:02d}'
+    if main_date:
+        return main_date.strftime('%Y%m%d')
     from datetime import timedelta
-    now = dt or datetime.now()
+    now = datetime.now()
     days_to_sunday = (6 - now.weekday()) % 7
     sunday = now + timedelta(days=days_to_sunday)
     return sunday.strftime('%Y%m%d')
@@ -4211,10 +4237,12 @@ def translate_preek_inline():
         file_bytes = file.read()
         result = _bilingual_preek_from_bytes(client, file_bytes, file.filename or '')
 
-        save_name = f"Preek {result['source_lang']}+{result['target_lang']} {_preek_service_date(file.filename or '')}.docx"
+        main_file = request.form.get('main_file')
+        dbx = _get_dbx_liturgie()
+        main_date = _date_from_main_liturgy_file(dbx, main_file) if main_file else None
+        save_name = f"Preek {result['source_lang']}+{result['target_lang']} {_preek_service_date(file.filename or '', main_date)}.docx"
         save_path = f'{WORKING_FOLDER}/{save_name}'
 
-        dbx = _get_dbx_liturgie()
         dbx.files_upload(
             result['docx_bytes'],
             save_path,
