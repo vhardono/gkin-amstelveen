@@ -28,7 +28,11 @@ _AUTHORITY        = 'https://login.microsoftonline.com/consumers'
 _SCOPES           = ['Mail.Read']
 _GRAPH_BASE       = 'https://graph.microsoft.com/v1.0'
 
-TOKEN_CACHE_PATH  = os.path.join(os.path.dirname(__file__), '..', '.msal_token_cache.json')
+# Use the persistent Fly volume if available; otherwise fall back to the project root.
+if os.path.isdir('/data'):
+    TOKEN_CACHE_PATH = '/data/.msal_token_cache.json'
+else:
+    TOKEN_CACHE_PATH = os.path.join(os.path.dirname(__file__), '..', '.msal_token_cache.json')
 UPLOAD_DIR        = os.path.join(os.path.dirname(__file__), '..', 'output', '_uploads')
 
 # Google Sheets fallback for liederen
