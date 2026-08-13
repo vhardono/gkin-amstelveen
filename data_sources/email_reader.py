@@ -75,10 +75,14 @@ def _load_cache() -> msal.SerializableTokenCache:
 def _save_cache(cache: msal.SerializableTokenCache):
     """Persist token cache to local file (dev). On Railway, export via /email-token-export."""
     if cache.has_state_changed:
+        serialized = cache.serialize()
+        # Keep an in-memory env var cache in sync so the current process picks it up immediately.
+        if os.getenv('MSAL_TOKEN_CACHE') is not None:
+            os.environ['MSAL_TOKEN_CACHE'] = serialized
         try:
             os.makedirs(os.path.dirname(os.path.abspath(TOKEN_CACHE_PATH)), exist_ok=True)
             with open(TOKEN_CACHE_PATH, 'w') as f:
-                f.write(cache.serialize())
+                f.write(serialized)
         except OSError:
             pass  # read-only filesystem on Railway — token exported via endpoint instead
 
@@ -110,9 +114,13 @@ class OutlookCollecteReader:
         accounts = app.get_accounts()
         if not accounts:
             return False
-        result = app.acquire_token_silent(_SCOPES, account=accounts[0])
+        for account in accounts:
+            result = app.acquire_token_silent(_SCOPES, account=account)
+            if result and 'access_token' in result:
+                _save_cache(cache)
+                return True
         _save_cache(cache)
-        return result is not None and 'access_token' in result
+        return False
 
     def start_device_flow(self) -> Dict[str, str]:
         """Initiate device-code login. Returns {user_code, verification_uri, message}."""
@@ -165,11 +173,13 @@ class OutlookCollecteReader:
         accounts = app.get_accounts()
         if not accounts:
             raise ValueError('Niet ingelogd. Gebruik de "Inloggen" knop eerst.')
-        result = app.acquire_token_silent(_SCOPES, account=accounts[0])
+        for account in accounts:
+            result = app.acquire_token_silent(_SCOPES, account=account)
+            if result and 'access_token' in result:
+                _save_cache(cache)
+                return result['access_token']
         _save_cache(cache)
-        if not result or 'access_token' not in result:
-            raise ValueError('Token verlopen. Log opnieuw in via de "Inloggen" knop.')
-        return result['access_token']
+        raise ValueError('Token verlopen. Log opnieuw in via de "Inloggen" knop.')
 
     def _graph_get(self, path: str, params: Dict = None) -> Dict:
         token = self._get_token()
