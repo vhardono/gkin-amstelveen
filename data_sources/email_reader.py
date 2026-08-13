@@ -22,7 +22,9 @@ import requests
 
 # Microsoft's well-known public client ID for Office apps — works for personal accounts
 _PUBLIC_CLIENT_ID = '9e5f94bc-e8a4-4e73-b8be-63364c29d753'
-_AUTHORITY        = 'https://login.microsoftonline.com/common'
+# Use the consumers endpoint for Outlook.com / personal Microsoft accounts.
+# This gives https://www.microsoft.com/link instead of the broken /device page.
+_AUTHORITY        = 'https://login.microsoftonline.com/consumers'
 _SCOPES           = ['Mail.Read']
 _GRAPH_BASE       = 'https://graph.microsoft.com/v1.0'
 
