@@ -14,7 +14,7 @@ import traceback
 import uuid
 from datetime import datetime, timedelta
 from typing import Dict, Optional
-from flask import Flask, render_template, request, send_file, jsonify, session, redirect, url_for, Response
+from flask import Flask, render_template, request, send_file, send_from_directory, jsonify, session, redirect, url_for, Response
 from werkzeug.utils import secure_filename
 
 import re
@@ -201,7 +201,7 @@ def _get_takenrooster():
     return _takenrooster_cache
 
 
-def _get_takenrooster_and_render_page():
+def _get_mededelingen_dates():
     taken = _get_takenrooster()
     dutch_months = [
         'januari', 'februari', 'maart', 'april', 'mei', 'juni',
@@ -250,7 +250,149 @@ def _get_takenrooster_and_render_page():
             'youtube_link':    entry.get('youtube_link', ''),
         })
 
-    return render_template('mededelingen.html', dates=dates)
+    return dates
+
+
+def _get_takenrooster_and_render_page():
+    return render_template('mededelingen.html', dates=_get_mededelingen_dates())
+
+
+@app.route('/mededelingen-editor')
+@_password_required
+def mededelingen_editor():
+    """Simple editor for the active mededelingen Output tab and image attachments."""
+    return render_template('mededelingen_editor.html', dates=_get_mededelingen_dates())
+
+
+@app.route('/mededelingen-editor-data')
+@_password_required
+def mededelingen_editor_data():
+    """Return current Output text and image URL for a date."""
+    from data_sources.dropbox_reader import DropboxExcelReader, _mededelingen_image_url_for_date
+    date_str = request.args.get('date', '')
+    if not date_str:
+        return jsonify({'error': 'No date'}), 400
+    try:
+        d = datetime.strptime(date_str, '%Y-%m-%d')
+    except ValueError:
+        return jsonify({'error': 'Invalid date'}), 400
+
+    reader = DropboxExcelReader()
+    meded = reader.get_mededelingen(mededelingen_date=d)
+    image_url = _mededelingen_image_url_for_date(d)
+    return jsonify({
+        'regionale_nl': meded.get('regionale_nl', ''),
+        'regionale_id': meded.get('regionale_id', ''),
+        'landelijke_nl': meded.get('landelijke_nl', ''),
+        'landelijke_id': meded.get('landelijke_id', ''),
+        'image': {'url': image_url, 'name': image_url.split('/')[-1] if image_url else None} if image_url else None,
+    })
+
+
+@app.route('/mededelingen-editor-save', methods=['POST'])
+@_password_required
+def mededelingen_editor_save():
+    """Save Output text back to the Excel file."""
+    from data_sources.dropbox_reader import DropboxExcelReader
+    data = request.get_json() or {}
+    date_str = data.get('date', '')
+    if not date_str:
+        return jsonify({'error': 'No date'}), 400
+    try:
+        d = datetime.strptime(date_str, '%Y-%m-%d')
+    except ValueError:
+        return jsonify({'error': 'Invalid date'}), 400
+
+    reader = DropboxExcelReader()
+    result = reader.save_mededelingen_output(
+        year=d.year,
+        regionale_nl=data.get('regionale_nl', ''),
+        regionale_id=data.get('regionale_id', ''),
+        landelijke_nl=data.get('landelijke_nl', ''),
+        landelijke_id=data.get('landelijke_id', ''),
+    )
+    if result.get('success'):
+        return jsonify({'success': True})
+    return jsonify({'error': result.get('error', 'Unknown error')}), 500
+
+
+@app.route('/mededelingen-upload-image', methods=['POST'])
+@_password_required
+def mededelingen_upload_image():
+    """Store one image per mededelingen date on /data and keep a JSON sidecar."""
+    import uuid
+    from werkzeug.utils import secure_filename
+    from data_sources.dropbox_reader import (
+        MEDEDELINGEN_IMG_DIR, _mededelingen_image_dir_for_date,
+        _mededelingen_image_meta, _save_mededelingen_image_meta
+    )
+
+    date_str = request.form.get('date', '')
+    file = request.files.get('image')
+    if not file or not date_str:
+        return jsonify({'error': 'Missing date or file'}), 400
+    try:
+        d = datetime.strptime(date_str, '%Y-%m-%d')
+    except ValueError:
+        return jsonify({'error': 'Invalid date'}), 400
+
+    ext = secure_filename(file.filename).rsplit('.', 1)[-1].lower()
+    if ext not in {'png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp'}:
+        return jsonify({'error': 'Invalid image type'}), 400
+
+    filename = f"{uuid.uuid4().hex}.{ext}"
+    out_dir = _mededelingen_image_dir_for_date(d)
+    os.makedirs(out_dir, exist_ok=True)
+    out_path = os.path.join(out_dir, filename)
+    file.save(out_path)
+
+    meta = _mededelingen_image_meta()
+    key = f"{d.year}-{d.strftime('%Y%m%d')}"
+    meta[key] = {'filename': filename, 'original_name': secure_filename(file.filename)}
+    _save_mededelingen_image_meta(meta)
+
+    url = f"/mededelingen-image/{d.year}/{d.strftime('%Y%m%d')}/{filename}"
+    return jsonify({'success': True, 'url': url, 'name': filename})
+
+
+@app.route('/mededelingen-delete-image', methods=['POST'])
+@_password_required
+def mededelingen_delete_image():
+    import os
+    from data_sources.dropbox_reader import (
+        _mededelingen_image_dir_for_date,
+        _mededelingen_image_meta, _save_mededelingen_image_meta
+    )
+    data = request.get_json() or {}
+    date_str = data.get('date', '')
+    if not date_str:
+        return jsonify({'error': 'No date'}), 400
+    try:
+        d = datetime.strptime(date_str, '%Y-%m-%d')
+    except ValueError:
+        return jsonify({'error': 'Invalid date'}), 400
+
+    meta = _mededelingen_image_meta()
+    key = f"{d.year}-{d.strftime('%Y%m%d')}"
+    rec = meta.get(key)
+    if rec:
+        path = os.path.join(_mededelingen_image_dir_for_date(d), rec['filename'])
+        try:
+            if os.path.exists(path):
+                os.remove(path)
+        except Exception as e:
+            print(f'[Mededelingen] Could not delete image: {e}')
+        del meta[key]
+        _save_mededelingen_image_meta(meta)
+
+    return jsonify({'success': True})
+
+
+@app.route('/mededelingen-image/<int:year>/<date>/<filename>')
+def mededelingen_image(year, date, filename):
+    from data_sources.dropbox_reader import MEDEDELINGEN_IMG_DIR
+    directory = os.path.join(MEDEDELINGEN_IMG_DIR, str(year), date)
+    return send_from_directory(directory, filename)
 
 
 @app.route('/')

@@ -5,6 +5,7 @@ Extracts dates, predikant, and OvD (with full name lookup from People tab).
 """
 
 import os
+import json
 import re
 import pandas as pd
 import dropbox
@@ -16,6 +17,39 @@ from config import Config
 
 TAKENROOSTER_PATH = '/# Kerkbode GKIN Amstelveen/Rooster/Takenrooster_GKIN_Amstelveen_2026.xlsx'
 MEDEDELINGEN_PATH_TEMPLATE = '/# Kerkbode GKIN Amstelveen/{year}/Mededelingen Overzicht.xlsx'
+
+MEDEDELINGEN_IMG_DIR = os.getenv('MEDEDELINGEN_IMAGES_DIR',
+                                 '/data/mededelingen_images' if os.path.isdir('/data') else './mededelingen_images')
+MEDEDELINGEN_IMG_META = os.path.join(MEDEDELINGEN_IMG_DIR, 'images.json')
+
+
+def _mededelingen_image_dir_for_date(d: datetime) -> str:
+    return os.path.join(MEDEDELINGEN_IMG_DIR, str(d.year), d.strftime('%Y%m%d'))
+
+
+def _mededelingen_image_meta() -> dict:
+    if not os.path.exists(MEDEDELINGEN_IMG_META):
+        return {}
+    try:
+        with open(MEDEDELINGEN_IMG_META, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+def _save_mededelingen_image_meta(meta: dict) -> None:
+    os.makedirs(MEDEDELINGEN_IMG_DIR, exist_ok=True)
+    with open(MEDEDELINGEN_IMG_META, 'w', encoding='utf-8') as f:
+        json.dump(meta, f, ensure_ascii=False, indent=2)
+
+
+def _mededelingen_image_url_for_date(d: datetime) -> Optional[str]:
+    meta = _mededelingen_image_meta()
+    key = f"{d.year}-{d.strftime('%Y%m%d')}"
+    rec = meta.get(key)
+    if not rec:
+        return None
+    return f"/mededelingen-image/{d.year}/{d.strftime('%Y%m%d')}/{rec['filename']}"
 
 
 class DropboxExcelReader:
@@ -141,6 +175,46 @@ class DropboxExcelReader:
             print(f"Error reading mededelingen: {e}")
             return {'error': str(e), 'regionale_nl': '', 'landelijke_nl': '',
                     'regionale_id': '', 'landelijke_id': ''}
+
+    def save_mededelingen_output(self, year: int, regionale_nl: str, regionale_id: str,
+                                 landelijke_nl: str, landelijke_id: str) -> Dict[str, Any]:
+        """Update the Output sheet of Mededelingen Overzicht and write back to Dropbox."""
+        from openpyxl import load_workbook
+
+        path = MEDEDELINGEN_PATH_TEMPLATE.format(year=year)
+        try:
+            print(f"Writing Mededelingen Overzicht: {path}")
+            _, response = self.dbx.files_download(path)
+
+            wb = load_workbook(BytesIO(response.content))
+            if 'Output' not in wb.sheetnames:
+                return {'success': False, 'error': 'Output sheet not found'}
+
+            ws = wb['Output']
+            # Layout: A1='' B1='Details - Nederlands' C1='Details - Bahasa Indonesia'
+            # A2='Regionale' B2=nl C2=id
+            # A3='Landelijke' B3=nl C3=id
+            ws.cell(2, 2).value = regionale_nl
+            ws.cell(2, 3).value = regionale_id
+            ws.cell(3, 2).value = landelijke_nl
+            ws.cell(3, 3).value = landelijke_id
+
+            out = BytesIO()
+            wb.save(out)
+            out.seek(0)
+
+            self.dbx.files_upload(
+                out.read(),
+                path,
+                mode=dropbox.files.WriteMode.overwrite,
+                mute=True
+            )
+
+            return {'success': True, 'path': path}
+
+        except Exception as e:
+            print(f"Error saving mededelingen: {e}")
+            return {'success': False, 'error': str(e)}
 
     def get_activiteiten_kalender(self, mededelingen_date: datetime = None) -> List[Dict[str, Any]]:
         """Read Activiteiten Kalender from the year tab (e.g. '2026') of Mededelingen Overzicht.

@@ -20,6 +20,9 @@ class Config:
     # Output configuration
     OUTPUT_DIR = os.getenv('OUTPUT_DIR', './output')
     TEMPLATE_DIR = os.getenv('TEMPLATE_DIR', './doc_templates')
+    MEDEDELINGEN_IMAGES_DIR = os.getenv('MEDEDELINGEN_IMAGES_DIR',
+                                        '/data/mededelingen_images' if os.path.isdir('/data') else './mededelingen_images')
+    MEDEDELINGEN_META_PATH = os.path.join(MEDEDELINGEN_IMAGES_DIR, 'mededelingen_images.json')
     
     # Bulletin configuration
     CHURCH_NAME = os.getenv('CHURCH_NAME', 'Gemeente')
