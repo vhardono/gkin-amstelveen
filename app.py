@@ -1573,6 +1573,12 @@ def _run_liturgi(excel_bytes: bytes, preek_bytes, work_dir: str,
             try:
                 reader = DropboxExcelReader()
                 meded = reader.get_mededelingen(mededelingen_date=service_date)
+                mededelingen_rows = reader.get_mededelingen_rows(service_date.year)
+                image_map = {
+                    (row.get('nl_title', '') or '').strip(): row.get('image_path')
+                    for row in mededelingen_rows
+                    if row.get('image_path')
+                }
                 welkom_paras = _extract_welkom_paragraphs(service_date, entry, meded, taken.get('entries'))
                 gen = VoorleesGenerator()
                 nl_welkom, id_welkom = gen.build_welkom_texts(service_date, entry, welkom_paras)
@@ -1584,7 +1590,11 @@ def _run_liturgi(excel_bytes: bytes, preek_bytes, work_dir: str,
                     for nb, ib in zip(nl_blocks, id_blocks):
                         nl_text = '\n'.join(p for p in [nb.get('heading', ''), nb.get('body', '')] if p)
                         id_text = '\n'.join(p for p in [ib.get('heading', ''), ib.get('body', '')] if p)
-                        items.append({'nl': nl_text, 'id': id_text})
+                        item = {'nl': nl_text, 'id': id_text}
+                        img_path = image_map.get((nb.get('heading') or '').strip())
+                        if img_path:
+                            item['image'] = img_path
+                        items.append(item)
                     return {'type': section_type, 'title': {'nl': title_nl, 'id': title_id}, 'items': items}
 
                 mededelingen_data = {
