@@ -65,10 +65,18 @@ def _parse_mededelingen_date(value) -> Optional[datetime]:
         return None
 
 
+def _next_sunday():
+    """Return the upcoming Sunday (or today if it is Sunday)."""
+    today = datetime.now().date()
+    # Sunday = 6
+    days = (6 - today.weekday()) % 7
+    return today + timedelta(days=days)
+
+
 def _compute_mededelingen_status(first, last, reference: datetime = None) -> str:
-    """Return Active, Past or Future based on reference date (default now)."""
+    """Return Active, Past or Future based on reference date (default upcoming Sunday)."""
     if reference is None:
-        reference = datetime.now()
+        reference = _next_sunday()
     if isinstance(reference, datetime):
         reference = reference.date()
 
@@ -452,7 +460,7 @@ class DropboxExcelReader:
 
             first_v = data.get('first_date', '')
             last_v = data.get('last_date', '')
-            year_ws.cell(new_row, 8).value = data.get('source', 'web')
+            year_ws.cell(new_row, 8).value = data.get('source', '')
             year_ws.cell(new_row, 9).value = _compute_mededelingen_status(first_v, last_v)
 
             # Recompute Output

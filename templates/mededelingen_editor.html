@@ -33,7 +33,7 @@
             </a>
             <select id="statusFilter" onchange="filterRows(this.value)" class="ml-auto text-sm rounded border border-gray-300 px-2 py-1.5 bg-white">
                 <option value="all">Toon: Alles</option>
-                <option value="active" selected>Toon: Active</option>
+                <option value="active">Toon: Active</option>
                 <option value="past">Toon: Past</option>
                 <option value="future">Toon: Future</option>
             </select>
@@ -44,7 +44,6 @@
             <table class="w-full text-sm text-left">
                 <thead class="bg-gray-100 text-gray-600 text-xs uppercase">
                     <tr>
-                        <th class="px-2 py-2">Rij</th>
                         <th class="px-2 py-2">Cat</th>
                         <th class="px-2 py-2">Type</th>
                         <th class="px-2 py-2 w-1/6">NL Titel</th>
@@ -60,8 +59,7 @@
                 </thead>
                 <tbody class="divide-y divide-gray-100">
                     {% for row in rows %}
-                    <tr data-status="{{ row.status | lower }}" class="hover:bg-gray-50{% if row.status == 'Active' %}{% else %} hidden{% endif %}">
-                        <td class="px-2 py-1.5 text-gray-500">{{ row.row_index }}</td>
+                    <tr data-status="{{ row.status | lower }}" data-row-index="{{ row.row_index }}" class="hover:bg-gray-50{% if row.status == 'Active' %}{% else %} hidden{% endif %}">
                         <td class="px-2 py-1.5 whitespace-nowrap">{{ row.category }}</td>
                         <td class="px-2 py-1.5 whitespace-nowrap">{{ row.type }}</td>
                         <td class="px-2 py-1.5 max-w-xs truncate" title="{{ row.nl_body }}">{{ row.nl_title }}</td>
@@ -109,9 +107,22 @@
                     <option value="Regionale">Regionale</option>
                     <option value="Landelijke">Landelijke</option>
                 </select>
-                <input id="m_type" type="text" placeholder="Type" class="rounded border border-gray-300 px-2 py-1.5 text-sm">
-                <input id="m_first" type="date" class="rounded border border-gray-300 px-2 py-1.5 text-sm">
-                <input id="m_last" type="date" class="rounded border border-gray-300 px-2 py-1.5 text-sm">
+                <select id="m_type" class="rounded border border-gray-300 px-2 py-1.5 text-sm">
+                    <option value="Activity">Activity</option>
+                    <option value="Organization">Organization</option>
+                    <option value="Others" selected>Others</option>
+                    <option value="Overlijdens">Overlijdens</option>
+                    <option value="Huwelijks">Huwelijks</option>
+                    <option value="Doop">Doop</option>
+                </select>
+                <select id="m_first" class="rounded border border-gray-300 px-2 py-1.5 text-sm">
+                    <option value="">-- kies van --</option>
+                    {% for d in takenrooster_dates %}<option value="{{ d }}">{{ d }}</option>{% endfor %}
+                </select>
+                <select id="m_last" class="rounded border border-gray-300 px-2 py-1.5 text-sm">
+                    <option value="">-- kies tot --</option>
+                    {% for d in takenrooster_dates %}<option value="{{ d }}">{{ d }}</option>{% endfor %}
+                </select>
                 <input id="m_event" type="date" class="rounded border border-gray-300 px-2 py-1.5 text-sm">
                 <input id="m_source" type="text" placeholder="Bron" class="rounded border border-gray-300 px-2 py-1.5 text-sm">
             </div>
@@ -164,6 +175,7 @@
     <script>
         const YEAR = {{ year }};
         const ROWS = {{ rows | tojson | safe }};
+        const TAKENROOSTER_DATES = {{ takenrooster_dates | tojson | safe }};
 
         function showStatus(el, msg, isError) {
             el.textContent = msg;
@@ -182,6 +194,12 @@
         }
 
         function filterRows(status) {
+            if (status) {
+                localStorage.setItem('mededelingenFilter', status);
+                const select = document.getElementById('statusFilter');
+                if (select) select.value = status;
+            }
+            status = status || localStorage.getItem('mededelingenFilter') || 'active';
             document.querySelectorAll('tbody tr[data-status]').forEach(row => {
                 if (status === 'all' || row.dataset.status === status) {
                     row.classList.remove('hidden');
@@ -228,9 +246,10 @@
         function openAdd() {
             document.getElementById('modalTitle').textContent = 'Nieuwe mededeling';
             document.getElementById('m_index').value = 'new';
-            ['m_cat','m_type','m_first','m_last','m_event','m_source','m_nl_title','m_nl_body','m_id_title','m_id_body'].forEach(id => {
-                document.getElementById(id).value = id === 'm_cat' ? 'Regionale' : (id === 'm_source' ? 'web' : '');
+            ['m_cat','m_first','m_last','m_event','m_source','m_nl_title','m_nl_body','m_id_title','m_id_body'].forEach(id => {
+                document.getElementById(id).value = id === 'm_cat' ? 'Regionale' : '';
             });
+            document.getElementById('m_type').value = 'Others';
             document.getElementById('m_status').textContent = '';
             document.getElementById('m_imgPreviewBox').classList.add('hidden');
             document.getElementById('m_noImg').classList.remove('hidden');
@@ -320,8 +339,8 @@
             }
         }
 
-        // default filter
-        filterRows('active');
+        // restore filter after reload
+        filterRows(localStorage.getItem('mededelingenFilter') || 'active');
     </script>
 </body>
 </html>

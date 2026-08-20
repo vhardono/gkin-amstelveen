@@ -264,16 +264,25 @@ def mededelingen_editor():
     from data_sources.dropbox_reader import DropboxExcelReader
     year = request.args.get('year', type=int) or datetime.now().year
     rows = []
+    takenrooster_dates = []
     try:
         reader = DropboxExcelReader()
         reader.cleanup_mededelingen_images(year)
         rows = reader.get_mededelingen_rows(year)
+        taken = _get_takenrooster()
+        for entry in taken.get('entries', []):
+            d = entry['date']
+            if hasattr(d, 'date'):
+                d = d.date()
+            if d.year == year:
+                takenrooster_dates.append(d.strftime('%Y-%m-%d'))
     except Exception as e:
         print(f'[MededelingenEditor] Could not load rows: {e}')
 
     return render_template('mededelingen_editor.html',
                            year=year,
                            today=datetime.now().strftime('%Y-%m-%d'),
+                           takenrooster_dates=takenrooster_dates,
                            rows=rows)
 
 
