@@ -819,6 +819,7 @@ def generate_voorlees():
 
         reader = DropboxExcelReader()
         meded  = reader.get_mededelingen(mededelingen_date=selected_date)
+        mededelingen_rows = reader.get_mededelingen_rows(selected_date.year)
 
         def fv(key): return request.form.get(key, '').strip()
 
@@ -865,7 +866,8 @@ def generate_voorlees():
 
         gen      = VoorleesGenerator()
         filepath = gen.generate(selected_date, entry, meded, user_data,
-                                welkom_paragraphs=welkom_paras)
+                                welkom_paragraphs=welkom_paras,
+                                mededelingen_rows=mededelingen_rows)
         filename = os.path.basename(filepath)
         return send_file(filepath, as_attachment=True, download_name=filename,
                          mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document')

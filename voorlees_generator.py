@@ -505,7 +505,8 @@ class VoorleesGenerator:
                  takenrooster_entry: Dict[str, Any],
                  mededelingen_data: Dict[str, Any],
                  user_data: Dict[str, Any],
-                 welkom_paragraphs: List[str] = None) -> str:
+                 welkom_paragraphs: List[str] = None,
+                 mededelingen_rows: List[Dict[str, Any]] = None) -> str:
 
         doc = Document()
         for sec in doc.sections:
@@ -550,6 +551,16 @@ class VoorleesGenerator:
 
         table = doc.add_table(rows=0, cols=2)
         table.style = 'Table Grid'
+
+        # Build image map from year-sheet metadata
+        image_map = {}
+        if mededelingen_rows:
+            for row in mededelingen_rows:
+                img_path = row.get('image_path')
+                if img_path and os.path.exists(img_path):
+                    title = (row.get('nl_title', '') or '').strip()
+                    if title:
+                        image_map[title] = img_path
 
         # ── 1. Welkomstwoord ──────────────────────────────────────────────
         _section_header_row(table, 'Welkomstwoord', 'Kata Sambutan')
@@ -678,6 +689,18 @@ class VoorleesGenerator:
                 id_parts = [('', False)]
             _content_row(table, nl_parts, id_parts)
 
+            # Add image below both NL/ID versions if attached
+            img_path = image_map.get((nb.get('heading') or '').strip())
+            if img_path and os.path.exists(img_path):
+                try:
+                    img_row = table.add_row()
+                    img_cell = img_row.cells[0].merge(img_row.cells[1])
+                    p = img_cell.paragraphs[0]
+                    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                    p.add_run().add_picture(img_path, width=Cm(5.0))
+                except Exception as exc:
+                    print(f'[Voorlees] Could not add picture {img_path}: {exc}')
+
         # ── 5. Landelijke Mededelingen ────────────────────────────────────
         _section_header_row(table, 'Landelijke Mededelingen', 'Berita Nasional')
         land_nl = mededelingen_data.get('landelijke_nl', '').strip()
@@ -703,6 +726,18 @@ class VoorleesGenerator:
             if not id_parts:
                 id_parts = [('', False)]
             _content_row(table, nl_parts, id_parts)
+
+            # Add image below both NL/ID versions if attached
+            img_path = image_map.get((nb.get('heading') or '').strip())
+            if img_path and os.path.exists(img_path):
+                try:
+                    img_row = table.add_row()
+                    img_cell = img_row.cells[0].merge(img_row.cells[1])
+                    p = img_cell.paragraphs[0]
+                    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                    p.add_run().add_picture(img_path, width=Cm(5.0))
+                except Exception as exc:
+                    print(f'[Voorlees] Could not add picture {img_path}: {exc}')
 
         # Save
         fname    = f'Vertaling_Mededelingen_{mededelingen_date.strftime("%y%m%d")}.docx'
