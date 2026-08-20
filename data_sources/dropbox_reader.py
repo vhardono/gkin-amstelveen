@@ -308,12 +308,12 @@ class DropboxExcelReader:
                 # image sidecar (single dict legacy or list of dicts)
                 meta = _mededelingen_image_meta()
                 key = f"{year}-{idx}"
-                raw = meta.get(key)
+                img_entry = meta.get(key)
                 recs = []
-                if isinstance(raw, dict):
-                    recs = [raw]
-                elif isinstance(raw, list):
-                    recs = raw
+                if isinstance(img_entry, dict):
+                    recs = [img_entry]
+                elif isinstance(img_entry, list):
+                    recs = img_entry
                 images = []
                 for rec in recs:
                     if not isinstance(rec, dict) or not rec.get('filename'):
