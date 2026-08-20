@@ -3030,39 +3030,44 @@ def add_mededelingen_section(prs, json_path, section_type=None):
             )
             slides_added += added
 
-            img_path = item.get('image')
-            if img_path and os.path.exists(img_path):
-                try:
-                    with Image.open(img_path) as im:
-                        w_px, h_px = im.size
-                    h_px = h_px or 1
-                    ratio = w_px / h_px
-                    if ratio > 1.5:
-                        # Wide image / banner -> own slide
-                        banner = prs.slides.add_slide(prs.slide_layouts[6])
-                        set_background(banner)
-                        max_w = SLIDE_WIDTH - Cm(2)
-                        max_h = SLIDE_HEIGHT - Cm(2)
-                        if ratio > (max_w / max_h):
-                            bwidth = int(max_w)
-                            bheight = int(max_w / ratio)
+            img_paths = item.get('images') or ([item.get('image')] if item.get('image') else [])
+            if img_paths:
+                small_y = Cm(14)
+                for img_path in img_paths:
+                    if not img_path or not os.path.exists(img_path):
+                        continue
+                    try:
+                        with Image.open(img_path) as im:
+                            w_px, h_px = im.size
+                        h_px = h_px or 1
+                        ratio = w_px / h_px
+                        if ratio > 1.5:
+                            # Wide image / banner -> own slide
+                            banner = prs.slides.add_slide(prs.slide_layouts[6])
+                            set_background(banner)
+                            max_w = SLIDE_WIDTH - Cm(2)
+                            max_h = SLIDE_HEIGHT - Cm(2)
+                            if ratio > (max_w / max_h):
+                                bwidth = int(max_w)
+                                bheight = int(max_w / ratio)
+                            else:
+                                bheight = int(max_h)
+                                bwidth = int(max_h * ratio)
+                            bleft = int((SLIDE_WIDTH - bwidth) / 2)
+                            btop = int((SLIDE_HEIGHT - bheight) / 2)
+                            banner.shapes.add_picture(img_path, bleft, btop, bwidth, bheight)
+                            slides_added += 1
                         else:
-                            bheight = int(max_h)
-                            bwidth = int(max_h * ratio)
-                        bleft = int((SLIDE_WIDTH - bwidth) / 2)
-                        btop = int((SLIDE_HEIGHT - bheight) / 2)
-                        banner.shapes.add_picture(img_path, bleft, btop, bwidth, bheight)
-                        slides_added += 1
-                    else:
-                        # Small image below text on the last slide
-                        last_slide = prs.slides[len(prs.slides) - 1]
-                        pic_width = Cm(4)
-                        pic_height = int(pic_width / ratio)
-                        pleft = int((SLIDE_WIDTH - pic_width) / 2)
-                        ptop = Cm(14)
-                        last_slide.shapes.add_picture(img_path, pleft, ptop, pic_width, pic_height)
-                except Exception as e:
-                    print(f'[Liturgi] Could not add image {img_path}: {e}')
+                            # Small image below text on the last slide
+                            last_slide = prs.slides[len(prs.slides) - 1]
+                            pic_width = Cm(4)
+                            pic_height = int(pic_width / ratio)
+                            pleft = int((SLIDE_WIDTH - pic_width) / 2)
+                            ptop = small_y
+                            last_slide.shapes.add_picture(img_path, pleft, ptop, pic_width, pic_height)
+                            small_y += pic_height + Cm(0.3)
+                    except Exception as e:
+                        print(f'[Liturgi] Could not add image {img_path}: {e}')
 
     return slides_added
 

@@ -144,21 +144,17 @@
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-gray-50 rounded-lg border border-gray-100 mb-4">
                 <div>
-                    <p class="text-xs font-medium text-gray-600 mb-2">Afbeelding voor deze mededeling</p>
+                    <p class="text-xs font-medium text-gray-600 mb-2">Afbeelding(en) voor deze mededeling</p>
                     <label class="flex items-center gap-2 w-full rounded border border-dashed border-gray-300 px-3 py-2 bg-white cursor-pointer hover:border-gkin-green transition-colors mb-2">
                         <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                        <span id="m_imgLabel" class="text-sm text-gray-500 truncate">Kies afbeelding...</span>
-                        <input type="file" id="m_imgUpload" accept="image/*" class="hidden" onchange="updateImgLabel(this)">
+                        <span id="m_imgLabel" class="text-sm text-gray-500 truncate">Kies afbeelding(en)...</span>
+                        <input type="file" id="m_imgUpload" accept="image/*" multiple class="hidden" onchange="updateImgLabel(this)">
                     </label>
                     <button type="button" onclick="uploadImage()" class="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded px-3 py-1.5">Upload</button>
                 </div>
                 <div>
-                    <p class="text-xs text-gray-500 mb-1">Huidige afbeelding</p>
-                    <div id="m_imgPreviewBox" class="hidden">
-                        <img id="m_imgPreview" src="" alt="" class="max-h-40 object-contain rounded border border-gray-200 mb-1">
-                        <p id="m_imgName" class="text-xs text-gray-500 truncate"></p>
-                        <button type="button" onclick="deleteImage()" class="mt-2 text-xs bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded px-3 py-1">Verwijder</button>
-                    </div>
+                    <p class="text-xs text-gray-500 mb-1">Huidige afbeeldingen</p>
+                    <div id="m_imgPreviewBox" class="hidden grid grid-cols-3 gap-2"></div>
                     <p id="m_noImg" class="text-sm text-gray-400 italic">Geen afbeelding gekoppeld</p>
                 </div>
             </div>
@@ -182,6 +178,25 @@
             el.className = `text-xs rounded p-2 border ${isError ? 'bg-red-50 text-red-700 border-red-200' : 'bg-green-50 text-green-700 border-green-200'}`;
             el.classList.remove('hidden');
             setTimeout(() => el.classList.add('hidden'), 5000);
+        }
+
+        function renderImages(images) {
+            const box = document.getElementById('m_imgPreviewBox');
+            const noImg = document.getElementById('m_noImg');
+            box.innerHTML = '';
+            if (!images || !images.length) {
+                box.classList.add('hidden');
+                noImg.classList.remove('hidden');
+                return;
+            }
+            box.classList.remove('hidden');
+            noImg.classList.add('hidden');
+            images.forEach(img => {
+                const div = document.createElement('div');
+                div.className = 'border border-gray-200 rounded p-2 bg-white text-center';
+                div.innerHTML = `<img src="${img.url}" class="h-16 w-full object-cover rounded mb-1"><p class="text-xs text-gray-500 truncate mb-1">${img.name || img.filename}</p><button type="button" onclick="deleteImage('${img.filename}')" class="text-xs bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded px-2 py-0.5">Verwijder</button>`;
+                box.appendChild(div);
+            });
         }
 
         function buildText(title, body) {
@@ -228,18 +243,9 @@
             document.getElementById('m_id_body').value = row.id_body;
             document.getElementById('m_status').textContent = `Status: ${row.status}`;
 
-            if (row.image_url) {
-                document.getElementById('m_imgPreview').src = row.image_url;
-                document.getElementById('m_imgName').textContent = row.image_name || '';
-                document.getElementById('m_imgPreviewBox').classList.remove('hidden');
-                document.getElementById('m_noImg').classList.add('hidden');
-            } else {
-                document.getElementById('m_imgPreviewBox').classList.add('hidden');
-                document.getElementById('m_noImg').classList.remove('hidden');
-                document.getElementById('m_imgPreview').src = '';
-            }
+            renderImages(row.images || []);
             document.getElementById('m_imgUpload').value = '';
-            document.getElementById('m_imgLabel').textContent = 'Kies afbeelding...';
+            document.getElementById('m_imgLabel').textContent = 'Kies afbeelding(en)...';
             openModal();
         }
 
@@ -251,8 +257,7 @@
             });
             document.getElementById('m_type').value = 'Others';
             document.getElementById('m_status').textContent = '';
-            document.getElementById('m_imgPreviewBox').classList.add('hidden');
-            document.getElementById('m_noImg').classList.remove('hidden');
+            renderImages([]);
             openModal();
         }
 
@@ -290,18 +295,18 @@
         }
 
         function updateImgLabel(input) {
-            document.getElementById('m_imgLabel').textContent = input.files[0]?.name || 'Kies afbeelding...';
+            const count = input.files.length;
+            document.getElementById('m_imgLabel').textContent = count ? `${count} bestand(en) gekozen` : 'Kies afbeelding(en)...';
         }
 
         async function uploadImage() {
             const idx = document.getElementById('m_index').value;
             if (idx === 'new') { alert('Bewaar eerst de mededeling'); return; }
             const input = document.getElementById('m_imgUpload');
-            const file = input.files[0];
-            if (!file) return;
+            if (!input.files.length) return;
 
             const form = new FormData();
-            form.append('image', file);
+            for (const f of input.files) form.append('image', f);
             form.append('year', YEAR);
             form.append('row_index', idx);
 
@@ -309,18 +314,19 @@
                 const resp = await fetch('/mededelingen-upload-image', {method: 'POST', body: form});
                 const data = await resp.json();
                 if (data.error) throw new Error(data.error);
-                document.getElementById('m_imgPreview').src = data.url;
-                document.getElementById('m_imgName').textContent = data.name;
-                document.getElementById('m_imgPreviewBox').classList.remove('hidden');
-                document.getElementById('m_noImg').classList.add('hidden');
+                const row = ROWS.find(r => r.row_index == idx);
+                if (row) {
+                    row.images = (row.images || []).concat(data.images || []);
+                    renderImages(row.images);
+                }
                 input.value = '';
-                document.getElementById('m_imgLabel').textContent = 'Kies afbeelding...';
+                document.getElementById('m_imgLabel').textContent = 'Kies afbeelding(en)...';
             } catch (e) {
                 alert('Uploadfout: ' + e.message);
             }
         }
 
-        async function deleteImage() {
+        async function deleteImage(filename) {
             const idx = document.getElementById('m_index').value;
             if (idx === 'new') return;
             if (!confirm('Afbeelding verwijderen?')) return;
@@ -328,12 +334,15 @@
                 const resp = await fetch('/mededelingen-delete-image', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({year: YEAR, row_index: parseInt(idx, 10)})
+                    body: JSON.stringify({year: YEAR, row_index: parseInt(idx, 10), filename})
                 });
                 const data = await resp.json();
                 if (data.error) throw new Error(data.error);
-                document.getElementById('m_imgPreviewBox').classList.add('hidden');
-                document.getElementById('m_noImg').classList.remove('hidden');
+                const row = ROWS.find(r => r.row_index == idx);
+                if (row) {
+                    row.images = (row.images || []).filter(img => img.filename !== filename);
+                    renderImages(row.images);
+                }
             } catch (e) {
                 alert('Fout: ' + e.message);
             }

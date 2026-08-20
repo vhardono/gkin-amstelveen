@@ -110,11 +110,15 @@ class BulletinGenerator:
         image_map = {}
         if mededelingen_rows:
             for row in mededelingen_rows:
-                img_path = row.get('image_path')
-                if img_path and os.path.exists(img_path):
-                    title = (row.get('nl_title', '') or '').strip()
-                    if title:
-                        image_map[title] = img_path
+                title = (row.get('nl_title', '') or '').strip()
+                if not title:
+                    continue
+                paths = [img['path'] for img in (row.get('images') or []) if img and img.get('path')]
+                if not paths and row.get('image_path'):
+                    paths = [row['image_path']]
+                paths = [p for p in paths if os.path.exists(p)]
+                if paths:
+                    image_map[title] = paths
 
         # --- Replace text sections (Landelijke first to avoid index shift) ---
         self._replace_section(doc, 'Landelijke Mededelingen',
@@ -1040,17 +1044,20 @@ class BulletinGenerator:
                 else:
                     body.append(body_p)
 
-                # --- Image below this topic, if one is attached ---
+                # --- Images below this topic, if any are attached ---
                 if image_map:
                     title_key = title_line.strip()
-                    img_path = image_map.get(title_key)
-                    if img_path and os.path.exists(img_path):
-                        try:
-                            img_para = doc.add_picture(img_path, width=Inches(2.5))
-                            if next_anchor is not None:
-                                next_anchor.addprevious(img_para._element)
-                        except Exception as exc:
-                            print(f"[Bulletin] Could not add picture {img_path}: {exc}")
+                    img_paths = image_map.get(title_key, [])
+                    if isinstance(img_paths, str):
+                        img_paths = [img_paths]
+                    for img_path in img_paths:
+                        if img_path and os.path.exists(img_path):
+                            try:
+                                img_para = doc.add_picture(img_path, width=Inches(2.5))
+                                if next_anchor is not None:
+                                    next_anchor.addprevious(img_para._element)
+                            except Exception as exc:
+                                print(f"[Bulletin] Could not add picture {img_path}: {exc}")
 
     def _make_paragraph(self, body, style_name: str, text: str, left_align: bool = False):
         """Create a new paragraph element with given style and text."""

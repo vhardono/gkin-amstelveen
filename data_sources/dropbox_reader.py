@@ -305,17 +305,26 @@ class DropboxExcelReader:
                 nl_title, nl_body = _split_title_body(nl)
                 id_title, id_body = _split_title_body(id_)
 
-                # image sidecar
+                # image sidecar (single dict legacy or list)
                 meta = _mededelingen_image_meta()
                 key = f"{year}-{idx}"
-                rec = meta.get(key)
-                image_url = None
-                image_path = None
-                image_name = None
-                if rec:
-                    image_url = f"/mededelingen-image/{year}/{idx}/{rec['filename']}"
-                    image_path = os.path.join(MEDEDELINGEN_IMG_DIR, str(year), str(idx), rec['filename'])
-                    image_name = rec['original_name']
+                recs = meta.get(key)
+                images = []
+                if recs:
+                    if isinstance(recs, dict):
+                        recs = [recs]
+                    for rec in recs:
+                        if not rec or not rec.get('filename'):
+                            continue
+                        images.append({
+                            'filename': rec['filename'],
+                            'name': rec.get('original_name', rec['filename']),
+                            'url': f"/mededelingen-image/{year}/{idx}/{rec['filename']}",
+                            'path': os.path.join(MEDEDELINGEN_IMG_DIR, str(year), str(idx), rec['filename']),
+                        })
+                image_url = images[0]['url'] if images else None
+                image_path = images[0]['path'] if images else None
+                image_name = images[0]['name'] if images else None
 
                 first_date = _date_cell(4)
                 last_date = _date_cell(5)
@@ -337,6 +346,7 @@ class DropboxExcelReader:
                     'image_url': image_url,
                     'image_path': image_path,
                     'image_name': image_name,
+                    'images': images,
                 })
 
             return rows
@@ -548,12 +558,16 @@ class DropboxExcelReader:
                     remove = True
 
             if remove:
-                path = os.path.join(MEDEDELINGEN_IMG_DIR, str(year), str(idx), rec['filename'])
-                try:
-                    if os.path.exists(path):
-                        os.remove(path)
-                except Exception as e:
-                    print(f'[Cleanup] Could not remove {path}: {e}')
+                image_recs = [rec] if isinstance(rec, dict) else (rec if isinstance(rec, list) else [])
+                for img in image_recs:
+                    if not img or not img.get('filename'):
+                        continue
+                    path = os.path.join(MEDEDELINGEN_IMG_DIR, str(year), str(idx), img['filename'])
+                    try:
+                        if os.path.exists(path):
+                            os.remove(path)
+                    except Exception as e:
+                        print(f'[Cleanup] Could not remove {path}: {e}')
                 removed += 1
             else:
                 new_meta[key] = rec

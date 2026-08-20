@@ -364,7 +364,7 @@ def mededelingen_editor_add():
 @app.route('/mededelingen-upload-image', methods=['POST'])
 @_password_required
 def mededelingen_upload_image():
-    """Store one image per mededelingen row on /data and keep a JSON sidecar."""
+    """Store one or more images per mededelingen row on /data and keep a JSON sidecar."""
     import uuid
     from werkzeug.utils import secure_filename
     from data_sources.dropbox_reader import (
@@ -373,27 +373,44 @@ def mededelingen_upload_image():
 
     year = request.form.get('year', type=int)
     row_index = request.form.get('row_index', type=int)
-    file = request.files.get('image')
-    if not file or year is None or row_index is None:
+    files = request.files.getlist('image')
+    if not files or year is None or row_index is None:
         return jsonify({'error': 'Missing year, row_index or file'}), 400
 
-    ext = secure_filename(file.filename).rsplit('.', 1)[-1].lower()
-    if ext not in {'png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp'}:
-        return jsonify({'error': 'Invalid image type'}), 400
-
-    filename = f"{uuid.uuid4().hex}.{ext}"
     out_dir = os.path.join(MEDEDELINGEN_IMG_DIR, str(year), str(row_index))
     os.makedirs(out_dir, exist_ok=True)
-    out_path = os.path.join(out_dir, filename)
-    file.save(out_path)
+
+    saved = []
+    for file in files:
+        if not file.filename:
+            continue
+        ext = secure_filename(file.filename).rsplit('.', 1)[-1].lower()
+        if ext not in {'png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp'}:
+            continue
+        filename = f"{uuid.uuid4().hex}.{ext}"
+        out_path = os.path.join(out_dir, filename)
+        file.save(out_path)
+        saved.append({
+            'filename': filename,
+            'original_name': secure_filename(file.filename),
+            'url': f"/mededelingen-image/{year}/{row_index}/{filename}",
+        })
+
+    if not saved:
+        return jsonify({'error': 'No valid images uploaded'}), 400
 
     meta = _mededelingen_image_meta()
     key = f"{year}-{row_index}"
-    meta[key] = {'filename': filename, 'original_name': secure_filename(file.filename)}
+    existing = meta.get(key)
+    if isinstance(existing, dict):
+        existing = [existing]
+    elif not existing:
+        existing = []
+    existing.extend(saved)
+    meta[key] = existing
     _save_mededelingen_image_meta(meta)
 
-    url = f"/mededelingen-image/{year}/{row_index}/{filename}"
-    return jsonify({'success': True, 'url': url, 'name': filename})
+    return jsonify({'success': True, 'images': saved})
 
 
 @app.route('/mededelingen-delete-image', methods=['POST'])
@@ -406,20 +423,29 @@ def mededelingen_delete_image():
     data = request.get_json() or {}
     year = data.get('year')
     row_index = data.get('row_index')
+    filename = data.get('filename')
     if year is None or row_index is None:
         return jsonify({'error': 'Missing year or row_index'}), 400
 
     meta = _mededelingen_image_meta()
     key = f"{year}-{row_index}"
-    rec = meta.get(key)
-    if rec:
-        path = os.path.join(MEDEDELINGEN_IMG_DIR, str(year), str(row_index), rec['filename'])
-        try:
-            if os.path.exists(path):
-                os.remove(path)
-        except Exception as e:
-            print(f'[Mededelingen] Could not delete image: {e}')
-        del meta[key]
+    recs = meta.get(key)
+    if recs:
+        if isinstance(recs, dict):
+            recs = [recs]
+        target = next((r for r in recs if r.get('filename') == filename), None)
+        if target:
+            path = os.path.join(MEDEDELINGEN_IMG_DIR, str(year), str(row_index), target['filename'])
+            try:
+                if os.path.exists(path):
+                    os.remove(path)
+            except Exception as e:
+                print(f'[Mededelingen] Could not delete image: {e}')
+        recs = [r for r in recs if r.get('filename') != filename]
+        if recs:
+            meta[key] = recs
+        else:
+            del meta[key]
         _save_mededelingen_image_meta(meta)
 
     return jsonify({'success': True})
@@ -1584,11 +1610,14 @@ def _run_liturgi(excel_bytes: bytes, preek_bytes, work_dir: str,
                 reader = DropboxExcelReader()
                 meded = reader.get_mededelingen(mededelingen_date=service_date)
                 mededelingen_rows = reader.get_mededelingen_rows(service_date.year)
-                image_map = {
-                    (row.get('nl_title', '') or '').strip(): row.get('image_path')
-                    for row in mededelingen_rows
-                    if row.get('image_path')
-                }
+                image_map = {}
+                for row in mededelingen_rows:
+                    title = (row.get('nl_title', '') or '').strip()
+                    paths = [img['path'] for img in (row.get('images') or []) if img and img.get('path')]
+                    if not paths and row.get('image_path'):
+                        paths = [row['image_path']]
+                    if title and paths:
+                        image_map[title] = paths
                 welkom_paras = _extract_welkom_paragraphs(service_date, entry, meded, taken.get('entries'))
                 gen = VoorleesGenerator()
                 nl_welkom, id_welkom = gen.build_welkom_texts(service_date, entry, welkom_paras)
@@ -1601,9 +1630,9 @@ def _run_liturgi(excel_bytes: bytes, preek_bytes, work_dir: str,
                         nl_text = '\n'.join(p for p in [nb.get('heading', ''), nb.get('body', '')] if p)
                         id_text = '\n'.join(p for p in [ib.get('heading', ''), ib.get('body', '')] if p)
                         item = {'nl': nl_text, 'id': id_text}
-                        img_path = image_map.get((nb.get('heading') or '').strip())
-                        if img_path:
-                            item['image'] = img_path
+                        img_paths = image_map.get((nb.get('heading') or '').strip())
+                        if img_paths:
+                            item['images'] = img_paths
                         items.append(item)
                     return {'type': section_type, 'title': {'nl': title_nl, 'id': title_id}, 'items': items}
 

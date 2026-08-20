@@ -556,11 +556,15 @@ class VoorleesGenerator:
         image_map = {}
         if mededelingen_rows:
             for row in mededelingen_rows:
-                img_path = row.get('image_path')
-                if img_path and os.path.exists(img_path):
-                    title = (row.get('nl_title', '') or '').strip()
-                    if title:
-                        image_map[title] = img_path
+                title = (row.get('nl_title', '') or '').strip()
+                if not title:
+                    continue
+                paths = [img['path'] for img in (row.get('images') or []) if img and img.get('path')]
+                if not paths and row.get('image_path'):
+                    paths = [row['image_path']]
+                paths = [p for p in paths if os.path.exists(p)]
+                if paths:
+                    image_map[title] = paths
 
         # ── 1. Welkomstwoord ──────────────────────────────────────────────
         _section_header_row(table, 'Welkomstwoord', 'Kata Sambutan')
@@ -689,17 +693,20 @@ class VoorleesGenerator:
                 id_parts = [('', False)]
             _content_row(table, nl_parts, id_parts)
 
-            # Add image below both NL/ID versions if attached
-            img_path = image_map.get((nb.get('heading') or '').strip())
-            if img_path and os.path.exists(img_path):
-                try:
-                    img_row = table.add_row()
-                    img_cell = img_row.cells[0].merge(img_row.cells[1])
-                    p = img_cell.paragraphs[0]
-                    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                    p.add_run().add_picture(img_path, width=Cm(5.0))
-                except Exception as exc:
-                    print(f'[Voorlees] Could not add picture {img_path}: {exc}')
+            # Add images below both NL/ID versions if attached
+            img_paths = image_map.get((nb.get('heading') or '').strip(), [])
+            if isinstance(img_paths, str):
+                img_paths = [img_paths]
+            for img_path in img_paths:
+                if img_path and os.path.exists(img_path):
+                    try:
+                        img_row = table.add_row()
+                        img_cell = img_row.cells[0].merge(img_row.cells[1])
+                        p = img_cell.paragraphs[0]
+                        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                        p.add_run().add_picture(img_path, width=Cm(5.0))
+                    except Exception as exc:
+                        print(f'[Voorlees] Could not add picture {img_path}: {exc}')
 
         # ── 5. Landelijke Mededelingen ────────────────────────────────────
         _section_header_row(table, 'Landelijke Mededelingen', 'Berita Nasional')
@@ -727,17 +734,20 @@ class VoorleesGenerator:
                 id_parts = [('', False)]
             _content_row(table, nl_parts, id_parts)
 
-            # Add image below both NL/ID versions if attached
-            img_path = image_map.get((nb.get('heading') or '').strip())
-            if img_path and os.path.exists(img_path):
-                try:
-                    img_row = table.add_row()
-                    img_cell = img_row.cells[0].merge(img_row.cells[1])
-                    p = img_cell.paragraphs[0]
-                    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                    p.add_run().add_picture(img_path, width=Cm(5.0))
-                except Exception as exc:
-                    print(f'[Voorlees] Could not add picture {img_path}: {exc}')
+            # Add images below both NL/ID versions if attached
+            img_paths = image_map.get((nb.get('heading') or '').strip(), [])
+            if isinstance(img_paths, str):
+                img_paths = [img_paths]
+            for img_path in img_paths:
+                if img_path and os.path.exists(img_path):
+                    try:
+                        img_row = table.add_row()
+                        img_cell = img_row.cells[0].merge(img_row.cells[1])
+                        p = img_cell.paragraphs[0]
+                        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                        p.add_run().add_picture(img_path, width=Cm(5.0))
+                    except Exception as exc:
+                        print(f'[Voorlees] Could not add picture {img_path}: {exc}')
 
         # Save
         fname    = f'Vertaling_Mededelingen_{mededelingen_date.strftime("%y%m%d")}.docx'
