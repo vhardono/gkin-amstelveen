@@ -263,6 +263,7 @@ def mededelingen_editor():
     """Per-section mededelingen editor with metadata."""
     from data_sources.dropbox_reader import DropboxExcelReader
     date_str = request.args.get('date')
+    selected = None
     if date_str:
         try:
             selected = datetime.strptime(date_str, '%Y-%m-%d')
@@ -271,7 +272,9 @@ def mededelingen_editor():
     else:
         # default to first upcoming date
         all_dates = _get_mededelingen_dates()
-        selected = next((d for d in all_dates if d['value'] >= datetime.now().strftime('%Y-%m-%d')), all_dates[0] if all_dates else None)
+        first = next((d for d in all_dates if d['value'] >= datetime.now().strftime('%Y-%m-%d')), all_dates[0] if all_dates else None)
+        if first:
+            selected = datetime.strptime(first['value'], '%Y-%m-%d')
 
     rows = []
     year = None
