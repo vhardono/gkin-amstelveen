@@ -111,11 +111,29 @@ def _section_header_row(table, nl_text: str, id_text: str):
     _r(p, id_text, bold=True, color=ID_COLOR, size_pt=14)
 
 
-def _content_row(table, nl_parts: list, id_parts: list):
+def _add_image_to_cell(cell, img_path: str, non_qr_width_cm: float = 8.5):
+    """Append a centered picture at the bottom of a table cell."""
+    if not (img_path and os.path.exists(img_path)):
+        return
+    try:
+        is_qr = 'qr' in os.path.basename(img_path).lower()
+        p = cell.add_paragraph()
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        run = p.add_run()
+        if is_qr:
+            run.add_picture(img_path, height=Cm(3))
+        else:
+            run.add_picture(img_path, width=Cm(non_qr_width_cm))
+    except Exception as exc:
+        print(f'[Voorlees] Could not add picture {img_path}: {exc}')
+
+
+def _content_row(table, nl_parts: list, id_parts: list, img_paths: list = None):
     """
     Add one content row.
     Each part is (text, bold).  Parts in the same cell are written consecutively
     on newlines when the previous part ended with \\n.
+    Any attached images are duplicated and centered at the bottom of each cell.
     """
     row = table.add_row()
     nl_cell = row.cells[0]
@@ -138,6 +156,14 @@ def _content_row(table, nl_parts: list, id_parts: list):
 
     fill_cell(nl_cell, nl_parts, NL_COLOR)
     fill_cell(id_cell, id_parts, ID_COLOR)
+
+    if img_paths:
+        if isinstance(img_paths, str):
+            img_paths = [img_paths]
+        for img_path in img_paths:
+            _add_image_to_cell(nl_cell, img_path)
+            _add_image_to_cell(id_cell, img_path)
+
     return row
 
 
@@ -146,35 +172,6 @@ def _subheader_row(table, nl_text: str, id_text: str):
     _content_row(table,
                  [(nl_text, True)],
                  [(id_text, True)])
-
-
-def _add_meded_image_row(table, img_path: str, non_qr_width_cm: float = 8.5):
-    """Add a two-cell row with the same centered image in both columns.
-
-    QR code images (filename containing 'qr') are rendered 3 cm tall.
-    Non-QR images use the given width in cm.
-    """
-    img_row = table.add_row()
-    nl_cell = img_row.cells[0]
-    id_cell = img_row.cells[1]
-    _set_cell_margins(nl_cell)
-    _set_cell_margins(id_cell)
-    _set_col_width(nl_cell, 8.0)
-    _set_col_width(id_cell, 8.0)
-
-    is_qr = 'qr' in os.path.basename(img_path).lower()
-    for cell in (nl_cell, id_cell):
-        p = cell.paragraphs[0]
-        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        try:
-            run = p.add_run()
-            if is_qr:
-                run.add_picture(img_path, height=Cm(3))
-            else:
-                run.add_picture(img_path, width=Cm(non_qr_width_cm))
-        except Exception as exc:
-            _r(p, f'[Afbeelding: {exc}]', color=NL_COLOR, size_pt=9)
-            print(f'[Voorlees] Could not add picture {img_path}: {exc}')
 
 
 def parse_meded_blocks(text: str) -> List[dict]:
@@ -720,15 +717,8 @@ class VoorleesGenerator:
                 id_parts.append((ib['body'], False))
             if not id_parts:
                 id_parts = [('', False)]
-            _content_row(table, nl_parts, id_parts)
-
-            # Add images at the bottom of the NL/ID box, duplicated in both columns
             img_paths = image_map.get((nb.get('heading') or '').strip(), [])
-            if isinstance(img_paths, str):
-                img_paths = [img_paths]
-            for img_path in img_paths:
-                if img_path and os.path.exists(img_path):
-                    _add_meded_image_row(table, img_path)
+            _content_row(table, nl_parts, id_parts, img_paths=img_paths)
 
         # ── 5. Landelijke Mededelingen ────────────────────────────────────
         _section_header_row(table, 'Landelijke Mededelingen', 'Berita Nasional')
@@ -754,15 +744,8 @@ class VoorleesGenerator:
                 id_parts.append((ib['body'], False))
             if not id_parts:
                 id_parts = [('', False)]
-            _content_row(table, nl_parts, id_parts)
-
-            # Add images at the bottom of the NL/ID box, duplicated in both columns
             img_paths = image_map.get((nb.get('heading') or '').strip(), [])
-            if isinstance(img_paths, str):
-                img_paths = [img_paths]
-            for img_path in img_paths:
-                if img_path and os.path.exists(img_path):
-                    _add_meded_image_row(table, img_path)
+            _content_row(table, nl_parts, id_parts, img_paths=img_paths)
 
         # Save
         fname    = f'Vertaling_Mededelingen_{mededelingen_date.strftime("%y%m%d")}.docx'
