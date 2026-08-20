@@ -143,74 +143,59 @@ class DropboxExcelReader:
             return {'error': str(e), 'dates': [], 'entries': []}
 
     def get_mededelingen(self, mededelingen_date: datetime = None) -> Dict[str, Any]:
-        """Read Mededelingen Overzicht from the Output tab.
+        """Compute active mededelingen for the selected date from the year sheet.
 
         The year in the file path is derived from the selected mededelingen_date.
+        If mededelingen_date is not provided, the current year/upcoming Sunday is used.
 
         Returns dict with:
-            'regionale_nl'  – Regionale Mededelingen (Nederlands) from B2
-            'landelijke_nl' – Landelijke Mededelingen (Nederlands) from B3
-            'regionale_id'  – Regionale Mededelingen (Bahasa Indonesia) from C2
-            'landelijke_id' – Landelijke Mededelingen (Bahasa Indonesia) from C3
+            'regionale_nl'  – Regionale Mededelingen (Nederlands)
+            'landelijke_nl' – Landelijke Mededelingen (Nederlands)
+            'regionale_id'  – Regionale Mededelingen (Bahasa Indonesia)
+            'landelijke_id' – Landelijke Mededelingen (Bahasa Indonesia)
         """
         if mededelingen_date is None:
             year = datetime.now().year
+            reference = None
         else:
             year = mededelingen_date.year
+            reference = mededelingen_date
 
         path = MEDEDELINGEN_PATH_TEMPLATE.format(year=year)
         try:
-            print(f"Reading Mededelingen Overzicht: {path}, date: {mededelingen_date}")
-            _, response = self.dbx.files_download(path)
+            print(f"[DropboxReader] Computing mededelingen for {path}, date: {mededelingen_date}")
+            rows = self.get_mededelingen_rows(year, reference=reference)
 
-            # Read from Output sheet (contains mededelingen text)
-            df_output = pd.read_excel(BytesIO(response.content), sheet_name='Output', header=None)
+            regionale_nl = []
+            regionale_id = []
+            landelijke_nl = []
+            landelijke_id = []
 
-            def _clean(val):
-                if pd.isna(val):
-                    return ''
-                s = str(val).strip()
-                # Treat Excel formula errors as missing so we fall back to computing from the year sheet
-                if s.startswith('#') or s.lower() in ('#name?', '#value!', '#ref!', '#num!', '#n/a'):
-                    return ''
-                return s
+            for row in rows:
+                if row.get('status') != 'Active':
+                    continue
+                cat = (row.get('category') or '').strip().lower()
+                if cat == 'regionale':
+                    if row.get('nl'):
+                        regionale_nl.append(str(row['nl']).strip())
+                    if row.get('id'):
+                        regionale_id.append(str(row['id']).strip())
+                elif cat == 'landelijke':
+                    if row.get('nl'):
+                        landelijke_nl.append(str(row['nl']).strip())
+                    if row.get('id'):
+                        landelijke_id.append(str(row['id']).strip())
 
-            regionale_nl = _clean(df_output.iloc[1, 1])
-            landelijke_nl = _clean(df_output.iloc[2, 1])
-            regionale_id = _clean(df_output.iloc[1, 2])
-            landelijke_id = _clean(df_output.iloc[2, 2])
-
-            # If Output tab is broken/empty, compute active mededelingen from the year sheet
-            if not (regionale_nl and landelijke_nl and regionale_id and landelijke_id):
-                print('[DropboxReader] Output tab empty or contains errors, computing from year sheet')
-                df_year = pd.read_excel(BytesIO(response.content), sheet_name=str(year), header=0)
-                # Find the status column (last 'Active' formula column, usually column I)
-                status_col = None
-                for col in df_year.columns:
-                    if df_year[col].astype(str).str.contains('Active|Past|Future', case=False, na=False).any():
-                        status_col = col
-                if status_col:
-                    active = df_year[df_year[status_col] == 'Active']
-                    regionale = active[active.iloc[:, 0] == 'Regionale']
-                    landelijke = active[active.iloc[:, 0] == 'Landelijke']
-                    # Column C = Nederlands (index 2), D = Bahasa Indonesia (index 3)
-                    if not regionale_nl:
-                        regionale_nl = '\n\n'.join(regionale.iloc[:, 2].dropna().astype(str).tolist())
-                    if not landelijke_nl:
-                        landelijke_nl = '\n\n'.join(landelijke.iloc[:, 2].dropna().astype(str).tolist())
-                    if not regionale_id:
-                        regionale_id = '\n\n'.join(regionale.iloc[:, 3].dropna().astype(str).tolist())
-                    if not landelijke_id:
-                        landelijke_id = '\n\n'.join(landelijke.iloc[:, 3].dropna().astype(str).tolist())
-
-            print(f"Mededelingen loaded: regionale={len(regionale_nl)} chars, landelijke={len(landelijke_nl)} chars")
-            return {
+            result = {
                 'source': path,
-                'regionale_nl': regionale_nl,
-                'landelijke_nl': landelijke_nl,
-                'regionale_id': regionale_id,
-                'landelijke_id': landelijke_id,
+                'regionale_nl': '\n\n'.join(regionale_nl),
+                'landelijke_nl': '\n\n'.join(landelijke_nl),
+                'regionale_id': '\n\n'.join(regionale_id),
+                'landelijke_id': '\n\n'.join(landelijke_id),
             }
+
+            print(f"[DropboxReader] regionale={len(regionale_nl)} items, landelijke={len(landelijke_nl)} items")
+            return result
 
         except Exception as e:
             print(f"Error reading mededelingen: {e}")
@@ -257,12 +242,16 @@ class DropboxExcelReader:
             print(f"Error saving mededelingen: {e}")
             return {'success': False, 'error': str(e)}
 
-    def get_mededelingen_rows(self, year: int) -> List[Dict[str, Any]]:
+    def get_mededelingen_rows(self, year: int,
+                              reference: datetime = None) -> List[Dict[str, Any]]:
         """Return all rows from the year sheet as editable dicts.
 
         Each dict contains:
-        row_index, category, type, nl_title, nl_body, id_title, id_body,
+        row_index, category, type, nl, id, nl_title, nl_body, id_title, id_body,
         first_date, last_date, event_date, source, status, image_url.
+
+        If reference is provided, status is computed relative to that date,
+        otherwise relative to the upcoming Sunday.
         """
         path = MEDEDELINGEN_PATH_TEMPLATE.format(year=year)
         rows = []
@@ -330,12 +319,14 @@ class DropboxExcelReader:
 
                 first_date = _date_cell(4)
                 last_date = _date_cell(5)
-                status = _compute_mededelingen_status(first_date, last_date)
+                status = _compute_mededelingen_status(first_date, last_date, reference)
 
                 rows.append({
                     'row_index': idx,
                     'category': _cell(0),
                     'type': _cell(1),
+                    'nl': nl,
+                    'id': id_,
                     'nl_title': nl_title,
                     'nl_body': nl_body,
                     'id_title': id_title,
