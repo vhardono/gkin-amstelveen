@@ -166,14 +166,29 @@ class DropboxExcelReader:
             print(f"[DropboxReader] Computing mededelingen for {path}, date: {mededelingen_date}")
             rows = self.get_mededelingen_rows(year, reference=reference)
 
+            # Filter active, then sort: Regionale before Landelijke,
+            # within each group by event date (oldest first). Missing event
+            # dates are placed at the end.
+            active_rows = [r for r in rows if r.get('status') == 'Active']
+
+            def _sort_key(r):
+                cat = (r.get('category') or '').strip().lower()
+                cat_order = 0 if cat == 'regionale' else 1
+                ev = _parse_mededelingen_date(r.get('event_date'))
+                if ev is None:
+                    ev = datetime.max
+                elif isinstance(ev, datetime):
+                    ev = ev.replace(tzinfo=None)
+                return (cat_order, ev)
+
+            active_rows.sort(key=_sort_key)
+
             regionale_nl = []
             regionale_id = []
             landelijke_nl = []
             landelijke_id = []
 
-            for row in rows:
-                if row.get('status') != 'Active':
-                    continue
+            for row in active_rows:
                 cat = (row.get('category') or '').strip().lower()
                 if cat == 'regionale':
                     if row.get('nl'):

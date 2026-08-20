@@ -148,6 +148,35 @@ def _subheader_row(table, nl_text: str, id_text: str):
                  [(id_text, True)])
 
 
+def _add_meded_image_row(table, img_path: str, non_qr_width_cm: float = 8.5):
+    """Add a two-cell row with the same centered image in both columns.
+
+    QR code images (filename containing 'qr') are rendered 3 cm tall.
+    Non-QR images use the given width in cm.
+    """
+    img_row = table.add_row()
+    nl_cell = img_row.cells[0]
+    id_cell = img_row.cells[1]
+    _set_cell_margins(nl_cell)
+    _set_cell_margins(id_cell)
+    _set_col_width(nl_cell, 8.0)
+    _set_col_width(id_cell, 8.0)
+
+    is_qr = 'qr' in os.path.basename(img_path).lower()
+    for cell in (nl_cell, id_cell):
+        p = cell.paragraphs[0]
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        try:
+            run = p.add_run()
+            if is_qr:
+                run.add_picture(img_path, height=Cm(3))
+            else:
+                run.add_picture(img_path, width=Cm(non_qr_width_cm))
+        except Exception as exc:
+            _r(p, f'[Afbeelding: {exc}]', color=NL_COLOR, size_pt=9)
+            print(f'[Voorlees] Could not add picture {img_path}: {exc}')
+
+
 def parse_meded_blocks(text: str) -> List[dict]:
     """
     Split raw mededelingen text into blocks of {'heading': str, 'body': str}.
@@ -693,20 +722,13 @@ class VoorleesGenerator:
                 id_parts = [('', False)]
             _content_row(table, nl_parts, id_parts)
 
-            # Add images below both NL/ID versions if attached
+            # Add images at the bottom of the NL/ID box, duplicated in both columns
             img_paths = image_map.get((nb.get('heading') or '').strip(), [])
             if isinstance(img_paths, str):
                 img_paths = [img_paths]
             for img_path in img_paths:
                 if img_path and os.path.exists(img_path):
-                    try:
-                        img_row = table.add_row()
-                        img_cell = img_row.cells[0].merge(img_row.cells[1])
-                        p = img_cell.paragraphs[0]
-                        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                        p.add_run().add_picture(img_path, width=Cm(5.0))
-                    except Exception as exc:
-                        print(f'[Voorlees] Could not add picture {img_path}: {exc}')
+                    _add_meded_image_row(table, img_path)
 
         # ── 5. Landelijke Mededelingen ────────────────────────────────────
         _section_header_row(table, 'Landelijke Mededelingen', 'Berita Nasional')
@@ -734,20 +756,13 @@ class VoorleesGenerator:
                 id_parts = [('', False)]
             _content_row(table, nl_parts, id_parts)
 
-            # Add images below both NL/ID versions if attached
+            # Add images at the bottom of the NL/ID box, duplicated in both columns
             img_paths = image_map.get((nb.get('heading') or '').strip(), [])
             if isinstance(img_paths, str):
                 img_paths = [img_paths]
             for img_path in img_paths:
                 if img_path and os.path.exists(img_path):
-                    try:
-                        img_row = table.add_row()
-                        img_cell = img_row.cells[0].merge(img_row.cells[1])
-                        p = img_cell.paragraphs[0]
-                        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                        p.add_run().add_picture(img_path, width=Cm(5.0))
-                    except Exception as exc:
-                        print(f'[Voorlees] Could not add picture {img_path}: {exc}')
+                    _add_meded_image_row(table, img_path)
 
         # Save
         fname    = f'Vertaling_Mededelingen_{mededelingen_date.strftime("%y%m%d")}.docx'

@@ -13,7 +13,8 @@ import io
 from datetime import datetime, timedelta
 from typing import Dict, List, Any
 from docx import Document
-from docx.shared import Pt, Inches
+from docx.shared import Pt, Inches, Cm
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.opc.constants import RELATIONSHIP_TYPE as RT
@@ -1053,9 +1054,16 @@ class BulletinGenerator:
                     for img_path in img_paths:
                         if img_path and os.path.exists(img_path):
                             try:
-                                img_para = doc.add_picture(img_path, width=Inches(2.5))
+                                is_qr = 'qr' in os.path.basename(img_path).lower()
+                                p = doc.add_paragraph()
+                                p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                                run = p.add_run()
+                                if is_qr:
+                                    run.add_picture(img_path, height=Cm(3))
+                                else:
+                                    run.add_picture(img_path, width=Cm(11))
                                 if next_anchor is not None:
-                                    next_anchor.addprevious(img_para._element)
+                                    next_anchor.addprevious(p._element)
                             except Exception as exc:
                                 print(f"[Bulletin] Could not add picture {img_path}: {exc}")
 
