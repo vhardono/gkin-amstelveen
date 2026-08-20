@@ -216,6 +216,246 @@ class DropboxExcelReader:
             print(f"Error saving mededelingen: {e}")
             return {'success': False, 'error': str(e)}
 
+    def get_mededelingen_rows(self, year: int) -> List[Dict[str, Any]]:
+        """Return all rows from the year sheet as editable dicts.
+
+        Each dict contains:
+        row_index, category, type, nl_title, nl_body, id_title, id_body,
+        first_date, last_date, event_date, source, status, image_url.
+        """
+        path = MEDEDELINGEN_PATH_TEMPLATE.format(year=year)
+        rows = []
+        try:
+            _, response = self.dbx.files_download(path)
+            df = pd.read_excel(BytesIO(response.content), sheet_name=str(year), header=0)
+
+            for idx, raw in df.iterrows():
+                # skip completely empty rows
+                if raw.isna().all():
+                    continue
+
+                def _cell(i):
+                    v = raw.iloc[i] if i < len(raw) else None
+                    if pd.isna(v):
+                        return ''
+                    return str(v).strip()
+
+                def _date_cell(i):
+                    v = raw.iloc[i] if i < len(raw) else None
+                    if pd.isna(v):
+                        return ''
+                    if hasattr(v, 'date'):
+                        return v.strftime('%Y-%m-%d')
+                    if hasattr(v, 'strftime'):
+                        return v.strftime('%Y-%m-%d')
+                    return str(v).split()[0]
+
+                def _split_title_body(text: str) -> tuple:
+                    text = text.replace('\r\n', '\n').replace('\r', '\n')
+                    parts = [p.strip() for p in text.split('\n') if p.strip()]
+                    if not parts:
+                        return '', ''
+                    title = parts[0]
+                    body = '\n'.join(parts[1:])
+                    return title, body
+
+                nl = _cell(2)
+                id_ = _cell(3)
+                nl_title, nl_body = _split_title_body(nl)
+                id_title, id_body = _split_title_body(id_)
+
+                # image sidecar
+                meta = _mededelingen_image_meta()
+                key = f"{year}-{idx}"
+                rec = meta.get(key)
+                image_url = None
+                if rec:
+                    image_url = f"/mededelingen-image/{year}/{idx}/{rec['filename']}"
+
+                rows.append({
+                    'row_index': idx,
+                    'category': _cell(0),
+                    'type': _cell(1),
+                    'nl_title': nl_title,
+                    'nl_body': nl_body,
+                    'id_title': id_title,
+                    'id_body': id_body,
+                    'first_date': _date_cell(4),
+                    'last_date': _date_cell(5),
+                    'event_date': _date_cell(6),
+                    'source': _cell(7),
+                    'status': _cell(8),
+                    'image_url': image_url,
+                    'image_name': rec['original_name'] if rec else None,
+                })
+
+            return rows
+
+        except Exception as e:
+            print(f"Error reading mededelingen rows: {e}")
+            return []
+
+    def save_mededelingen_row(self, year: int, row_index: int, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Update one row in the year sheet and recompute the Output sheet."""
+        from openpyxl import load_workbook
+        from openpyxl.utils import get_column_letter
+
+        path = MEDEDELINGEN_PATH_TEMPLATE.format(year=year)
+        try:
+            _, response = self.dbx.files_download(path)
+            wb = load_workbook(BytesIO(response.content))
+
+            year_ws = wb[str(year)]
+            excel_row = row_index + 2  # header at row 1
+
+            def _set(col, val):
+                year_ws.cell(excel_row, col).value = val
+
+            _set(1, data.get('category', ''))
+            _set(2, data.get('type', ''))
+            _set(3, data.get('nl', ''))
+            _set(4, data.get('id', ''))
+
+            # dates written as real dates if possible
+            for col_idx, key in [(5, 'first_date'), (6, 'last_date'), (7, 'event_date')]:
+                v = data.get(key, '')
+                if v:
+                    try:
+                        d = pd.to_datetime(v)
+                        year_ws.cell(excel_row, col_idx).value = d
+                    except Exception:
+                        year_ws.cell(excel_row, col_idx).value = str(v)
+                else:
+                    year_ws.cell(excel_row, col_idx).value = None
+
+            _set(8, data.get('source', ''))
+            _set(9, data.get('status', ''))
+
+            # Recompute Output sheet from active rows
+            output_ws = wb['Output']
+            regionale_nl = []
+            regionale_id = []
+            landelijke_nl = []
+            landelijke_id = []
+
+            for r in range(2, year_ws.max_row + 1):
+                cat = str(year_ws.cell(r, 1).value or '').strip()
+                status = str(year_ws.cell(r, 9).value or '').strip()
+                if status.lower() != 'active':
+                    continue
+                nl = str(year_ws.cell(r, 3).value or '').strip()
+                id_ = str(year_ws.cell(r, 4).value or '').strip()
+                if cat.lower() == 'regionale':
+                    if nl:
+                        regionale_nl.append(nl)
+                    if id_:
+                        regionale_id.append(id_)
+                elif cat.lower() == 'landelijke':
+                    if nl:
+                        landelijke_nl.append(nl)
+                    if id_:
+                        landelijke_id.append(id_)
+
+            output_ws.cell(2, 2).value = '\n\n'.join(regionale_nl)
+            output_ws.cell(2, 3).value = '\n\n'.join(regionale_id)
+            output_ws.cell(3, 2).value = '\n\n'.join(landelijke_nl)
+            output_ws.cell(3, 3).value = '\n\n'.join(landelijke_id)
+
+            out = BytesIO()
+            wb.save(out)
+            out.seek(0)
+
+            self.dbx.files_upload(
+                out.read(),
+                path,
+                mode=dropbox.files.WriteMode.overwrite,
+                mute=True
+            )
+
+            return {'success': True}
+
+        except Exception as e:
+            print(f"Error saving mededelingen row: {e}")
+            return {'success': False, 'error': str(e)}
+
+    def add_mededelingen_row(self, year: int, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Append a new row to the year sheet and recompute Output."""
+        from openpyxl import load_workbook
+
+        path = MEDEDELINGEN_PATH_TEMPLATE.format(year=year)
+        try:
+            _, response = self.dbx.files_download(path)
+            wb = load_workbook(BytesIO(response.content))
+
+            year_ws = wb[str(year)]
+            new_row = year_ws.max_row + 1
+
+            year_ws.cell(new_row, 1).value = data.get('category', 'Regionale')
+            year_ws.cell(new_row, 2).value = data.get('type', 'Others')
+            year_ws.cell(new_row, 3).value = data.get('nl', '')
+            year_ws.cell(new_row, 4).value = data.get('id', '')
+
+            for col_idx, key in [(5, 'first_date'), (6, 'last_date'), (7, 'event_date')]:
+                v = data.get(key, '')
+                if v:
+                    try:
+                        d = pd.to_datetime(v)
+                        year_ws.cell(new_row, col_idx).value = d
+                    except Exception:
+                        year_ws.cell(new_row, col_idx).value = str(v)
+                else:
+                    year_ws.cell(new_row, col_idx).value = None
+
+            year_ws.cell(new_row, 8).value = data.get('source', 'web')
+            year_ws.cell(new_row, 9).value = data.get('status', 'Active')
+
+            # Recompute Output
+            output_ws = wb['Output']
+            regionale_nl = []
+            regionale_id = []
+            landelijke_nl = []
+            landelijke_id = []
+
+            for r in range(2, year_ws.max_row + 1):
+                cat = str(year_ws.cell(r, 1).value or '').strip()
+                status = str(year_ws.cell(r, 9).value or '').strip()
+                if status.lower() != 'active':
+                    continue
+                nl = str(year_ws.cell(r, 3).value or '').strip()
+                id_ = str(year_ws.cell(r, 4).value or '').strip()
+                if cat.lower() == 'regionale':
+                    if nl:
+                        regionale_nl.append(nl)
+                    if id_:
+                        regionale_id.append(id_)
+                elif cat.lower() == 'landelijke':
+                    if nl:
+                        landelijke_nl.append(nl)
+                    if id_:
+                        landelijke_id.append(id_)
+
+            output_ws.cell(2, 2).value = '\n\n'.join(regionale_nl)
+            output_ws.cell(2, 3).value = '\n\n'.join(regionale_id)
+            output_ws.cell(3, 2).value = '\n\n'.join(landelijke_nl)
+            output_ws.cell(3, 3).value = '\n\n'.join(landelijke_id)
+
+            out = BytesIO()
+            wb.save(out)
+            out.seek(0)
+
+            self.dbx.files_upload(
+                out.read(),
+                path,
+                mode=dropbox.files.WriteMode.overwrite,
+                mute=True
+            )
+
+            return {'success': True, 'row_index': new_row - 2}
+
+        except Exception as e:
+            print(f"Error adding mededelingen row: {e}")
+            return {'success': False, 'error': str(e)}
+
     def get_activiteiten_kalender(self, mededelingen_date: datetime = None) -> List[Dict[str, Any]]:
         """Read Activiteiten Kalender from the year tab (e.g. '2026') of Mededelingen Overzicht.
 

@@ -260,98 +260,143 @@ def _get_takenrooster_and_render_page():
 @app.route('/mededelingen-editor')
 @_password_required
 def mededelingen_editor():
-    """Simple editor for the active mededelingen Output tab and image attachments."""
-    return render_template('mededelingen_editor.html', dates=_get_mededelingen_dates())
+    """Per-section mededelingen editor with metadata."""
+    from data_sources.dropbox_reader import DropboxExcelReader
+    date_str = request.args.get('date')
+    if date_str:
+        try:
+            selected = datetime.strptime(date_str, '%Y-%m-%d')
+        except ValueError:
+            selected = None
+    else:
+        # default to first upcoming date
+        all_dates = _get_mededelingen_dates()
+        selected = next((d for d in all_dates if d['value'] >= datetime.now().strftime('%Y-%m-%d')), all_dates[0] if all_dates else None)
+
+    rows = []
+    year = None
+    if selected:
+        year = selected.year
+        reader = DropboxExcelReader()
+        try:
+            rows = reader.get_mededelingen_rows(year)
+        except Exception as e:
+            print(f'[MededelingenEditor] Could not load rows: {e}')
+
+    return render_template('mededelingen_editor.html',
+                           dates=_get_mededelingen_dates(),
+                           selected_date=selected,
+                           year=year,
+                           rows=rows)
 
 
 @app.route('/mededelingen-editor-data')
 @_password_required
 def mededelingen_editor_data():
-    """Return current Output text and image URL for a date."""
-    from data_sources.dropbox_reader import DropboxExcelReader, _mededelingen_image_url_for_date
-    date_str = request.args.get('date', '')
-    if not date_str:
-        return jsonify({'error': 'No date'}), 400
-    try:
-        d = datetime.strptime(date_str, '%Y-%m-%d')
-    except ValueError:
-        return jsonify({'error': 'Invalid date'}), 400
+    """Return all year sheet rows for the selected year."""
+    from data_sources.dropbox_reader import DropboxExcelReader
+    year = request.args.get('year', type=int)
+    if not year:
+        date_str = request.args.get('date', '')
+        if not date_str:
+            return jsonify({'error': 'No year or date'}), 400
+        try:
+            year = datetime.strptime(date_str, '%Y-%m-%d').year
+        except ValueError:
+            return jsonify({'error': 'Invalid date'}), 400
 
     reader = DropboxExcelReader()
-    meded = reader.get_mededelingen(mededelingen_date=d)
-    image_url = _mededelingen_image_url_for_date(d)
-    return jsonify({
-        'regionale_nl': meded.get('regionale_nl', ''),
-        'regionale_id': meded.get('regionale_id', ''),
-        'landelijke_nl': meded.get('landelijke_nl', ''),
-        'landelijke_id': meded.get('landelijke_id', ''),
-        'image': {'url': image_url, 'name': image_url.split('/')[-1] if image_url else None} if image_url else None,
-    })
+    rows = reader.get_mededelingen_rows(year)
+    return jsonify({'year': year, 'rows': rows})
 
 
 @app.route('/mededelingen-editor-save', methods=['POST'])
 @_password_required
 def mededelingen_editor_save():
-    """Save Output text back to the Excel file."""
+    """Save one year sheet row and recompute Output."""
     from data_sources.dropbox_reader import DropboxExcelReader
     data = request.get_json() or {}
-    date_str = data.get('date', '')
-    if not date_str:
-        return jsonify({'error': 'No date'}), 400
-    try:
-        d = datetime.strptime(date_str, '%Y-%m-%d')
-    except ValueError:
-        return jsonify({'error': 'Invalid date'}), 400
+    year = data.get('year')
+    row_index = data.get('row_index')
+    if not year or row_index is None:
+        return jsonify({'error': 'Missing year or row_index'}), 400
 
     reader = DropboxExcelReader()
-    result = reader.save_mededelingen_output(
-        year=d.year,
-        regionale_nl=data.get('regionale_nl', ''),
-        regionale_id=data.get('regionale_id', ''),
-        landelijke_nl=data.get('landelijke_nl', ''),
-        landelijke_id=data.get('landelijke_id', ''),
-    )
+    result = reader.save_mededelingen_row(year, row_index, {
+        'category': data.get('category', ''),
+        'type': data.get('type', ''),
+        'nl': data.get('nl', ''),
+        'id': data.get('id', ''),
+        'first_date': data.get('first_date', ''),
+        'last_date': data.get('last_date', ''),
+        'event_date': data.get('event_date', ''),
+        'source': data.get('source', ''),
+        'status': data.get('status', ''),
+    })
     if result.get('success'):
         return jsonify({'success': True})
+    return jsonify({'error': result.get('error', 'Unknown error')}), 500
+
+
+@app.route('/mededelingen-editor-add', methods=['POST'])
+@_password_required
+def mededelingen_editor_add():
+    """Append a new year sheet row and recompute Output."""
+    from data_sources.dropbox_reader import DropboxExcelReader
+    data = request.get_json() or {}
+    year = data.get('year')
+    if not year:
+        return jsonify({'error': 'Missing year'}), 400
+
+    reader = DropboxExcelReader()
+    result = reader.add_mededelingen_row(year, {
+        'category': data.get('category', 'Regionale'),
+        'type': data.get('type', 'Others'),
+        'nl': data.get('nl', ''),
+        'id': data.get('id', ''),
+        'first_date': data.get('first_date', ''),
+        'last_date': data.get('last_date', ''),
+        'event_date': data.get('event_date', ''),
+        'source': data.get('source', 'web'),
+        'status': data.get('status', 'Active'),
+    })
+    if result.get('success'):
+        return jsonify({'success': True, 'row_index': result.get('row_index')})
     return jsonify({'error': result.get('error', 'Unknown error')}), 500
 
 
 @app.route('/mededelingen-upload-image', methods=['POST'])
 @_password_required
 def mededelingen_upload_image():
-    """Store one image per mededelingen date on /data and keep a JSON sidecar."""
+    """Store one image per mededelingen row on /data and keep a JSON sidecar."""
     import uuid
     from werkzeug.utils import secure_filename
     from data_sources.dropbox_reader import (
-        MEDEDELINGEN_IMG_DIR, _mededelingen_image_dir_for_date,
-        _mededelingen_image_meta, _save_mededelingen_image_meta
+        MEDEDELINGEN_IMG_DIR, _mededelingen_image_meta, _save_mededelingen_image_meta
     )
 
-    date_str = request.form.get('date', '')
+    year = request.form.get('year', type=int)
+    row_index = request.form.get('row_index', type=int)
     file = request.files.get('image')
-    if not file or not date_str:
-        return jsonify({'error': 'Missing date or file'}), 400
-    try:
-        d = datetime.strptime(date_str, '%Y-%m-%d')
-    except ValueError:
-        return jsonify({'error': 'Invalid date'}), 400
+    if not file or year is None or row_index is None:
+        return jsonify({'error': 'Missing year, row_index or file'}), 400
 
     ext = secure_filename(file.filename).rsplit('.', 1)[-1].lower()
     if ext not in {'png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp'}:
         return jsonify({'error': 'Invalid image type'}), 400
 
     filename = f"{uuid.uuid4().hex}.{ext}"
-    out_dir = _mededelingen_image_dir_for_date(d)
+    out_dir = os.path.join(MEDEDELINGEN_IMG_DIR, str(year), str(row_index))
     os.makedirs(out_dir, exist_ok=True)
     out_path = os.path.join(out_dir, filename)
     file.save(out_path)
 
     meta = _mededelingen_image_meta()
-    key = f"{d.year}-{d.strftime('%Y%m%d')}"
+    key = f"{year}-{row_index}"
     meta[key] = {'filename': filename, 'original_name': secure_filename(file.filename)}
     _save_mededelingen_image_meta(meta)
 
-    url = f"/mededelingen-image/{d.year}/{d.strftime('%Y%m%d')}/{filename}"
+    url = f"/mededelingen-image/{year}/{row_index}/{filename}"
     return jsonify({'success': True, 'url': url, 'name': filename})
 
 
@@ -360,23 +405,19 @@ def mededelingen_upload_image():
 def mededelingen_delete_image():
     import os
     from data_sources.dropbox_reader import (
-        _mededelingen_image_dir_for_date,
-        _mededelingen_image_meta, _save_mededelingen_image_meta
+        MEDEDELINGEN_IMG_DIR, _mededelingen_image_meta, _save_mededelingen_image_meta
     )
     data = request.get_json() or {}
-    date_str = data.get('date', '')
-    if not date_str:
-        return jsonify({'error': 'No date'}), 400
-    try:
-        d = datetime.strptime(date_str, '%Y-%m-%d')
-    except ValueError:
-        return jsonify({'error': 'Invalid date'}), 400
+    year = data.get('year')
+    row_index = data.get('row_index')
+    if year is None or row_index is None:
+        return jsonify({'error': 'Missing year or row_index'}), 400
 
     meta = _mededelingen_image_meta()
-    key = f"{d.year}-{d.strftime('%Y%m%d')}"
+    key = f"{year}-{row_index}"
     rec = meta.get(key)
     if rec:
-        path = os.path.join(_mededelingen_image_dir_for_date(d), rec['filename'])
+        path = os.path.join(MEDEDELINGEN_IMG_DIR, str(year), str(row_index), rec['filename'])
         try:
             if os.path.exists(path):
                 os.remove(path)
@@ -388,10 +429,10 @@ def mededelingen_delete_image():
     return jsonify({'success': True})
 
 
-@app.route('/mededelingen-image/<int:year>/<date>/<filename>')
-def mededelingen_image(year, date, filename):
+@app.route('/mededelingen-image/<int:year>/<int:row_index>/<filename>')
+def mededelingen_image(year, row_index, filename):
     from data_sources.dropbox_reader import MEDEDELINGEN_IMG_DIR
-    directory = os.path.join(MEDEDELINGEN_IMG_DIR, str(year), date)
+    directory = os.path.join(MEDEDELINGEN_IMG_DIR, str(year), str(row_index))
     return send_from_directory(directory, filename)
 
 

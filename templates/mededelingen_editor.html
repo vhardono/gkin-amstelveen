@@ -12,14 +12,13 @@
     </script>
     <style>
         html { overflow-y: scroll; }
-        @keyframes spin { to { transform: rotate(360deg); } }
         .spinner { animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
-    <script src="/static/i18n.js"></script>
 </head>
 <body class="bg-gray-50 min-h-screen">
     <header class="bg-gkin-green shadow-md">
-        <div class="max-w-4xl mx-auto px-6 py-5 flex items-center gap-4">
+        <div class="max-w-6xl mx-auto px-6 py-5 flex items-center gap-4">
             <a href="/mededelingen"><img src="/static/logo2.png" alt="GKIN Logo" class="h-12 w-12 object-contain shrink-0"></a>
             <div class="flex-1">
                 <h1 class="text-white text-2xl font-bold tracking-tight">GKIN Amstelveen</h1>
@@ -28,228 +27,306 @@
         </div>
     </header>
 
-    <main class="max-w-4xl mx-auto px-6 py-8">
+    <main class="max-w-6xl mx-auto px-6 py-8">
         <a href="/mededelingen" class="inline-flex items-center gap-1 text-sm text-gkin-green hover:text-gkin-dark mb-5">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
             <span>Terug</span>
         </a>
 
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-5">
-            <h2 class="text-base font-semibold text-gkin-green mb-4 flex items-center gap-2">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                <span>Datum</span>
-            </h2>
-            <select id="date" class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-gkin-green">
-                <option value="" disabled selected>— Kies een datum —</option>
-                {% for d in dates %}
-                <option value="{{ d.value }}">{{ d.label }}</option>
-                {% endfor %}
-            </select>
+        <form method="GET" action="/mededelingen-editor" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+            <div class="flex items-end gap-4">
+                <div class="flex-1">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Kies datum (bepaalt jaar)</label>
+                    <select name="date" onchange="this.form.submit()" class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gkin-green">
+                        <option value="" disabled>— Kies een datum —</option>
+                        {% for d in dates %}
+                        <option value="{{ d.value }}" {% if selected_date and d.value == selected_date.strftime('%Y-%m-%d') %}selected{% endif %}>{{ d.label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="button" onclick="openAdd()" class="bg-gkin-green hover:bg-gkin-dark text-white text-sm font-semibold px-4 py-2.5 rounded-lg shadow-md transition-colors">
+                    + Nieuwe mededeling
+                </button>
+            </div>
+        </form>
+
+        {% if year %}
+        <div class="mb-4 text-sm text-gray-500">Jaar: <strong>{{ year }}</strong> · {{ rows | length }} rij(en) geladen</div>
+        {% endif %}
+
+        <div id="rowsContainer" class="space-y-6">
+            {% for row in rows %}
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6" data-row="{{ row.row_index }}">
+                <div class="flex flex-wrap items-start gap-4 mb-4 pb-4 border-b border-gray-100">
+                    <div class="w-32">
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Categorie</label>
+                        <select id="cat_{{ row.row_index }}" class="w-full rounded border border-gray-300 px-2 py-1.5 text-sm">
+                            <option value="Regionale" {% if row.category == 'Regionale' %}selected{% endif %}>Regionale</option>
+                            <option value="Landelijke" {% if row.category == 'Landelijke' %}selected{% endif %}>Landelijke</option>
+                        </select>
+                    </div>
+                    <div class="w-32">
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Type</label>
+                        <input id="type_{{ row.row_index }}" type="text" value="{{ row.type }}" class="w-full rounded border border-gray-300 px-2 py-1.5 text-sm">
+                    </div>
+                    <div class="w-32">
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Status</label>
+                        <select id="status_{{ row.row_index }}" class="w-full rounded border border-gray-300 px-2 py-1.5 text-sm">
+                            <option value="Active" {% if row.status == 'Active' %}selected{% endif %}>Active</option>
+                            <option value="Past" {% if row.status == 'Past' %}selected{% endif %}>Past</option>
+                            <option value="Future" {% if row.status == 'Future' %}selected{% endif %}>Future</option>
+                        </select>
+                    </div>
+                    <div class="flex-1 grid grid-cols-2 md:grid-cols-5 gap-3">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">Van</label>
+                            <input id="first_{{ row.row_index }}" type="date" value="{{ row.first_date }}" class="w-full rounded border border-gray-300 px-2 py-1.5 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">Tot</label>
+                            <input id="last_{{ row.row_index }}" type="date" value="{{ row.last_date }}" class="w-full rounded border border-gray-300 px-2 py-1.5 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">Event</label>
+                            <input id="event_{{ row.row_index }}" type="date" value="{{ row.event_date }}" class="w-full rounded border border-gray-300 px-2 py-1.5 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">Bron</label>
+                            <input id="source_{{ row.row_index }}" type="text" value="{{ row.source }}" class="w-full rounded border border-gray-300 px-2 py-1.5 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">Rij-index</label>
+                            <div class="text-sm py-1.5 text-gray-600">{{ row.row_index }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-5">
+                    <div>
+                        <h3 class="text-sm font-semibold text-gkin-green mb-2">Nederlands</h3>
+                        <label class="block text-xs text-gray-500 mb-1">Titel</label>
+                        <input id="nl_title_{{ row.row_index }}" type="text" value="{{ row.nl_title }}" class="w-full rounded border border-gray-300 px-2 py-1.5 text-sm mb-2">
+                        <label class="block text-xs text-gray-500 mb-1">Inhoud</label>
+                        <textarea id="nl_body_{{ row.row_index }}" rows="5" class="w-full rounded border border-gray-300 px-2 py-1.5 text-sm resize-y">{{ row.nl_body }}</textarea>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-semibold text-gkin-green mb-2">Bahasa Indonesia</h3>
+                        <label class="block text-xs text-gray-500 mb-1">Titel</label>
+                        <input id="id_title_{{ row.row_index }}" type="text" value="{{ row.id_title }}" class="w-full rounded border border-gray-300 px-2 py-1.5 text-sm mb-2">
+                        <label class="block text-xs text-gray-500 mb-1">Inhoud</label>
+                        <textarea id="id_body_{{ row.row_index }}" rows="5" class="w-full rounded border border-gray-300 px-2 py-1.5 text-sm resize-y">{{ row.id_body }}</textarea>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start mb-4 p-4 bg-gray-50 rounded-lg border border-gray-100">
+                    <div>
+                        <p class="text-xs font-medium text-gray-600 mb-2">Afbeelding voor deze mededeling</p>
+                        <label class="flex items-center gap-2 w-full rounded border border-dashed border-gray-300 px-3 py-2 bg-white cursor-pointer hover:border-gkin-green transition-colors mb-2">
+                            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                            <span id="imgLabel_{{ row.row_index }}" class="text-sm text-gray-500 truncate">Kies afbeelding...</span>
+                            <input type="file" id="imgUpload_{{ row.row_index }}" accept="image/*" class="hidden" onchange="updateImgLabel('{{ row.row_index }}', this)">
+                        </label>
+                        <button type="button" onclick="uploadImage('{{ row.row_index }}')" class="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded px-3 py-1.5">Upload</button>
+                        <div id="imgStatus_{{ row.row_index }}" class="hidden mt-2 text-xs rounded p-2 border"></div>
+                    </div>
+                    <div id="imgPreviewBox_{{ row.row_index }}" class="{% if not row.image_url %}hidden{% endif %}">
+                        <p class="text-xs text-gray-500 mb-1">Huidige afbeelding</p>
+                        <img id="imgPreview_{{ row.row_index }}" src="{{ row.image_url or '' }}" alt="" class="max-h-40 object-contain rounded border border-gray-200 mb-1">
+                        <p id="imgName_{{ row.row_index }}" class="text-xs text-gray-500 truncate">{{ row.image_name or '' }}</p>
+                        <button type="button" onclick="deleteImage('{{ row.row_index }}')" class="mt-2 text-xs bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded px-3 py-1">Verwijder</button>
+                    </div>
+                </div>
+
+                <div class="flex justify-end">
+                    <button type="button" onclick="saveRow('{{ row.row_index }}')" id="saveBtn_{{ row.row_index }}" class="bg-gkin-green hover:bg-gkin-dark text-white text-sm font-semibold px-5 py-2 rounded-lg shadow transition-colors">
+                        Bewaren
+                    </button>
+                </div>
+                <div id="saveStatus_{{ row.row_index }}" class="hidden mt-2 text-xs rounded p-2 border"></div>
+            </div>
+            {% endfor %}
         </div>
 
-        <div id="editor" class="hidden">
-            <form id="textForm" class="space-y-5">
-                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                    <h2 class="text-base font-semibold text-gkin-green mb-4">Regionale mededelingen</h2>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Nederlands</label>
-                            <textarea name="regionale_nl" id="regionale_nl" rows="6" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gkin-green resize-y"></textarea>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Bahasa Indonesia</label>
-                            <textarea name="regionale_id" id="regionale_id" rows="6" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gkin-green resize-y"></textarea>
-                        </div>
+        <div id="addModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-xl shadow-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-bold text-gkin-green">Nieuwe mededeling</h2>
+                    <button type="button" onclick="closeAdd()" class="text-gray-500 hover:text-gray-700 text-2xl leading-none">&times;</button>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
+                    <select id="add_cat" class="rounded border border-gray-300 px-2 py-1.5 text-sm">
+                        <option value="Regionale">Regionale</option>
+                        <option value="Landelijke">Landelijke</option>
+                    </select>
+                    <input id="add_type" type="text" placeholder="Type" value="Others" class="rounded border border-gray-300 px-2 py-1.5 text-sm">
+                    <select id="add_status" class="rounded border border-gray-300 px-2 py-1.5 text-sm">
+                        <option value="Active">Active</option>
+                        <option value="Past">Past</option>
+                        <option value="Future">Future</option>
+                    </select>
+                    <input id="add_first" type="date" class="rounded border border-gray-300 px-2 py-1.5 text-sm">
+                    <input id="add_last" type="date" class="rounded border border-gray-300 px-2 py-1.5 text-sm">
+                    <input id="add_event" type="date" class="rounded border border-gray-300 px-2 py-1.5 text-sm">
+                    <input id="add_source" type="text" placeholder="Bron" value="web" class="rounded border border-gray-300 px-2 py-1.5 text-sm">
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+                    <div>
+                        <label class="block text-xs text-gray-500 mb-1">NL Titel</label>
+                        <input id="add_nl_title" type="text" class="w-full rounded border border-gray-300 px-2 py-1.5 text-sm mb-2">
+                        <label class="block text-xs text-gray-500 mb-1">NL Inhoud</label>
+                        <textarea id="add_nl_body" rows="4" class="w-full rounded border border-gray-300 px-2 py-1.5 text-sm resize-y"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-500 mb-1">ID Titel</label>
+                        <input id="add_id_title" type="text" class="w-full rounded border border-gray-300 px-2 py-1.5 text-sm mb-2">
+                        <label class="block text-xs text-gray-500 mb-1">ID Inhoud</label>
+                        <textarea id="add_id_body" rows="4" class="w-full rounded border border-gray-300 px-2 py-1.5 text-sm resize-y"></textarea>
                     </div>
                 </div>
-
-                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                    <h2 class="text-base font-semibold text-gkin-green mb-4">Landelijke mededelingen</h2>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Nederlands</label>
-                            <textarea name="landelijke_nl" id="landelijke_nl" rows="6" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gkin-green resize-y"></textarea>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Bahasa Indonesia</label>
-                            <textarea name="landelijke_id" id="landelijke_id" rows="6" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gkin-green resize-y"></textarea>
-                        </div>
-                    </div>
+                <div class="flex justify-end gap-2">
+                    <button type="button" onclick="closeAdd()" class="text-sm text-gray-600 hover:text-gray-800 px-4 py-2">Annuleren</button>
+                    <button type="button" onclick="addRow()" id="addBtn" class="bg-gkin-green hover:bg-gkin-dark text-white text-sm font-semibold px-5 py-2 rounded-lg shadow transition-colors">Toevoegen</button>
                 </div>
-
-                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                    <h2 class="text-base font-semibold text-gkin-green mb-4">Afbeelding / bijlage</h2>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Upload afbeelding</label>
-                            <label class="flex items-center gap-2 w-full rounded-lg border border-dashed border-gray-300 px-3 py-2 bg-white cursor-pointer hover:border-gkin-green transition-colors">
-                                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                                <span id="imgLabel" class="text-sm text-gray-500">Kies afbeelding...</span>
-                                <input type="file" id="imgUpload" name="image" accept="image/*" class="hidden" onchange="updateImgLabel(this)">
-                            </label>
-                            <button type="button" id="uploadImgBtn" class="mt-2 text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg px-3 py-1.5 flex items-center gap-1 transition-colors disabled:opacity-50">
-                                <span>Upload afbeelding</span>
-                            </button>
-                            <div id="imgStatus" class="hidden mt-2 text-xs rounded-lg p-2 border"></div>
-                        </div>
-                        <div>
-                            <p class="text-sm font-medium text-gray-700 mb-1">Huidige afbeelding</p>
-                            <div id="imgPreviewBox" class="hidden rounded-lg border border-gray-200 bg-white p-2">
-                                <img id="imgPreview" src="" alt="" class="max-h-40 object-contain rounded border border-gray-100">
-                                <p id="imgName" class="text-xs text-gray-500 mt-1 truncate"></p>
-                                <button type="button" id="delImgBtn" class="mt-2 text-xs bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-lg px-3 py-1">Verwijder</button>
-                            </div>
-                            <p id="noImg" class="text-sm text-gray-400 italic">Geen afbeelding gekoppeld</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                    <div class="flex gap-3">
-                        <button type="button" id="saveBtn" class="flex-1 bg-gkin-green hover:bg-gkin-dark text-white font-semibold py-3 rounded-lg shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                            Bewaren in Excel
-                        </button>
-                    </div>
-                    <div id="saveStatus" class="hidden mt-3 text-xs rounded-lg p-2 border"></div>
-                </div>
-            </form>
+                <div id="addStatus" class="hidden mt-2 text-xs rounded p-2 border"></div>
+            </div>
         </div>
     </main>
 
     <script>
-        const dateSelect = document.getElementById('date');
-        const editor = document.getElementById('editor');
-        const saveBtn = document.getElementById('saveBtn');
-        const saveStatus = document.getElementById('saveStatus');
-        const imgUpload = document.getElementById('imgUpload');
-        const imgLabel = document.getElementById('imgLabel');
-        const uploadImgBtn = document.getElementById('uploadImgBtn');
-        const imgStatus = document.getElementById('imgStatus');
-        const imgPreviewBox = document.getElementById('imgPreviewBox');
-        const noImg = document.getElementById('noImg');
-        const imgPreview = document.getElementById('imgPreview');
-        const imgName = document.getElementById('imgName');
-        const delImgBtn = document.getElementById('delImgBtn');
-
-        let currentImage = null;
-
-        function updateImgLabel(input) {
-            imgLabel.textContent = input.files[0]?.name || 'Kies afbeelding...';
-        }
+        const YEAR = {{ year or 'null' }};
 
         function showStatus(el, msg, isError) {
             el.textContent = msg;
-            el.className = `mt-2 text-xs rounded-lg p-2 border ${isError ? 'bg-red-50 text-red-700 border-red-200' : 'bg-green-50 text-green-700 border-green-200'}`;
+            el.className = `text-xs rounded p-2 border ${isError ? 'bg-red-50 text-red-700 border-red-200' : 'bg-green-50 text-green-700 border-green-200'}`;
             el.classList.remove('hidden');
             setTimeout(() => el.classList.add('hidden'), 5000);
         }
 
-        async function loadData() {
-            const date = dateSelect.value;
-            if (!date) { editor.classList.add('hidden'); return; }
-
-            const resp = await fetch(`/mededelingen-editor-data?date=${encodeURIComponent(date)}`);
-            const data = await resp.json();
-            if (data.error) { alert(data.error); return; }
-
-            document.getElementById('regionale_nl').value = data.regionale_nl || '';
-            document.getElementById('regionale_id').value = data.regionale_id || '';
-            document.getElementById('landelijke_nl').value = data.landelijke_nl || '';
-            document.getElementById('landelijke_id').value = data.landelijke_id || '';
-
-            currentImage = data.image || null;
-            updateImagePreview();
-            editor.classList.remove('hidden');
+        function buildText(title, body) {
+            title = (title || '').trim();
+            body = (body || '').trim();
+            if (!title && !body) return '';
+            if (!title) return body;
+            if (!body) return title;
+            return title + '\n' + body;
         }
 
-        function updateImagePreview() {
-            if (currentImage && currentImage.url) {
-                imgPreviewBox.classList.remove('hidden');
-                noImg.classList.add('hidden');
-                imgPreview.src = currentImage.url;
-                imgName.textContent = currentImage.name || '';
-            } else {
-                imgPreviewBox.classList.add('hidden');
-                noImg.classList.remove('hidden');
-                imgPreview.src = '';
-            }
-        }
+        async function saveRow(row) {
+            const btn = document.getElementById(`saveBtn_${row}`);
+            const status = document.getElementById(`saveStatus_${row}`);
+            btn.disabled = true;
+            btn.textContent = 'Bezig...';
 
-        dateSelect.addEventListener('change', loadData);
+            const payload = {
+                year: YEAR,
+                row_index: parseInt(row, 10),
+                category: document.getElementById(`cat_${row}`).value,
+                type: document.getElementById(`type_${row}`).value,
+                status: document.getElementById(`status_${row}`).value,
+                first_date: document.getElementById(`first_${row}`).value,
+                last_date: document.getElementById(`last_${row}`).value,
+                event_date: document.getElementById(`event_${row}`).value,
+                source: document.getElementById(`source_${row}`).value,
+                nl: buildText(document.getElementById(`nl_title_${row}`).value, document.getElementById(`nl_body_${row}`).value),
+                id: buildText(document.getElementById(`id_title_${row}`).value, document.getElementById(`id_body_${row}`).value),
+            };
 
-        saveBtn.addEventListener('click', async () => {
-            saveBtn.disabled = true;
-            saveBtn.textContent = 'Bezig...';
-            const date = dateSelect.value;
             try {
-                const resp = await fetch('/mededelingen-editor-save', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        date: date,
-                        regionale_nl: document.getElementById('regionale_nl').value,
-                        regionale_id: document.getElementById('regionale_id').value,
-                        landelijke_nl: document.getElementById('landelijke_nl').value,
-                        landelijke_id: document.getElementById('landelijke_id').value,
-                    })
-                });
+                const resp = await fetch('/mededelingen-editor-save', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)});
                 const data = await resp.json();
                 if (data.error) throw new Error(data.error);
-                showStatus(saveStatus, 'Opgeslagen in Excel', false);
+                showStatus(status, 'Opgeslagen', false);
             } catch (e) {
-                showStatus(saveStatus, 'Fout: ' + e.message, true);
+                showStatus(status, 'Fout: ' + e.message, true);
             } finally {
-                saveBtn.disabled = false;
-                saveBtn.textContent = 'Bewaren in Excel';
+                btn.disabled = false;
+                btn.textContent = 'Bewaren';
             }
-        });
+        }
 
-        uploadImgBtn.addEventListener('click', async () => {
-            const file = imgUpload.files[0];
-            if (!file) { showStatus(imgStatus, 'Kies eerst een afbeelding', true); return; }
-            const date = dateSelect.value;
-            if (!date) { showStatus(imgStatus, 'Selecteer eerst een datum', true); return; }
+        function updateImgLabel(row, input) {
+            document.getElementById(`imgLabel_${row}`).textContent = input.files[0]?.name || 'Kies afbeelding...';
+        }
 
-            uploadImgBtn.disabled = true;
+        async function uploadImage(row) {
+            const input = document.getElementById(`imgUpload_${row}`);
+            const file = input.files[0];
+            if (!file) { showStatus(document.getElementById(`imgStatus_${row}`), 'Kies eerst een afbeelding', true); return; }
+
             const form = new FormData();
             form.append('image', file);
-            form.append('date', date);
+            form.append('year', YEAR);
+            form.append('row_index', row);
 
             try {
                 const resp = await fetch('/mededelingen-upload-image', {method: 'POST', body: form});
                 const data = await resp.json();
                 if (data.error) throw new Error(data.error);
-                currentImage = {url: data.url, name: data.name};
-                updateImagePreview();
-                showStatus(imgStatus, 'Afbeelding geüpload', false);
-                imgUpload.value = '';
-                imgLabel.textContent = 'Kies afbeelding...';
-            } catch (e) {
-                showStatus(imgStatus, 'Fout: ' + e.message, true);
-            } finally {
-                uploadImgBtn.disabled = false;
-            }
-        });
 
-        delImgBtn.addEventListener('click', async () => {
-            if (!currentImage) return;
+                document.getElementById(`imgPreview_${row}`).src = data.url;
+                document.getElementById(`imgName_${row}`).textContent = data.name;
+                document.getElementById(`imgPreviewBox_${row}`).classList.remove('hidden');
+                input.value = '';
+                document.getElementById(`imgLabel_${row}`).textContent = 'Kies afbeelding...';
+                showStatus(document.getElementById(`imgStatus_${row}`), 'Geüpload', false);
+            } catch (e) {
+                showStatus(document.getElementById(`imgStatus_${row}`), 'Fout: ' + e.message, true);
+            }
+        }
+
+        async function deleteImage(row) {
             if (!confirm('Afbeelding verwijderen?')) return;
-            const date = dateSelect.value;
             try {
                 const resp = await fetch('/mededelingen-delete-image', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({date: date})
+                    body: JSON.stringify({year: YEAR, row_index: parseInt(row, 10)})
                 });
                 const data = await resp.json();
                 if (data.error) throw new Error(data.error);
-                currentImage = null;
-                updateImagePreview();
-                showStatus(imgStatus, 'Afbeelding verwijderd', false);
+                document.getElementById(`imgPreviewBox_${row}`).classList.add('hidden');
+                document.getElementById(`imgPreview_${row}`).src = '';
+                showStatus(document.getElementById(`imgStatus_${row}`), 'Verwijderd', false);
             } catch (e) {
-                showStatus(imgStatus, 'Fout: ' + e.message, true);
+                showStatus(document.getElementById(`imgStatus_${row}`), 'Fout: ' + e.message, true);
             }
-        });
+        }
+
+        function openAdd() {
+            if (!YEAR) { alert('Selecteer eerst een datum'); return; }
+            document.getElementById('addModal').classList.remove('hidden');
+        }
+        function closeAdd() { document.getElementById('addModal').classList.add('hidden'); }
+
+        async function addRow() {
+            const btn = document.getElementById('addBtn');
+            const status = document.getElementById('addStatus');
+            btn.disabled = true;
+
+            const payload = {
+                year: YEAR,
+                category: document.getElementById('add_cat').value,
+                type: document.getElementById('add_type').value,
+                status: document.getElementById('add_status').value,
+                first_date: document.getElementById('add_first').value,
+                last_date: document.getElementById('add_last').value,
+                event_date: document.getElementById('add_event').value,
+                source: document.getElementById('add_source').value,
+                nl: buildText(document.getElementById('add_nl_title').value, document.getElementById('add_nl_body').value),
+                id: buildText(document.getElementById('add_id_title').value, document.getElementById('add_id_body').value),
+            };
+
+            try {
+                const resp = await fetch('/mededelingen-editor-add', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)});
+                const data = await resp.json();
+                if (data.error) throw new Error(data.error);
+                showStatus(status, 'Toegevoegd', false);
+                setTimeout(() => location.reload(), 700);
+            } catch (e) {
+                showStatus(status, 'Fout: ' + e.message, true);
+                btn.disabled = false;
+            }
+        }
     </script>
 </body>
 </html>
