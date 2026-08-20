@@ -369,10 +369,10 @@ class OutlookCollecteReader:
         NL_MONTHS = ['','januari','februari','maart','april','mei','juni',
                      'juli','augustus','september','oktober','november','december']
 
-        # Window: 7 days before target_date (or last 14 days if no date)
+        # Window: around target_date. Opbrengst emails can arrive after the service.
         if target_date:
-            window_end   = target_date
-            window_start = target_date - timedelta(days=7)
+            window_end   = target_date + timedelta(days=14)
+            window_start = target_date - timedelta(days=since_days)
         else:
             window_end   = datetime.utcnow()
             window_start = window_end - timedelta(days=14)
@@ -490,6 +490,12 @@ class OutlookCollecteReader:
                 v += ',00'
             return v
 
+        _MONTH_ABBREVS = {
+            'jan': 'januari', 'feb': 'februari', 'mrt': 'maart', 'apr': 'april',
+            'mei': 'mei', 'jun': 'juni', 'jul': 'juli', 'aug': 'augustus',
+            'sep': 'september', 'okt': 'oktober', 'nov': 'november', 'dec': 'december',
+        }
+
         def _date_key(date_str: str) -> str:
             """Return a normalised 'D maand' key for fuzzy matching (strips year & day-name)."""
             ds = date_str.lower().strip()
@@ -500,7 +506,9 @@ class OutlookCollecteReader:
             # keep only "D maand" or "D maand YYYY"
             m = re.match(r'(\d{1,2})\s+([a-z]+)', ds)
             if m:
-                return f"{int(m.group(1))} {m.group(2)}"
+                day = int(m.group(1))
+                month = _MONTH_ABBREVS.get(m.group(2), m.group(2))
+                return f"{day} {month}"
             return ds
 
         for msg in ole_msgs:
