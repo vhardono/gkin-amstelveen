@@ -302,8 +302,12 @@ class DropboxExcelReader:
                 key = f"{year}-{idx}"
                 rec = meta.get(key)
                 image_url = None
+                image_path = None
+                image_name = None
                 if rec:
                     image_url = f"/mededelingen-image/{year}/{idx}/{rec['filename']}"
+                    image_path = os.path.join(MEDEDELINGEN_IMG_DIR, str(year), str(idx), rec['filename'])
+                    image_name = rec['original_name']
 
                 first_date = _date_cell(4)
                 last_date = _date_cell(5)
@@ -323,7 +327,8 @@ class DropboxExcelReader:
                     'source': _cell(7),
                     'status': status,
                     'image_url': image_url,
-                    'image_name': rec['original_name'] if rec else None,
+                    'image_path': image_path,
+                    'image_name': image_name,
                 })
 
             return rows

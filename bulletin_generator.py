@@ -13,7 +13,7 @@ import io
 from datetime import datetime, timedelta
 from typing import Dict, List, Any
 from docx import Document
-from docx.shared import Pt
+from docx.shared import Pt, Inches
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.opc.constants import RELATIONSHIP_TYPE as RT
@@ -40,7 +40,8 @@ class BulletinGenerator:
                  mededelingen_data: Dict[str, Any],
                  birthday_data: Dict[str, Any],
                  preekroster_data: Dict[str, Any],
-                 user_data: Dict[str, Any] = None) -> str:
+                 user_data: Dict[str, Any] = None,
+                 mededelingen_rows: List[Dict[str, Any]] = None) -> str:
         """Generate the bulletin Word document.
 
         Args:
@@ -105,11 +106,23 @@ class BulletinGenerator:
         ole_table = preekroster_data.get('ole_table', [])
         self._replace_preekroster_ole(doc, ole_table)
 
+        # --- Build image map from per-section metadata ---
+        image_map = {}
+        if mededelingen_rows:
+            for row in mededelingen_rows:
+                img_path = row.get('image_path')
+                if img_path and os.path.exists(img_path):
+                    title = (row.get('nl_title', '') or '').strip()
+                    if title:
+                        image_map[title] = img_path
+
         # --- Replace text sections (Landelijke first to avoid index shift) ---
         self._replace_section(doc, 'Landelijke Mededelingen',
-                              mededelingen_data.get('landelijke_nl', ''))
+                              mededelingen_data.get('landelijke_nl', ''),
+                              image_map=image_map)
         self._replace_section(doc, 'Regionale mededelingen',
-                              mededelingen_data.get('regionale_nl', ''))
+                              mededelingen_data.get('regionale_nl', ''),
+                              image_map=image_map)
 
         # --- Save ---
         filename = f'GKIN_Amstelveen_Mededelingen_{mededelingen_date.strftime("%y%m%d")}.docx'
@@ -917,7 +930,7 @@ class BulletinGenerator:
                 return i
         return len(doc.paragraphs)
 
-    def _replace_section(self, doc: Document, heading_text: str, new_content: str):
+    def _replace_section(self, doc: Document, heading_text: str, new_content: str, image_map: Dict[str, str] = None):
         """Replace all Normal paragraphs between a heading and the next heading.
 
         Strategy: find heading element in body, collect all Normal paragraph
@@ -1026,6 +1039,18 @@ class BulletinGenerator:
                     next_anchor.addprevious(body_p)
                 else:
                     body.append(body_p)
+
+                # --- Image below this topic, if one is attached ---
+                if image_map:
+                    title_key = title_line.strip()
+                    img_path = image_map.get(title_key)
+                    if img_path and os.path.exists(img_path):
+                        try:
+                            img_para = doc.add_picture(img_path, width=Inches(2.5))
+                            if next_anchor is not None:
+                                next_anchor.addprevious(img_para._element)
+                        except Exception as exc:
+                            print(f"[Bulletin] Could not add picture {img_path}: {exc}")
 
     def _make_paragraph(self, body, style_name: str, text: str, left_align: bool = False):
         """Create a new paragraph element with given style and text."""

@@ -712,6 +712,7 @@ def generate():
         # 2. Mededelingen from Dropbox
         reader = DropboxExcelReader()
         meded = reader.get_mededelingen(mededelingen_date=selected_date)
+        mededelingen_rows = reader.get_mededelingen_rows(selected_date.year)
 
         # 3. Birthdays from Scipio
         scipio = ScipioScraper()
@@ -787,7 +788,8 @@ def generate():
         # 6. Generate bulletin
         gen = BulletinGenerator()
         filepath = gen.generate(selected_date, entry, taken['entries'],
-                                meded, bdays, roster, user_data)
+                                meded, bdays, roster, user_data,
+                                mededelingen_rows=mededelingen_rows)
 
         filename = os.path.basename(filepath)
         return send_file(filepath, as_attachment=True, download_name=filename,
