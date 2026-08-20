@@ -6,9 +6,7 @@
     <title>GKIN Amstelveen – Mededelingen Bewerken</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        tailwind.config = {
-            theme: { extend: { colors: { gkin: { green: '#3A7C22', dark: '#2d6119' } } } }
-        }
+        tailwind.config = { theme: { extend: { colors: { gkin: { green: '#3A7C22', dark: '#2d6119' } } } } }
     </script>
     <style>
         html { overflow-y: scroll; }
@@ -18,182 +16,154 @@
 </head>
 <body class="bg-gray-50 min-h-screen">
     <header class="bg-gkin-green shadow-md">
-        <div class="max-w-6xl mx-auto px-6 py-5 flex items-center gap-4">
-            <a href="/mededelingen"><img src="/static/logo2.png" alt="GKIN Logo" class="h-12 w-12 object-contain shrink-0"></a>
+        <div class="max-w-7xl mx-auto px-4 py-4 flex items-center gap-3">
+            <a href="/mededelingen"><img src="/static/logo2.png" alt="GKIN Logo" class="h-10 w-10 object-contain shrink-0"></a>
             <div class="flex-1">
-                <h1 class="text-white text-2xl font-bold tracking-tight">GKIN Amstelveen</h1>
-                <p class="text-green-100 text-sm mt-0.5">Mededelingen bewerken</p>
+                <h1 class="text-white text-xl font-bold tracking-tight">GKIN Amstelveen</h1>
+                <p class="text-green-100 text-xs">Mededelingen bewerken</p>
             </div>
         </div>
     </header>
 
-    <main class="max-w-6xl mx-auto px-6 py-8">
-        <a href="/mededelingen" class="inline-flex items-center gap-1 text-sm text-gkin-green hover:text-gkin-dark mb-5">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-            <span>Terug</span>
-        </a>
-
-        <form method="GET" action="/mededelingen-editor" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-            <div class="flex items-end gap-4">
-                <div class="flex-1">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Kies datum (bepaalt jaar)</label>
-                    <select name="date" onchange="this.form.submit()" class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gkin-green">
-                        <option value="" disabled>— Kies een datum —</option>
-                        {% for d in dates %}
-                        <option value="{{ d.value }}" {% if selected_date and d.value == selected_date.strftime('%Y-%m-%d') %}selected{% endif %}>{{ d.label }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <button type="button" onclick="openAdd()" class="bg-gkin-green hover:bg-gkin-dark text-white text-sm font-semibold px-4 py-2.5 rounded-lg shadow-md transition-colors">
-                    + Nieuwe mededeling
-                </button>
-            </div>
-        </form>
-
-        {% if year %}
-        <div class="mb-4 text-sm text-gray-500">Jaar: <strong>{{ year }}</strong> · {{ rows | length }} rij(en) geladen</div>
-        {% endif %}
-
-        <div id="rowsContainer" class="space-y-6">
-            {% for row in rows %}
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6" data-row="{{ row.row_index }}">
-                <div class="flex flex-wrap items-start gap-4 mb-4 pb-4 border-b border-gray-100">
-                    <div class="w-32">
-                        <label class="block text-xs font-medium text-gray-500 mb-1">Categorie</label>
-                        <select id="cat_{{ row.row_index }}" class="w-full rounded border border-gray-300 px-2 py-1.5 text-sm">
-                            <option value="Regionale" {% if row.category == 'Regionale' %}selected{% endif %}>Regionale</option>
-                            <option value="Landelijke" {% if row.category == 'Landelijke' %}selected{% endif %}>Landelijke</option>
-                        </select>
-                    </div>
-                    <div class="w-32">
-                        <label class="block text-xs font-medium text-gray-500 mb-1">Type</label>
-                        <input id="type_{{ row.row_index }}" type="text" value="{{ row.type }}" class="w-full rounded border border-gray-300 px-2 py-1.5 text-sm">
-                    </div>
-                    <div class="w-32">
-                        <label class="block text-xs font-medium text-gray-500 mb-1">Status</label>
-                        <select id="status_{{ row.row_index }}" class="w-full rounded border border-gray-300 px-2 py-1.5 text-sm">
-                            <option value="Active" {% if row.status == 'Active' %}selected{% endif %}>Active</option>
-                            <option value="Past" {% if row.status == 'Past' %}selected{% endif %}>Past</option>
-                            <option value="Future" {% if row.status == 'Future' %}selected{% endif %}>Future</option>
-                        </select>
-                    </div>
-                    <div class="flex-1 grid grid-cols-2 md:grid-cols-5 gap-3">
-                        <div>
-                            <label class="block text-xs font-medium text-gray-500 mb-1">Van</label>
-                            <input id="first_{{ row.row_index }}" type="date" value="{{ row.first_date }}" class="w-full rounded border border-gray-300 px-2 py-1.5 text-sm">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-gray-500 mb-1">Tot</label>
-                            <input id="last_{{ row.row_index }}" type="date" value="{{ row.last_date }}" class="w-full rounded border border-gray-300 px-2 py-1.5 text-sm">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-gray-500 mb-1">Event</label>
-                            <input id="event_{{ row.row_index }}" type="date" value="{{ row.event_date }}" class="w-full rounded border border-gray-300 px-2 py-1.5 text-sm">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-gray-500 mb-1">Bron</label>
-                            <input id="source_{{ row.row_index }}" type="text" value="{{ row.source }}" class="w-full rounded border border-gray-300 px-2 py-1.5 text-sm">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-gray-500 mb-1">Rij-index</label>
-                            <div class="text-sm py-1.5 text-gray-600">{{ row.row_index }}</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-5">
-                    <div>
-                        <h3 class="text-sm font-semibold text-gkin-green mb-2">Nederlands</h3>
-                        <label class="block text-xs text-gray-500 mb-1">Titel</label>
-                        <input id="nl_title_{{ row.row_index }}" type="text" value="{{ row.nl_title }}" class="w-full rounded border border-gray-300 px-2 py-1.5 text-sm mb-2">
-                        <label class="block text-xs text-gray-500 mb-1">Inhoud</label>
-                        <textarea id="nl_body_{{ row.row_index }}" rows="5" class="w-full rounded border border-gray-300 px-2 py-1.5 text-sm resize-y">{{ row.nl_body }}</textarea>
-                    </div>
-                    <div>
-                        <h3 class="text-sm font-semibold text-gkin-green mb-2">Bahasa Indonesia</h3>
-                        <label class="block text-xs text-gray-500 mb-1">Titel</label>
-                        <input id="id_title_{{ row.row_index }}" type="text" value="{{ row.id_title }}" class="w-full rounded border border-gray-300 px-2 py-1.5 text-sm mb-2">
-                        <label class="block text-xs text-gray-500 mb-1">Inhoud</label>
-                        <textarea id="id_body_{{ row.row_index }}" rows="5" class="w-full rounded border border-gray-300 px-2 py-1.5 text-sm resize-y">{{ row.id_body }}</textarea>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start mb-4 p-4 bg-gray-50 rounded-lg border border-gray-100">
-                    <div>
-                        <p class="text-xs font-medium text-gray-600 mb-2">Afbeelding voor deze mededeling</p>
-                        <label class="flex items-center gap-2 w-full rounded border border-dashed border-gray-300 px-3 py-2 bg-white cursor-pointer hover:border-gkin-green transition-colors mb-2">
-                            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                            <span id="imgLabel_{{ row.row_index }}" class="text-sm text-gray-500 truncate">Kies afbeelding...</span>
-                            <input type="file" id="imgUpload_{{ row.row_index }}" accept="image/*" class="hidden" onchange="updateImgLabel('{{ row.row_index }}', this)">
-                        </label>
-                        <button type="button" onclick="uploadImage('{{ row.row_index }}')" class="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded px-3 py-1.5">Upload</button>
-                        <div id="imgStatus_{{ row.row_index }}" class="hidden mt-2 text-xs rounded p-2 border"></div>
-                    </div>
-                    <div id="imgPreviewBox_{{ row.row_index }}" class="{% if not row.image_url %}hidden{% endif %}">
-                        <p class="text-xs text-gray-500 mb-1">Huidige afbeelding</p>
-                        <img id="imgPreview_{{ row.row_index }}" src="{{ row.image_url or '' }}" alt="" class="max-h-40 object-contain rounded border border-gray-200 mb-1">
-                        <p id="imgName_{{ row.row_index }}" class="text-xs text-gray-500 truncate">{{ row.image_name or '' }}</p>
-                        <button type="button" onclick="deleteImage('{{ row.row_index }}')" class="mt-2 text-xs bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded px-3 py-1">Verwijder</button>
-                    </div>
-                </div>
-
-                <div class="flex justify-end">
-                    <button type="button" onclick="saveRow('{{ row.row_index }}')" id="saveBtn_{{ row.row_index }}" class="bg-gkin-green hover:bg-gkin-dark text-white text-sm font-semibold px-5 py-2 rounded-lg shadow transition-colors">
-                        Bewaren
-                    </button>
-                </div>
-                <div id="saveStatus_{{ row.row_index }}" class="hidden mt-2 text-xs rounded p-2 border"></div>
-            </div>
-            {% endfor %}
+    <main class="max-w-7xl mx-auto px-4 py-4">
+        <div class="flex flex-wrap items-center gap-3 mb-3">
+            <a href="/mededelingen" class="inline-flex items-center gap-1 text-sm text-gkin-green hover:text-gkin-dark">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                <span>Terug</span>
+            </a>
+            <select id="statusFilter" onchange="filterRows(this.value)" class="ml-auto text-sm rounded border border-gray-300 px-2 py-1.5 bg-white">
+                <option value="all">Toon: Alles</option>
+                <option value="active" selected>Toon: Active</option>
+                <option value="past">Toon: Past</option>
+                <option value="future">Toon: Future</option>
+            </select>
+            <button type="button" onclick="openAdd()" class="bg-gkin-green hover:bg-gkin-dark text-white text-sm font-semibold px-3 py-1.5 rounded shadow transition-colors">+ Nieuw</button>
         </div>
 
-        <div id="addModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div class="bg-white rounded-xl shadow-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto p-6">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-lg font-bold text-gkin-green">Nieuwe mededeling</h2>
-                    <button type="button" onclick="closeAdd()" class="text-gray-500 hover:text-gray-700 text-2xl leading-none">&times;</button>
-                </div>
-                <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
-                    <select id="add_cat" class="rounded border border-gray-300 px-2 py-1.5 text-sm">
-                        <option value="Regionale">Regionale</option>
-                        <option value="Landelijke">Landelijke</option>
-                    </select>
-                    <input id="add_type" type="text" placeholder="Type" value="Others" class="rounded border border-gray-300 px-2 py-1.5 text-sm">
-                    <select id="add_status" class="rounded border border-gray-300 px-2 py-1.5 text-sm">
-                        <option value="Active">Active</option>
-                        <option value="Past">Past</option>
-                        <option value="Future">Future</option>
-                    </select>
-                    <input id="add_first" type="date" class="rounded border border-gray-300 px-2 py-1.5 text-sm">
-                    <input id="add_last" type="date" class="rounded border border-gray-300 px-2 py-1.5 text-sm">
-                    <input id="add_event" type="date" class="rounded border border-gray-300 px-2 py-1.5 text-sm">
-                    <input id="add_source" type="text" placeholder="Bron" value="web" class="rounded border border-gray-300 px-2 py-1.5 text-sm">
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
-                    <div>
-                        <label class="block text-xs text-gray-500 mb-1">NL Titel</label>
-                        <input id="add_nl_title" type="text" class="w-full rounded border border-gray-300 px-2 py-1.5 text-sm mb-2">
-                        <label class="block text-xs text-gray-500 mb-1">NL Inhoud</label>
-                        <textarea id="add_nl_body" rows="4" class="w-full rounded border border-gray-300 px-2 py-1.5 text-sm resize-y"></textarea>
-                    </div>
-                    <div>
-                        <label class="block text-xs text-gray-500 mb-1">ID Titel</label>
-                        <input id="add_id_title" type="text" class="w-full rounded border border-gray-300 px-2 py-1.5 text-sm mb-2">
-                        <label class="block text-xs text-gray-500 mb-1">ID Inhoud</label>
-                        <textarea id="add_id_body" rows="4" class="w-full rounded border border-gray-300 px-2 py-1.5 text-sm resize-y"></textarea>
-                    </div>
-                </div>
-                <div class="flex justify-end gap-2">
-                    <button type="button" onclick="closeAdd()" class="text-sm text-gray-600 hover:text-gray-800 px-4 py-2">Annuleren</button>
-                    <button type="button" onclick="addRow()" id="addBtn" class="bg-gkin-green hover:bg-gkin-dark text-white text-sm font-semibold px-5 py-2 rounded-lg shadow transition-colors">Toevoegen</button>
-                </div>
-                <div id="addStatus" class="hidden mt-2 text-xs rounded p-2 border"></div>
-            </div>
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-x-auto">
+            <table class="w-full text-sm text-left">
+                <thead class="bg-gray-100 text-gray-600 text-xs uppercase">
+                    <tr>
+                        <th class="px-2 py-2">Rij</th>
+                        <th class="px-2 py-2">Cat</th>
+                        <th class="px-2 py-2">Type</th>
+                        <th class="px-2 py-2 w-1/6">NL Titel</th>
+                        <th class="px-2 py-2 w-1/6">ID Titel</th>
+                        <th class="px-2 py-2">Van</th>
+                        <th class="px-2 py-2">Tot</th>
+                        <th class="px-2 py-2">Event</th>
+                        <th class="px-2 py-2">Bron</th>
+                        <th class="px-2 py-2">Status</th>
+                        <th class="px-2 py-2">Afbeelding</th>
+                        <th class="px-2 py-2">Actie</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for row in rows %}
+                    <tr data-status="{{ row.status | lower }}" class="hover:bg-gray-50{% if row.status == 'Active' %}{% else %} hidden{% endif %}">
+                        <td class="px-2 py-1.5 text-gray-500">{{ row.row_index }}</td>
+                        <td class="px-2 py-1.5 whitespace-nowrap">{{ row.category }}</td>
+                        <td class="px-2 py-1.5 whitespace-nowrap">{{ row.type }}</td>
+                        <td class="px-2 py-1.5 max-w-xs truncate" title="{{ row.nl_body }}">{{ row.nl_title }}</td>
+                        <td class="px-2 py-1.5 max-w-xs truncate" title="{{ row.id_body }}">{{ row.id_title }}</td>
+                        <td class="px-2 py-1.5 whitespace-nowrap">{{ row.first_date }}</td>
+                        <td class="px-2 py-1.5 whitespace-nowrap">{{ row.last_date }}</td>
+                        <td class="px-2 py-1.5 whitespace-nowrap">{{ row.event_date }}</td>
+                        <td class="px-2 py-1.5 whitespace-nowrap">{{ row.source }}</td>
+                        <td class="px-2 py-1.5">
+                            <span class="inline-block rounded-full px-2 py-0.5 text-xs font-medium
+                                {% if row.status == 'Active' %}bg-green-100 text-green-800
+                                {% elif row.status == 'Past' %}bg-gray-100 text-gray-700
+                                {% else %}bg-blue-100 text-blue-800{% endif %}">
+                                {{ row.status }}
+                            </span>
+                        </td>
+                        <td class="px-2 py-1.5">
+                            {% if row.image_url %}
+                            <img src="{{ row.image_url }}" alt="" class="h-10 w-10 object-cover rounded border border-gray-200">
+                            {% else %}
+                            <span class="text-gray-300">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-2 py-1.5">
+                            <button type="button" onclick="openEdit({{ loop.index0 }})" class="text-xs text-gkin-green hover:text-gkin-dark font-medium">Bewerk</button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </main>
 
+    <div id="editModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-start justify-center p-4 overflow-y-auto">
+        <div class="bg-white rounded-xl shadow-lg w-full max-w-4xl my-8 p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 id="modalTitle" class="text-lg font-bold text-gkin-green">Mededeling bewerken</h2>
+                <button type="button" onclick="closeModal()" class="text-gray-500 hover:text-gray-700 text-2xl leading-none">&times;</button>
+            </div>
+
+            <input type="hidden" id="m_index" value="">
+
+            <div class="grid grid-cols-2 md:grid-cols-6 gap-3 mb-4">
+                <select id="m_cat" class="rounded border border-gray-300 px-2 py-1.5 text-sm">
+                    <option value="Regionale">Regionale</option>
+                    <option value="Landelijke">Landelijke</option>
+                </select>
+                <input id="m_type" type="text" placeholder="Type" class="rounded border border-gray-300 px-2 py-1.5 text-sm">
+                <input id="m_first" type="date" class="rounded border border-gray-300 px-2 py-1.5 text-sm">
+                <input id="m_last" type="date" class="rounded border border-gray-300 px-2 py-1.5 text-sm">
+                <input id="m_event" type="date" class="rounded border border-gray-300 px-2 py-1.5 text-sm">
+                <input id="m_source" type="text" placeholder="Bron" class="rounded border border-gray-300 px-2 py-1.5 text-sm">
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">NL Titel</label>
+                    <input id="m_nl_title" type="text" class="w-full rounded border border-gray-300 px-2 py-1.5 text-sm mb-2">
+                    <label class="block text-xs text-gray-500 mb-1">NL Inhoud</label>
+                    <textarea id="m_nl_body" rows="5" class="w-full rounded border border-gray-300 px-2 py-1.5 text-sm resize-y"></textarea>
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">ID Titel</label>
+                    <input id="m_id_title" type="text" class="w-full rounded border border-gray-300 px-2 py-1.5 text-sm mb-2">
+                    <label class="block text-xs text-gray-500 mb-1">ID Inhoud</label>
+                    <textarea id="m_id_body" rows="5" class="w-full rounded border border-gray-300 px-2 py-1.5 text-sm resize-y"></textarea>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-gray-50 rounded-lg border border-gray-100 mb-4">
+                <div>
+                    <p class="text-xs font-medium text-gray-600 mb-2">Afbeelding voor deze mededeling</p>
+                    <label class="flex items-center gap-2 w-full rounded border border-dashed border-gray-300 px-3 py-2 bg-white cursor-pointer hover:border-gkin-green transition-colors mb-2">
+                        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                        <span id="m_imgLabel" class="text-sm text-gray-500 truncate">Kies afbeelding...</span>
+                        <input type="file" id="m_imgUpload" accept="image/*" class="hidden" onchange="updateImgLabel(this)">
+                    </label>
+                    <button type="button" onclick="uploadImage()" class="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded px-3 py-1.5">Upload</button>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-500 mb-1">Huidige afbeelding</p>
+                    <div id="m_imgPreviewBox" class="hidden">
+                        <img id="m_imgPreview" src="" alt="" class="max-h-40 object-contain rounded border border-gray-200 mb-1">
+                        <p id="m_imgName" class="text-xs text-gray-500 truncate"></p>
+                        <button type="button" onclick="deleteImage()" class="mt-2 text-xs bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded px-3 py-1">Verwijder</button>
+                    </div>
+                    <p id="m_noImg" class="text-sm text-gray-400 italic">Geen afbeelding gekoppeld</p>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-2 items-center">
+                <span id="m_status" class="text-sm text-gray-500"></span>
+                <button type="button" onclick="closeModal()" class="text-sm text-gray-600 hover:text-gray-800 px-4 py-2">Annuleren</button>
+                <button type="button" onclick="saveModal()" id="m_saveBtn" class="bg-gkin-green hover:bg-gkin-dark text-white text-sm font-semibold px-5 py-2 rounded-lg shadow transition-colors">Bewaren</button>
+            </div>
+            <div id="m_statusMsg" class="hidden mt-2 text-xs rounded p-2 border"></div>
+        </div>
+    </div>
+
     <script>
-        const YEAR = {{ year or 'null' }};
+        const YEAR = {{ year }};
+        const ROWS = {{ rows | tojson | safe }};
 
         function showStatus(el, msg, isError) {
             el.textContent = msg;
@@ -211,122 +181,147 @@
             return title + '\n' + body;
         }
 
-        async function saveRow(row) {
-            const btn = document.getElementById(`saveBtn_${row}`);
-            const status = document.getElementById(`saveStatus_${row}`);
+        function filterRows(status) {
+            document.querySelectorAll('tbody tr[data-status]').forEach(row => {
+                if (status === 'all' || row.dataset.status === status) {
+                    row.classList.remove('hidden');
+                } else {
+                    row.classList.add('hidden');
+                }
+            });
+        }
+
+        function openModal() { document.getElementById('editModal').classList.remove('hidden'); }
+        function closeModal() { document.getElementById('editModal').classList.add('hidden'); }
+
+        function openEdit(idx) {
+            const row = ROWS[idx];
+            document.getElementById('modalTitle').textContent = `Bewerk rij ${row.row_index}`;
+            document.getElementById('m_index').value = row.row_index;
+            document.getElementById('m_cat').value = row.category;
+            document.getElementById('m_type').value = row.type;
+            document.getElementById('m_first').value = row.first_date;
+            document.getElementById('m_last').value = row.last_date;
+            document.getElementById('m_event').value = row.event_date;
+            document.getElementById('m_source').value = row.source;
+            document.getElementById('m_nl_title').value = row.nl_title;
+            document.getElementById('m_nl_body').value = row.nl_body;
+            document.getElementById('m_id_title').value = row.id_title;
+            document.getElementById('m_id_body').value = row.id_body;
+            document.getElementById('m_status').textContent = `Status: ${row.status}`;
+
+            if (row.image_url) {
+                document.getElementById('m_imgPreview').src = row.image_url;
+                document.getElementById('m_imgName').textContent = row.image_name || '';
+                document.getElementById('m_imgPreviewBox').classList.remove('hidden');
+                document.getElementById('m_noImg').classList.add('hidden');
+            } else {
+                document.getElementById('m_imgPreviewBox').classList.add('hidden');
+                document.getElementById('m_noImg').classList.remove('hidden');
+                document.getElementById('m_imgPreview').src = '';
+            }
+            document.getElementById('m_imgUpload').value = '';
+            document.getElementById('m_imgLabel').textContent = 'Kies afbeelding...';
+            openModal();
+        }
+
+        function openAdd() {
+            document.getElementById('modalTitle').textContent = 'Nieuwe mededeling';
+            document.getElementById('m_index').value = 'new';
+            ['m_cat','m_type','m_first','m_last','m_event','m_source','m_nl_title','m_nl_body','m_id_title','m_id_body'].forEach(id => {
+                document.getElementById(id).value = id === 'm_cat' ? 'Regionale' : (id === 'm_source' ? 'web' : '');
+            });
+            document.getElementById('m_status').textContent = '';
+            document.getElementById('m_imgPreviewBox').classList.add('hidden');
+            document.getElementById('m_noImg').classList.remove('hidden');
+            openModal();
+        }
+
+        async function saveModal() {
+            const idx = document.getElementById('m_index').value;
+            const isNew = idx === 'new';
+            const btn = document.getElementById('m_saveBtn');
+            const statusMsg = document.getElementById('m_statusMsg');
             btn.disabled = true;
-            btn.textContent = 'Bezig...';
 
             const payload = {
                 year: YEAR,
-                row_index: parseInt(row, 10),
-                category: document.getElementById(`cat_${row}`).value,
-                type: document.getElementById(`type_${row}`).value,
-                status: document.getElementById(`status_${row}`).value,
-                first_date: document.getElementById(`first_${row}`).value,
-                last_date: document.getElementById(`last_${row}`).value,
-                event_date: document.getElementById(`event_${row}`).value,
-                source: document.getElementById(`source_${row}`).value,
-                nl: buildText(document.getElementById(`nl_title_${row}`).value, document.getElementById(`nl_body_${row}`).value),
-                id: buildText(document.getElementById(`id_title_${row}`).value, document.getElementById(`id_body_${row}`).value),
+                category: document.getElementById('m_cat').value,
+                type: document.getElementById('m_type').value,
+                first_date: document.getElementById('m_first').value,
+                last_date: document.getElementById('m_last').value,
+                event_date: document.getElementById('m_event').value,
+                source: document.getElementById('m_source').value,
+                nl: buildText(document.getElementById('m_nl_title').value, document.getElementById('m_nl_body').value),
+                id: buildText(document.getElementById('m_id_title').value, document.getElementById('m_id_body').value),
             };
+            if (!isNew) payload.row_index = parseInt(idx, 10);
 
             try {
-                const resp = await fetch('/mededelingen-editor-save', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)});
+                const url = isNew ? '/mededelingen-editor-add' : '/mededelingen-editor-save';
+                const resp = await fetch(url, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)});
                 const data = await resp.json();
                 if (data.error) throw new Error(data.error);
-                showStatus(status, 'Opgeslagen', false);
+                showStatus(statusMsg, isNew ? 'Toegevoegd' : 'Opgeslagen', false);
+                setTimeout(() => location.reload(), 700);
             } catch (e) {
-                showStatus(status, 'Fout: ' + e.message, true);
-            } finally {
+                showStatus(statusMsg, 'Fout: ' + e.message, true);
                 btn.disabled = false;
-                btn.textContent = 'Bewaren';
             }
         }
 
-        function updateImgLabel(row, input) {
-            document.getElementById(`imgLabel_${row}`).textContent = input.files[0]?.name || 'Kies afbeelding...';
+        function updateImgLabel(input) {
+            document.getElementById('m_imgLabel').textContent = input.files[0]?.name || 'Kies afbeelding...';
         }
 
-        async function uploadImage(row) {
-            const input = document.getElementById(`imgUpload_${row}`);
+        async function uploadImage() {
+            const idx = document.getElementById('m_index').value;
+            if (idx === 'new') { alert('Bewaar eerst de mededeling'); return; }
+            const input = document.getElementById('m_imgUpload');
             const file = input.files[0];
-            if (!file) { showStatus(document.getElementById(`imgStatus_${row}`), 'Kies eerst een afbeelding', true); return; }
+            if (!file) return;
 
             const form = new FormData();
             form.append('image', file);
             form.append('year', YEAR);
-            form.append('row_index', row);
+            form.append('row_index', idx);
 
             try {
                 const resp = await fetch('/mededelingen-upload-image', {method: 'POST', body: form});
                 const data = await resp.json();
                 if (data.error) throw new Error(data.error);
-
-                document.getElementById(`imgPreview_${row}`).src = data.url;
-                document.getElementById(`imgName_${row}`).textContent = data.name;
-                document.getElementById(`imgPreviewBox_${row}`).classList.remove('hidden');
+                document.getElementById('m_imgPreview').src = data.url;
+                document.getElementById('m_imgName').textContent = data.name;
+                document.getElementById('m_imgPreviewBox').classList.remove('hidden');
+                document.getElementById('m_noImg').classList.add('hidden');
                 input.value = '';
-                document.getElementById(`imgLabel_${row}`).textContent = 'Kies afbeelding...';
-                showStatus(document.getElementById(`imgStatus_${row}`), 'Geüpload', false);
+                document.getElementById('m_imgLabel').textContent = 'Kies afbeelding...';
             } catch (e) {
-                showStatus(document.getElementById(`imgStatus_${row}`), 'Fout: ' + e.message, true);
+                alert('Uploadfout: ' + e.message);
             }
         }
 
-        async function deleteImage(row) {
+        async function deleteImage() {
+            const idx = document.getElementById('m_index').value;
+            if (idx === 'new') return;
             if (!confirm('Afbeelding verwijderen?')) return;
             try {
                 const resp = await fetch('/mededelingen-delete-image', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({year: YEAR, row_index: parseInt(row, 10)})
+                    body: JSON.stringify({year: YEAR, row_index: parseInt(idx, 10)})
                 });
                 const data = await resp.json();
                 if (data.error) throw new Error(data.error);
-                document.getElementById(`imgPreviewBox_${row}`).classList.add('hidden');
-                document.getElementById(`imgPreview_${row}`).src = '';
-                showStatus(document.getElementById(`imgStatus_${row}`), 'Verwijderd', false);
+                document.getElementById('m_imgPreviewBox').classList.add('hidden');
+                document.getElementById('m_noImg').classList.remove('hidden');
             } catch (e) {
-                showStatus(document.getElementById(`imgStatus_${row}`), 'Fout: ' + e.message, true);
+                alert('Fout: ' + e.message);
             }
         }
 
-        function openAdd() {
-            if (!YEAR) { alert('Selecteer eerst een datum'); return; }
-            document.getElementById('addModal').classList.remove('hidden');
-        }
-        function closeAdd() { document.getElementById('addModal').classList.add('hidden'); }
-
-        async function addRow() {
-            const btn = document.getElementById('addBtn');
-            const status = document.getElementById('addStatus');
-            btn.disabled = true;
-
-            const payload = {
-                year: YEAR,
-                category: document.getElementById('add_cat').value,
-                type: document.getElementById('add_type').value,
-                status: document.getElementById('add_status').value,
-                first_date: document.getElementById('add_first').value,
-                last_date: document.getElementById('add_last').value,
-                event_date: document.getElementById('add_event').value,
-                source: document.getElementById('add_source').value,
-                nl: buildText(document.getElementById('add_nl_title').value, document.getElementById('add_nl_body').value),
-                id: buildText(document.getElementById('add_id_title').value, document.getElementById('add_id_body').value),
-            };
-
-            try {
-                const resp = await fetch('/mededelingen-editor-add', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)});
-                const data = await resp.json();
-                if (data.error) throw new Error(data.error);
-                showStatus(status, 'Toegevoegd', false);
-                setTimeout(() => location.reload(), 700);
-            } catch (e) {
-                showStatus(status, 'Fout: ' + e.message, true);
-                btn.disabled = false;
-            }
-        }
+        // default filter
+        filterRows('active');
     </script>
 </body>
 </html>

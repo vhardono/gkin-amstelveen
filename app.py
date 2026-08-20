@@ -262,34 +262,17 @@ def _get_takenrooster_and_render_page():
 def mededelingen_editor():
     """Per-section mededelingen editor with metadata."""
     from data_sources.dropbox_reader import DropboxExcelReader
-    date_str = request.args.get('date')
-    selected = None
-    if date_str:
-        try:
-            selected = datetime.strptime(date_str, '%Y-%m-%d')
-        except ValueError:
-            selected = None
-    else:
-        # default to first upcoming date
-        all_dates = _get_mededelingen_dates()
-        first = next((d for d in all_dates if d['value'] >= datetime.now().strftime('%Y-%m-%d')), all_dates[0] if all_dates else None)
-        if first:
-            selected = datetime.strptime(first['value'], '%Y-%m-%d')
-
+    year = request.args.get('year', type=int) or datetime.now().year
     rows = []
-    year = None
-    if selected:
-        year = selected.year
+    try:
         reader = DropboxExcelReader()
-        try:
-            rows = reader.get_mededelingen_rows(year)
-        except Exception as e:
-            print(f'[MededelingenEditor] Could not load rows: {e}')
+        rows = reader.get_mededelingen_rows(year)
+    except Exception as e:
+        print(f'[MededelingenEditor] Could not load rows: {e}')
 
     return render_template('mededelingen_editor.html',
-                           dates=_get_mededelingen_dates(),
-                           selected_date=selected,
                            year=year,
+                           today=datetime.now().strftime('%Y-%m-%d'),
                            rows=rows)
 
 

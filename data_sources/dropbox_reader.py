@@ -52,6 +52,39 @@ def _mededelingen_image_url_for_date(d: datetime) -> Optional[str]:
     return f"/mededelingen-image/{d.year}/{d.strftime('%Y%m%d')}/{rec['filename']}"
 
 
+def _parse_mededelingen_date(value) -> Optional[datetime]:
+    if not value or value == 'NaT':
+        return None
+    if isinstance(value, datetime):
+        return value
+    if isinstance(value, pd.Timestamp):
+        return value.to_pydatetime()
+    try:
+        return pd.to_datetime(value)
+    except Exception:
+        return None
+
+
+def _compute_mededelingen_status(first, last, reference: datetime = None) -> str:
+    """Return Active, Past or Future based on reference date (default now)."""
+    if reference is None:
+        reference = datetime.now()
+    if isinstance(reference, datetime):
+        reference = reference.date()
+
+    first_dt = _parse_mededelingen_date(first)
+    last_dt = _parse_mededelingen_date(last)
+
+    first_date = first_dt.date() if first_dt else None
+    last_date = last_dt.date() if last_dt else None
+
+    if first_date and reference < first_date:
+        return 'Future'
+    if last_date and reference > last_date:
+        return 'Past'
+    return 'Active'
+
+
 class DropboxExcelReader:
     def __init__(self):
         """Initialize Dropbox client using refresh token for long-lived access"""
@@ -272,6 +305,10 @@ class DropboxExcelReader:
                 if rec:
                     image_url = f"/mededelingen-image/{year}/{idx}/{rec['filename']}"
 
+                first_date = _date_cell(4)
+                last_date = _date_cell(5)
+                status = _compute_mededelingen_status(first_date, last_date)
+
                 rows.append({
                     'row_index': idx,
                     'category': _cell(0),
@@ -280,11 +317,11 @@ class DropboxExcelReader:
                     'nl_body': nl_body,
                     'id_title': id_title,
                     'id_body': id_body,
-                    'first_date': _date_cell(4),
-                    'last_date': _date_cell(5),
+                    'first_date': first_date,
+                    'last_date': last_date,
                     'event_date': _date_cell(6),
                     'source': _cell(7),
-                    'status': _cell(8),
+                    'status': status,
                     'image_url': image_url,
                     'image_name': rec['original_name'] if rec else None,
                 })
@@ -316,7 +353,8 @@ class DropboxExcelReader:
             _set(3, data.get('nl', ''))
             _set(4, data.get('id', ''))
 
-            # dates written as real dates if possible
+            first_v = data.get('first_date', '')
+            last_v = data.get('last_date', '')
             for col_idx, key in [(5, 'first_date'), (6, 'last_date'), (7, 'event_date')]:
                 v = data.get(key, '')
                 if v:
@@ -329,7 +367,8 @@ class DropboxExcelReader:
                     year_ws.cell(excel_row, col_idx).value = None
 
             _set(8, data.get('source', ''))
-            _set(9, data.get('status', ''))
+            status = _compute_mededelingen_status(first_v, last_v)
+            _set(9, status)
 
             # Recompute Output sheet from active rows
             output_ws = wb['Output']
@@ -340,8 +379,8 @@ class DropboxExcelReader:
 
             for r in range(2, year_ws.max_row + 1):
                 cat = str(year_ws.cell(r, 1).value or '').strip()
-                status = str(year_ws.cell(r, 9).value or '').strip()
-                if status.lower() != 'active':
+                row_status = str(year_ws.cell(r, 9).value or '').strip()
+                if row_status.lower() != 'active':
                     continue
                 nl = str(year_ws.cell(r, 3).value or '').strip()
                 id_ = str(year_ws.cell(r, 4).value or '').strip()
@@ -406,8 +445,10 @@ class DropboxExcelReader:
                 else:
                     year_ws.cell(new_row, col_idx).value = None
 
+            first_v = data.get('first_date', '')
+            last_v = data.get('last_date', '')
             year_ws.cell(new_row, 8).value = data.get('source', 'web')
-            year_ws.cell(new_row, 9).value = data.get('status', 'Active')
+            year_ws.cell(new_row, 9).value = _compute_mededelingen_status(first_v, last_v)
 
             # Recompute Output
             output_ws = wb['Output']
