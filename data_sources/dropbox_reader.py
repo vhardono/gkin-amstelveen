@@ -353,8 +353,9 @@ class DropboxExcelReader:
 
             return rows
 
-        except Exception as e:
-            print(f"Error reading mededelingen rows: {e}")
+        except Exception:
+            import traceback
+            traceback.print_exc()
             return []
 
     def save_mededelingen_row(self, year: int, row_index: int, data: Dict[str, Any]) -> Dict[str, Any]:
