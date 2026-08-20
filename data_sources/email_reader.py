@@ -357,7 +357,7 @@ class OutlookCollecteReader:
 
         return result
 
-    def fetch_opbrengst_data(self, target_date: datetime = None, since_days: int = 60) -> Dict[str, Any]:
+    def fetch_opbrengst_data(self, target_date: datetime = None, since_days: int = 7) -> Dict[str, Any]:
         """Fetch collecte opbrengsten from emails received in the 7 days before target_date.
 
         Reguliere: fokkedj@gmail.com,    subject like "20260503 Collecte opbrengst"
@@ -369,9 +369,9 @@ class OutlookCollecteReader:
         NL_MONTHS = ['','januari','februari','maart','april','mei','juni',
                      'juli','augustus','september','oktober','november','december']
 
-        # Window: around target_date. Opbrengst emails can arrive after the service.
+        # Window: the past week up to target_date.
         if target_date:
-            window_end   = target_date + timedelta(days=14)
+            window_end   = target_date
             window_start = target_date - timedelta(days=since_days)
         else:
             window_end   = datetime.utcnow()

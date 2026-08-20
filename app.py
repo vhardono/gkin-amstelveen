@@ -1049,7 +1049,7 @@ def fetch_email_opbrengst():
                 target_date = datetime.strptime(date_str, '%Y-%m-%d')
             except ValueError:
                 pass
-        data = reader.fetch_opbrengst_data(target_date=target_date, since_days=60)
+        data = reader.fetch_opbrengst_data(target_date=target_date, since_days=7)
         return jsonify(data)
     except Exception as e:
         import traceback; traceback.print_exc()
@@ -1363,7 +1363,7 @@ def _run_liturgi(excel_bytes: bytes, preek_bytes, work_dir: str,
         if service_date:
             reader = OutlookCollecteReader()
             if reader.is_authenticated():
-                data = reader.fetch_opbrengst_data(target_date=service_date, since_days=60)
+                data = reader.fetch_opbrengst_data(target_date=service_date, since_days=7)
                 entries = data.get('entries', [])
                 chosen = next((e for e in reversed(entries) if e.get('type') == 'regulier'),
                               entries[-1] if entries else None)
