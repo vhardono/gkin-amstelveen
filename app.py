@@ -266,6 +266,7 @@ def mededelingen_editor():
     rows = []
     try:
         reader = DropboxExcelReader()
+        reader.cleanup_mededelingen_images(year)
         rows = reader.get_mededelingen_rows(year)
     except Exception as e:
         print(f'[MededelingenEditor] Could not load rows: {e}')

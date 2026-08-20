@@ -502,6 +502,58 @@ class DropboxExcelReader:
             print(f"Error adding mededelingen row: {e}")
             return {'success': False, 'error': str(e)}
 
+    def cleanup_mededelingen_images(self, year: int, rows: List[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Remove image attachments whose last_date is in the past or row no longer exists."""
+        today = datetime.now().date()
+        meta = _mededelingen_image_meta()
+        if not meta:
+            return {'removed': 0}
+
+        if rows is None:
+            try:
+                rows = self.get_mededelingen_rows(year)
+            except Exception as e:
+                print(f'[Cleanup] Could not load rows: {e}')
+                return {'removed': 0}
+
+        row_map = {r['row_index']: r for r in rows}
+        new_meta = {}
+        removed = 0
+        for key, rec in list(meta.items()):
+            try:
+                y, idx = key.split('-')
+                if int(y) != year:
+                    new_meta[key] = rec
+                    continue
+            except Exception:
+                new_meta[key] = rec
+                continue
+
+            row = row_map.get(int(idx))
+            remove = False
+            if row is None:
+                remove = True
+            else:
+                last_dt = _parse_mededelingen_date(row.get('last_date'))
+                last = last_dt.date() if last_dt else None
+                if last and last < today:
+                    remove = True
+
+            if remove:
+                path = os.path.join(MEDEDELINGEN_IMG_DIR, str(year), str(idx), rec['filename'])
+                try:
+                    if os.path.exists(path):
+                        os.remove(path)
+                except Exception as e:
+                    print(f'[Cleanup] Could not remove {path}: {e}')
+                removed += 1
+            else:
+                new_meta[key] = rec
+
+        _save_mededelingen_image_meta(new_meta)
+        print(f'[Cleanup] Removed {removed} outdated mededelingen images for {year}')
+        return {'removed': removed}
+
     def get_activiteiten_kalender(self, mededelingen_date: datetime = None) -> List[Dict[str, Any]]:
         """Read Activiteiten Kalender from the year tab (e.g. '2026') of Mededelingen Overzicht.
 
