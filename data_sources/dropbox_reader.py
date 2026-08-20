@@ -386,11 +386,12 @@ class DropboxExcelReader:
 
             first_v = data.get('first_date', '')
             last_v = data.get('last_date', '')
+            print(f"[save row {row_index}] dates -> first={first_v!r}, last={last_v!r}, event={data.get('event_date','')!r}")
             for col_idx, key in [(5, 'first_date'), (6, 'last_date'), (7, 'event_date')]:
                 v = data.get(key, '')
                 if v:
                     try:
-                        d = pd.to_datetime(v)
+                        d = pd.to_datetime(v).to_pydatetime()
                         year_ws.cell(excel_row, col_idx).value = d
                     except Exception:
                         year_ws.cell(excel_row, col_idx).value = str(v)
@@ -469,7 +470,7 @@ class DropboxExcelReader:
                 v = data.get(key, '')
                 if v:
                     try:
-                        d = pd.to_datetime(v)
+                        d = pd.to_datetime(v).to_pydatetime()
                         year_ws.cell(new_row, col_idx).value = d
                     except Exception:
                         year_ws.cell(new_row, col_idx).value = str(v)
