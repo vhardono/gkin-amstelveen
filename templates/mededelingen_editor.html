@@ -84,7 +84,7 @@
                             {% endif %}
                         </td>
                         <td class="px-2 py-1.5">
-                            <button type="button" onclick="openEdit({{ loop.index0 }})" class="text-xs text-gkin-green hover:text-gkin-dark font-medium">Bewerk</button>
+                            <button type="button" onclick="openEdit({{ row.row_index }})" class="text-xs text-gkin-green hover:text-gkin-dark font-medium">Bewerk</button>
                         </td>
                     </tr>
                     {% endfor %}
@@ -209,12 +209,12 @@
         }
 
         function filterRows(status) {
-            if (status) {
-                localStorage.setItem('mededelingenFilter', status);
-                const select = document.getElementById('statusFilter');
-                if (select) select.value = status;
-            }
-            status = status || localStorage.getItem('mededelingenFilter') || 'active';
+            const valid = ['all', 'active', 'past', 'future'];
+            status = (status || localStorage.getItem('mededelingenFilter') || 'active').toLowerCase();
+            if (!valid.includes(status)) status = 'active';
+            localStorage.setItem('mededelingenFilter', status);
+            const select = document.getElementById('statusFilter');
+            if (select) select.value = status;
             document.querySelectorAll('tbody tr[data-status]').forEach(row => {
                 if (status === 'all' || row.dataset.status === status) {
                     row.classList.remove('hidden');
@@ -228,7 +228,8 @@
         function closeModal() { document.getElementById('editModal').classList.add('hidden'); }
 
         function openEdit(idx) {
-            const row = ROWS[idx];
+            const row = ROWS.find(r => r.row_index == idx);
+            if (!row) return;
             document.getElementById('modalTitle').textContent = `Bewerk rij ${row.row_index}`;
             document.getElementById('m_index').value = row.row_index;
             document.getElementById('m_cat').value = row.category;

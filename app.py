@@ -404,7 +404,7 @@ def mededelingen_upload_image():
     existing = meta.get(key)
     if isinstance(existing, dict):
         existing = [existing]
-    elif not existing:
+    elif not isinstance(existing, list):
         existing = []
     existing.extend(saved)
     meta[key] = existing
@@ -433,6 +433,8 @@ def mededelingen_delete_image():
     if recs:
         if isinstance(recs, dict):
             recs = [recs]
+        elif not isinstance(recs, list):
+            recs = []
         target = next((r for r in recs if r.get('filename') == filename), None)
         if target:
             path = os.path.join(MEDEDELINGEN_IMG_DIR, str(year), str(row_index), target['filename'])

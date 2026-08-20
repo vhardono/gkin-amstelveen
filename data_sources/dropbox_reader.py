@@ -305,23 +305,25 @@ class DropboxExcelReader:
                 nl_title, nl_body = _split_title_body(nl)
                 id_title, id_body = _split_title_body(id_)
 
-                # image sidecar (single dict legacy or list)
+                # image sidecar (single dict legacy or list of dicts)
                 meta = _mededelingen_image_meta()
                 key = f"{year}-{idx}"
-                recs = meta.get(key)
+                raw = meta.get(key)
+                recs = []
+                if isinstance(raw, dict):
+                    recs = [raw]
+                elif isinstance(raw, list):
+                    recs = raw
                 images = []
-                if recs:
-                    if isinstance(recs, dict):
-                        recs = [recs]
-                    for rec in recs:
-                        if not rec or not rec.get('filename'):
-                            continue
-                        images.append({
-                            'filename': rec['filename'],
-                            'name': rec.get('original_name', rec['filename']),
-                            'url': f"/mededelingen-image/{year}/{idx}/{rec['filename']}",
-                            'path': os.path.join(MEDEDELINGEN_IMG_DIR, str(year), str(idx), rec['filename']),
-                        })
+                for rec in recs:
+                    if not isinstance(rec, dict) or not rec.get('filename'):
+                        continue
+                    images.append({
+                        'filename': rec['filename'],
+                        'name': rec.get('original_name', rec['filename']),
+                        'url': f"/mededelingen-image/{year}/{idx}/{rec['filename']}",
+                        'path': os.path.join(MEDEDELINGEN_IMG_DIR, str(year), str(idx), rec['filename']),
+                    })
                 image_url = images[0]['url'] if images else None
                 image_path = images[0]['path'] if images else None
                 image_name = images[0]['name'] if images else None
@@ -560,7 +562,7 @@ class DropboxExcelReader:
             if remove:
                 image_recs = [rec] if isinstance(rec, dict) else (rec if isinstance(rec, list) else [])
                 for img in image_recs:
-                    if not img or not img.get('filename'):
+                    if not isinstance(img, dict) or not img.get('filename'):
                         continue
                     path = os.path.join(MEDEDELINGEN_IMG_DIR, str(year), str(idx), img['filename'])
                     try:
