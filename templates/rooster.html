@@ -36,7 +36,8 @@
         <select id="dateSelect" onchange="renderView()"
                 class="flex-1 min-w-0 bg-white border border-gray-200 rounded-lg px-3 py-2.5 text-sm shadow-sm"></select>
         <div id="editBar" class="hidden flex-1 min-w-0 flex items-center justify-between">
-            <span class="text-sm font-bold text-gray-700" data-i18n="tr.bijbellezers">Bijbellezers</span>
+            <select id="dutySelect" onchange="dutyField = this.value; renderEdit()"
+                    class="text-sm font-bold text-gray-700 bg-white border border-gray-200 rounded-lg px-2 py-2 shadow-sm min-w-0"></select>
             <div class="flex gap-1.5">
                 <button id="saveBtn" onclick="saveAll(this)"
                         class="w-16 text-center bg-gkin-green text-white font-semibold rounded-lg py-2 text-xs"
@@ -63,6 +64,7 @@
 
     <div id="viewMode"></div>
     <div id="editMode" class="hidden"></div>
+    <datalist id="roosterNames"></datalist>
 
     <p id="emptyState" class="hidden text-center text-sm text-gray-500 py-8" data-i18n="rooster.no_services">
         Geen diensten gevonden</p>
@@ -116,6 +118,42 @@ const fmtBijbel = (id, nl) =>
 
 let editMode = false;
 
+// Editable duties: bijbellezers default; others selectable via dropdown.
+const EDITABLE_DUTIES = [
+    ['bijbellezers','tr.bijbellezers','Bijbellezers'],
+    ['beamer',      'tr.beamer',      'Beamer'],
+    ['muziek',      'tr.muziek',      'Muziek'],
+    ['voorzangers', 'tr.voorzangers', 'Voorzangers'],
+    ['multimedia',  'tr.multimedia',  'Multimedia'],
+    ['knd',         'tr.knd',         'KND'],
+    ['tieners',     'tr.tieners',     'Tieners'],
+];
+let dutyField = 'bijbellezers';
+const dutyLabel = () => (EDITABLE_DUTIES.find(([f]) => f === dutyField) || [,'',''])[2];
+
+function fillDutySelect() {
+    const sel = document.getElementById('dutySelect');
+    sel.innerHTML = EDITABLE_DUTIES.map(([f,k,fb]) =>
+        `<option value="${f}"${f === dutyField ? ' selected' : ''}>${T(k, fb)}</option>`).join('');
+}
+
+// Auto-suggest names: everyone already appearing in the roster (any duty).
+function fillNameSuggestions() {
+    const names = new Set();
+    for (const s of SERVICES) {
+        for (const f of ['predikant','ovd','1eo','beamer','muziek','voorzangers',
+                         'multimedia','knd','tieners','bijbellezers']) {
+            (s[f] || '').split(',').forEach(part => {
+                const n = part.replace(/\s*\((id|nl)\)\s*$/i, '').trim();
+                if (n) names.add(n);
+            });
+        }
+    }
+    document.getElementById('roosterNames').innerHTML =
+        [...names].sort((a, b) => a.localeCompare(b))
+                  .map(n => `<option value="${esc(n)}"></option>`).join('');
+}
+
 function fillSelect() {
     const sel = document.getElementById('dateSelect');
     sel.innerHTML = SERVICES.map((s, i) => ({s, i})).filter(x => !x.s.past)
@@ -143,6 +181,7 @@ function renderView() {
 function renderEdit() {
     const wrap = document.getElementById('editMode');
     wrap.innerHTML = SERVICES.map(s => {
+        const pastCell = `<div class="flex-1 text-xs text-gray-600">${esc(s[dutyField]) || '—'}</div>`;
         if (s.past) return `
         <div class="bg-gray-100 rounded-lg px-2.5 py-2 mb-1.5 opacity-70">
             <div class="flex items-center gap-3">
@@ -150,10 +189,24 @@ function renderEdit() {
                     <div class="text-xs font-bold text-gray-500 whitespace-nowrap">${shortDate(s)}</div>
                     <div class="text-[10px] text-gray-400">${dienstOf(s)}</div>
                 </div>
-                <div class="flex-1 text-xs text-gray-600">${esc(s.bijbellezers) || '—'}</div>
+                ${pastCell}
             </div>
         </div>`;
-        const p = parseBijbel(s.bijbellezers);
+        let inputs;
+        if (dutyField === 'bijbellezers') {
+            const p = parseBijbel(s.bijbellezers);
+            inputs = `<div class="flex-1 grid grid-cols-2 gap-2">
+                    <input class="bij-id border rounded px-2 py-1.5 text-sm" list="roosterNames"
+                           placeholder="${T('rooster.reader_id','Indonesisch')}" value="${esc(p.id)}">
+                    <input class="bij-nl border rounded px-2 py-1.5 text-sm" list="roosterNames"
+                           placeholder="${T('rooster.reader_nl','Nederlands')}" value="${esc(p.nl)}">
+                </div>`;
+        } else {
+            inputs = `<div class="flex-1">
+                    <input class="duty-val w-full border rounded px-2 py-1.5 text-sm" list="roosterNames"
+                           placeholder="${dutyLabel()}" value="${esc(s[dutyField])}">
+                </div>`;
+        }
         return `
         <div class="bg-white rounded-lg shadow-sm px-2.5 py-2 mb-1.5" data-date="${s.value}">
             <div class="flex items-center gap-3">
@@ -161,12 +214,7 @@ function renderEdit() {
                     <div class="text-xs font-bold text-gray-800 whitespace-nowrap">${shortDate(s)}</div>
                     <div class="text-[10px] text-gkin-green font-semibold">${dienstOf(s)}</div>
                 </div>
-                <div class="flex-1 grid grid-cols-2 gap-2">
-                    <input class="bij-id border rounded px-2 py-1.5 text-sm"
-                           placeholder="${T('rooster.reader_id','Indonesisch')}" value="${esc(p.id)}">
-                    <input class="bij-nl border rounded px-2 py-1.5 text-sm"
-                           placeholder="${T('rooster.reader_nl','Nederlands')}" value="${esc(p.nl)}">
-                </div>
+                ${inputs}
             </div>
         </div>`;
     }).join('');
@@ -206,22 +254,27 @@ async function saveAll(btn) {
     let failed = [];
     for (const card of document.querySelectorAll('#editMode [data-date]')) {
         const date = card.dataset.date;
-        const idInput = card.querySelector('.bij-id');
-        if (!idInput) continue;   // read-only past row
-        const id = idInput.value.trim();
-        const nl = card.querySelector('.bij-nl').value.trim();
-        const value = fmtBijbel(id, nl);
+        let value;
+        if (dutyField === 'bijbellezers') {
+            const idInput = card.querySelector('.bij-id');
+            if (!idInput) continue;   // read-only past row
+            value = fmtBijbel(idInput.value.trim(), card.querySelector('.bij-nl').value.trim());
+        } else {
+            const input = card.querySelector('.duty-val');
+            if (!input) continue;
+            value = input.value.trim();
+        }
         const s = SERVICES.find(x => x.value === date);
-        if (s && s.bijbellezers === value) continue;  // unchanged
+        if (s && (s[dutyField] || '') === value) continue;  // unchanged
         card.classList.add('ring-2', 'ring-amber-300');   // saving indicator
         try {
-            const r = await fetch('/rooster/bijbellezers', {
+            const r = await fetch('/rooster/duty', {
                 method: 'POST', headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({date, value, ...body_code})});
+                body: JSON.stringify({date, field: dutyField, value, ...body_code})});
             const data = await r.json();
             card.classList.remove('ring-amber-300');
             if (data.ok) {
-                if (s) s.bijbellezers = value;
+                if (s) s[dutyField] = value;
                 card.classList.add('ring-green-400');    // saved flash
                 setTimeout(() => card.classList.remove('ring-2','ring-green-400'), 1200);
             } else {
@@ -254,9 +307,10 @@ function setLang(lang) {
 
 function render() {
     document.getElementById('emptyState').classList.toggle('hidden', SERVICES.length > 0);
-    fillSelect(); renderView();
+    fillSelect(); renderView(); fillDutySelect();
     if (editMode) renderEdit();
 }
+fillNameSuggestions();
 
 document.addEventListener('gkin:langchange', e => {
     if (e.detail?.lang && e.detail.lang !== curLang) { curLang = e.detail.lang; render(); }

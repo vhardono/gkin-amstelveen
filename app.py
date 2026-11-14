@@ -775,22 +775,27 @@ def rooster_persoon_page():
 
 
 @app.route('/rooster/bijbellezers', methods=['POST'])
+@app.route('/rooster/duty', methods=['POST'])
 def rooster_bijbellezers_save():
-    """Public endpoint to update the Bijbellezers field for a service date.
-    Only bijbellezers is writable, only for today/future dates; an optional
-    shared edit code (ROOSTER_EDIT_CODE) can be enforced via env."""
+    """Public endpoint to update an editable duty field for a service date.
+    Writable fields: bijbellezers, beamer, muziek, voorzangers, multimedia,
+    knd, tieners. Only for today/future dates; an optional shared edit code
+    (ROOSTER_EDIT_CODE) can be enforced via env."""
     data = request.get_json(silent=True) or {}
     if ROOSTER_EDIT_CODE and data.get('code') != ROOSTER_EDIT_CODE:
         return jsonify({'ok': False, 'error': 'Ongeldige bewerkcode'}), 403
+    field = (data.get('field') or 'bijbellezers').strip().lower()
+    if field not in DropboxExcelReader.DUTY_COLUMNS:
+        return jsonify({'ok': False, 'error': 'Dit veld kan niet bewerkt worden'}), 400
     date_str = (data.get('date') or '').strip()
-    value = (data.get('value') or '').strip()[:200]
+    value = (data.get('value') or '').strip()[:400]
     try:
         service_date = datetime.strptime(date_str, '%Y-%m-%d')
     except Exception:
         return jsonify({'ok': False, 'error': 'Ongeldige datum'}), 400
     if service_date.date() < datetime.now().date():
         return jsonify({'ok': False, 'error': 'Alleen toekomstige diensten zijn aanpasbaar'}), 400
-    result = DropboxExcelReader().save_takenrooster_bijbellezers(service_date, value)
+    result = DropboxExcelReader().save_takenrooster_duty(service_date, field, value)
     if result.get('ok'):
         global _takenrooster_cache
         _takenrooster_cache = None

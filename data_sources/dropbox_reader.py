@@ -243,8 +243,28 @@ class DropboxExcelReader:
 
     def save_takenrooster_bijbellezers(self, service_date, value: str) -> Dict[str, Any]:
         """Write the Bijbellezers value (column N / BIJBELEZERS) for a service date."""
+        return self.save_takenrooster_duty(service_date, 'bijbellezers', value)
+
+    # Editable duty fields -> (accepted header labels, fallback 1-based column).
+    # Fallbacks match the pandas positional defaults used when reading.
+    DUTY_COLUMNS = {
+        'knd':          (('KND', 'K N D', 'K.N.D.'), 8),
+        'tieners':      (('TIENERS',), 9),
+        'beamer':       (('BEAMER',), 10),
+        'muziek':       (('MUZIEK',), 11),
+        'voorzangers':  (('VOORZANGERS', 'VOORZANGER'), 12),
+        'multimedia':   (('MULTIMEDIA', 'MULTI MEDIA'), 13),
+        'bijbellezers': (('BIJBELEZERS',), 14),
+    }
+
+    def save_takenrooster_duty(self, service_date, field: str, value: str) -> Dict[str, Any]:
+        """Write one editable duty field for a service date in the CURRENT sheet."""
         from openpyxl import load_workbook
         import dropbox
+        field = (field or '').strip().lower()
+        if field not in self.DUTY_COLUMNS:
+            return {'ok': False, 'error': f'Veld "{field}" kan niet bewerkt worden'}
+        labels, default_col = self.DUTY_COLUMNS[field]
         year = service_date.year
         path = TAKENROOSTER_PATH_TEMPLATE.format(year=year)
         try:
@@ -262,8 +282,9 @@ class DropboxExcelReader:
             if not header_row:
                 return {'ok': False, 'error': 'Header row not found in CURRENT sheet'}
 
-            bijbel_col = next((idx for idx, h in enumerate(headers, start=1)
-                               if h.replace('\n', ' ').strip() == 'BIJBELEZERS'), 14)
+            bijbel_col = next(
+                (idx for idx, h in enumerate(headers, start=1)
+                 if h.replace('\n', ' ').strip() in labels), default_col)
             datum_col = headers.index('DATUM') + 1 if 'DATUM' in headers else 2
 
             target_row = None
