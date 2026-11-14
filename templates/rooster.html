@@ -41,7 +41,7 @@
                 <button id="saveBtn" onclick="saveAll(this)"
                         class="w-16 text-center bg-gkin-green text-white font-semibold rounded-lg py-2 text-xs"
                         data-i18n="rooster.save">Opslaan</button>
-                <button onclick="toggleMode()"
+                <button onclick="editBack()"
                         class="w-16 text-center text-xs font-semibold text-gkin-green border border-gkin-green rounded-lg py-2"
                         data-i18n="rooster.back">Terug</button>
             </div>
@@ -172,6 +172,14 @@ function renderEdit() {
     }).join('');
 }
 
+// Deep-linked into edit mode (e.g. /rooster?edit=1): Terug returns to the
+// previous page; toggled on-page it just switches back to view mode.
+const DEEP_EDIT = new URLSearchParams(location.search).get('edit') === '1';
+function editBack() {
+    if (DEEP_EDIT && history.length > 1) { history.back(); return; }
+    toggleMode();
+}
+
 function toggleMode() {
     editMode = !editMode;
     document.getElementById('viewMode').classList.toggle('hidden', editMode);
@@ -254,7 +262,7 @@ document.addEventListener('gkin:langchange', e => {
     if (e.detail?.lang && e.detail.lang !== curLang) { curLang = e.detail.lang; render(); }
 });
 render();
-if (new URLSearchParams(location.search).get('edit') === '1' && !editMode) toggleMode();
+if (DEEP_EDIT && !editMode) toggleMode();
 </script>
 </body>
 </html>
