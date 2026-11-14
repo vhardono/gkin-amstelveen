@@ -90,6 +90,7 @@
 <script>
 const RAW_TEXT = {{ text | tojson }};
 const SOURCE_NAME = {{ source_name | tojson }};
+let MODIFIED = {{ modified | tojson }};
 const LOAD_ERROR = {{ load_error | tojson }};
 const EDIT_CODE_REQUIRED = {{ 'true' if edit_code_required else 'false' }};
 const codeInput = document.getElementById('editCode');
@@ -161,7 +162,13 @@ async function saveText(btn) {
         const data = await r.json();
         if (data.ok) {
             currentText = body.text;
+            const now = new Date();
+            const p = n => String(n).padStart(2, '0');
+            MODIFIED = `${p(now.getDate())}-${p(now.getMonth()+1)}-${now.getFullYear()} ${p(now.getHours())}:${p(now.getMinutes())}`;
             renderContent(currentText);
+            document.getElementById('sourceLine').textContent =
+                `${T('gebed.source', 'Bron')}: ${SOURCE_NAME} (SharePoint)` +
+                ` — ${T('gebed.updated', 'Bijgewerkt')}: ${MODIFIED}`;
             btn.textContent = '✓';
             setTimeout(() => { toggleMode(); btn.textContent = orig; }, 800);
         } else {
@@ -185,7 +192,8 @@ function render() {
         e.classList.remove('hidden');
     }
     document.getElementById('sourceLine').textContent =
-        SOURCE_NAME ? `${T('gebed.source', 'Bron')}: ${SOURCE_NAME} (SharePoint)` : '';
+        SOURCE_NAME ? `${T('gebed.source', 'Bron')}: ${SOURCE_NAME} (SharePoint)` +
+        (MODIFIED ? ` — ${T('gebed.updated', 'Bijgewerkt')}: ${MODIFIED}` : '') : '';
     document.getElementById('editHint').textContent =
         T('gebed.edit_hint', 'Wijzigingen worden opgeslagen in het bronbestand op SharePoint.');
     renderContent(currentText);

@@ -34,6 +34,24 @@ def _storage(dbx=None):
         return _graph_drive
     return dbx
 
+
+def _format_modified(value) -> str:
+    """Format a SharePoint/Dropbox last-modified value as local time (Amsterdam)."""
+    if not value:
+        return ''
+    try:
+        from zoneinfo import ZoneInfo
+        ams = ZoneInfo('Europe/Amsterdam')
+        if isinstance(value, str):
+            dt = datetime.fromisoformat(value.replace('Z', '+00:00'))
+        else:
+            dt = value
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=ZoneInfo('UTC'))
+        return dt.astimezone(ams).strftime('%d-%m-%Y %H:%M')
+    except Exception:
+        return ''
+
 MEDEDELINGEN_IMG_DIR = os.getenv('MEDEDELINGEN_IMAGES_DIR',
                                  '/data/mededelingen_images' if os.path.isdir('/data') else './mededelingen_images')
 MEDEDELINGEN_IMG_META = os.path.join(MEDEDELINGEN_IMG_DIR, 'images.json')
@@ -284,7 +302,14 @@ class DropboxExcelReader:
             path = GEBEDSPUNTEN_PATH_TEMPLATE.format(year=y)
             try:
                 _, response = _storage(self.dbx).files_download(path)
+                modified = ''
+                try:
+                    meta = _storage(self.dbx).files_get_metadata(path)
+                    modified = _format_modified(getattr(meta, 'server_modified', ''))
+                except Exception:
+                    pass
                 return {'ok': True, 'name': os.path.basename(path),
+                        'modified': modified,
                         'text': response.content.decode('utf-8', errors='replace')}
             except Exception as e:
                 last_err = e

@@ -806,6 +806,7 @@ def rooster_gebedspunten_page():
     return render_template('gebedspunten.html',
                            text=result.get('text', ''),
                            source_name=result.get('name', ''),
+                           modified=result.get('modified', ''),
                            load_error=None if result.get('ok') else result.get('error'),
                            edit_code_required=bool(ROOSTER_EDIT_CODE))
 
