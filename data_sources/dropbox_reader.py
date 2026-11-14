@@ -18,7 +18,7 @@ from config import Config
 TAKENROOSTER_PATH = '/# Kerkbode GKIN Amstelveen/Rooster/Takenrooster_GKIN_Amstelveen_2026.xlsx'
 TAKENROOSTER_PATH_TEMPLATE = '/# Kerkbode GKIN Amstelveen/Rooster/Takenrooster_GKIN_Amstelveen_{year}.xlsx'
 MEDEDELINGEN_PATH_TEMPLATE = '/# Kerkbode GKIN Amstelveen/{year}/Mededelingen Overzicht.xlsx'
-GEBEDSPUNTEN_PATH = '/working folder/Gebedspunten.txt'
+GEBEDSPUNTEN_PATH_TEMPLATE = '/Gebedspunten/Gebedspunten_{year}.txt'
 
 STORAGE_BACKEND = os.environ.get('STORAGE_BACKEND', 'dropbox')
 _graph_drive = None
@@ -276,21 +276,30 @@ class DropboxExcelReader:
             return {'ok': False, 'error': str(e)}
 
     def get_gebedspunten(self) -> Dict[str, Any]:
-        """Read the Gebedspunten.txt prayer-points file from storage."""
-        try:
-            _, response = _storage(self.dbx).files_download(GEBEDSPUNTEN_PATH)
-            return {'ok': True, 'path': GEBEDSPUNTEN_PATH,
-                    'text': response.content.decode('utf-8', errors='replace')}
-        except Exception as e:
-            print(f'Gebedspunten: read failed: {e}')
-            return {'ok': False, 'error': str(e), 'text': ''}
+        """Read the Gebedspunten_<year>.txt prayer-points file from storage.
+        Tries the current year, then the previous one (like the takenrooster)."""
+        year = datetime.now().year
+        last_err = None
+        for y in (year, year - 1):
+            path = GEBEDSPUNTEN_PATH_TEMPLATE.format(year=y)
+            try:
+                _, response = _storage(self.dbx).files_download(path)
+                return {'ok': True, 'name': os.path.basename(path),
+                        'text': response.content.decode('utf-8', errors='replace')}
+            except Exception as e:
+                last_err = e
+        print(f'Gebedspunten: read failed: {last_err}')
+        return {'ok': False, 'error': str(last_err), 'text': ''}
 
-    def save_gebedspunten(self, text: str) -> Dict[str, Any]:
-        """Overwrite Gebedspunten.txt with the edited content (UTF-8)."""
+    def save_gebedspunten(self, text: str, name: str) -> Dict[str, Any]:
+        """Overwrite the Gebedspunten_<year>.txt source file (UTF-8)."""
         import dropbox
+        if not re.fullmatch(r'Gebedspunten_\d{4}\.txt', name or ''):
+            return {'ok': False, 'error': 'Ongeldige bestandsnaam'}
+        path = f'/Gebedspunten/{name}'
         try:
             _storage(self.dbx).files_upload(
-                text.encode('utf-8'), GEBEDSPUNTEN_PATH,
+                text.encode('utf-8'), path,
                 mode=dropbox.files.WriteMode.overwrite)
             return {'ok': True}
         except Exception as e:

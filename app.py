@@ -805,6 +805,7 @@ def rooster_gebedspunten_page():
     result = DropboxExcelReader().get_gebedspunten()
     return render_template('gebedspunten.html',
                            text=result.get('text', ''),
+                           source_name=result.get('name', ''),
                            load_error=None if result.get('ok') else result.get('error'),
                            edit_code_required=bool(ROOSTER_EDIT_CODE))
 
@@ -816,7 +817,8 @@ def rooster_gebedspunten_save():
     if ROOSTER_EDIT_CODE and data.get('code') != ROOSTER_EDIT_CODE:
         return jsonify({'ok': False, 'error': 'Ongeldige bewerkcode'}), 403
     text = (data.get('text') or '')[:20000]
-    return jsonify(DropboxExcelReader().save_gebedspunten(text))
+    name = (data.get('name') or '').strip()
+    return jsonify(DropboxExcelReader().save_gebedspunten(text, name))
 
 
 @app.route('/takenrooster-iframe')
