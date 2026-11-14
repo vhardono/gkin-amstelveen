@@ -9,9 +9,10 @@
     <style>html{overflow-y:scroll}.text-gkin-green{color:#3A7C22}.bg-gkin-green{background:#3A7C22}.bg-gkin-dark{background:#2d6119}</style>
 </head>
 <body class="bg-gray-50 min-h-screen">
+{% if not embed %}
 <header class="bg-gkin-green shadow-md">
     <div class="max-w-2xl mx-auto px-6 py-5 flex items-center gap-4">
-        <img src="/static/logo2.png" alt="GKIN" class="h-12 w-12 object-contain shrink-0">
+        <a href="/" class="shrink-0"><img src="/static/logo2.png" alt="GKIN" class="h-12 w-12 object-contain"></a>
         <div class="flex-1 min-w-0">
             <h1 class="text-white text-2xl font-bold tracking-tight whitespace-nowrap" data-i18n="rooster.title">Takenrooster</h1>
             <p class="text-green-100 text-sm mt-0.5 whitespace-nowrap truncate" data-i18n="rooster.my_duties">Mijn diensten</p>
@@ -23,16 +24,23 @@
         </div>
     </div>
 </header>
+{% endif %}
 
-<div class="max-w-2xl mx-auto px-6 py-6">
+<div class="{% if embed %}px-2 py-2{% else %}max-w-2xl mx-auto px-6 py-6{% endif %}">
     <div class="flex items-center gap-2 mb-3">
         <input id="nameInput" list="nameList" oninput="renderDuties()"
                data-i18n-placeholder="rooster.choose_name" placeholder="Typ je naam"
                class="flex-1 min-w-0 bg-white border border-gray-200 rounded-lg px-3 py-2.5 text-sm shadow-sm">
         <datalist id="nameList"></datalist>
+        {% if embed %}
+        <a href="/takenrooster-iframe"
+           class="w-16 shrink-0 text-center text-xs font-semibold text-gkin-green border border-gkin-green rounded-lg py-2.5"
+           data-i18n="rooster.back">Terug</a>
+        {% else %}
         <a href="/rooster" onclick="if (history.length > 1) { history.back(); return false; }"
            class="w-16 shrink-0 text-center text-xs font-semibold text-gkin-green border border-gkin-green rounded-lg py-2.5"
            data-i18n="rooster.back">Terug</a>
+        {% endif %}
     </div>
 
     <div id="duties"></div>
@@ -130,6 +138,15 @@ document.addEventListener('gkin:langchange', e => {
     if (e.detail?.lang && e.detail.lang !== curLang) { curLang = e.detail.lang; render(); }
 });
 render();
+{% if embed %}
+// Auto-resize parent iframe to fit content
+function resizeIframe() {
+    window.parent.postMessage({ type: 'resize', height: document.body.scrollHeight }, '*');
+}
+window.addEventListener('load', resizeIframe);
+window.addEventListener('resize', resizeIframe);
+new MutationObserver(resizeIframe).observe(document.body, {childList: true, subtree: true});
+{% endif %}
 </script>
 </body>
 </html>

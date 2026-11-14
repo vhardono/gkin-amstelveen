@@ -765,13 +765,15 @@ def rooster_page():
     """Public mobile-friendly duty roster. Unauthenticated but unindexed
     (robots.txt already disallows the site; page also carries noindex)."""
     return render_template('rooster.html', services=_rooster_services(),
-                           edit_code_required=bool(ROOSTER_EDIT_CODE))
+                           edit_code_required=bool(ROOSTER_EDIT_CODE),
+                           embed=request.args.get('embed') == '1')
 
 
 @app.route('/rooster/persoon')
 def rooster_persoon_page():
     """Public 'my duties' lookup: pick a name, see upcoming duty dates/roles."""
-    return render_template('rooster_persoon.html', services=_rooster_services())
+    return render_template('rooster_persoon.html', services=_rooster_services(),
+                           embed=request.args.get('embed') == '1')
 
 
 @app.route('/rooster/bijbellezers', methods=['POST'])
