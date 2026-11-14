@@ -70,6 +70,7 @@ class SenderCampaignGenerator:
             'vanuit het Kerkgebouw in Amstelveen': 'AM',
             'Amstelveen': 'AM',
             'Kerkgebouw in Den Haag': 'DH',
+            'Marcuskerk in Den Haag': 'DH',
             'vanuit het Kerkgebouw in Den Haag': 'DH',
             'vanuit de Marcuskerk in Den Haag': 'DH',
             'Den Haag': 'DH',
@@ -172,7 +173,8 @@ class SenderCampaignGenerator:
                      youtube_link: str = "", liturgie_url: str = "",
                      collecte_url: str = "", qr_image_url: str = "",
                      ole_location: str = "", ole_time: str = "10:00",
-                     collecte_ovv: str = "") -> str:
+                     collecte_ovv: str = "",
+                     second_qr_text: str = "", second_qr_image: str = "") -> str:
         """Generate HTML email for OLE service."""
         months = ['januari', 'februari', 'maart', 'april', 'mei', 'juni',
                   'juli', 'augustus', 'september', 'oktober', 'november', 'december']
@@ -214,10 +216,67 @@ class SenderCampaignGenerator:
                 except Exception:
                     pass
 
+        # Handle second QR image (optional)
+        second_qr_img = ""
+        if second_qr_image:
+            if second_qr_image.startswith('data:'):
+                second_qr_img = f'<img src="{second_qr_image}" style="max-width:200px;border-radius:8px;">'
+            elif second_qr_image.startswith('http'):
+                try:
+                    import requests as _req
+                    r = _req.get(second_qr_image, timeout=10)
+                    r.raise_for_status()
+                    ext = second_qr_image.rsplit('.', 1)[-1].lower().split('?')[0]
+                    mime = {'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'gif': 'image/gif'}.get(ext, 'image/png')
+                    b64 = base64.b64encode(r.content).decode('utf-8')
+                    second_qr_img = f'<img src="data:{mime};base64,{b64}" style="max-width:200px;border-radius:8px;">'
+                except Exception:
+                    second_qr_img = f'<img src="{second_qr_image}" style="max-width:200px;border-radius:8px;">'
+            elif second_qr_image.startswith('/uploads/'):
+                try:
+                    upload_dir = os.environ.get('UPLOAD_DIR', '/app/uploads')
+                    full_path = os.path.join(upload_dir, second_qr_image.replace('/uploads/', ''))
+                    if os.path.exists(full_path):
+                        with open(full_path, 'rb') as f:
+                            b64 = base64.b64encode(f.read()).decode('utf-8')
+                            ext = os.path.splitext(full_path)[1].lower()
+                            mime = 'image/png' if ext == '.png' else 'image/jpeg'
+                            second_qr_img = f'<img src="data:{mime};base64,{b64}" style="max-width:200px;border-radius:8px;">'
+                except Exception:
+                    pass
+
         bible_suffix = f" genomen uit {bible_verse}" if bible_verse else ""
         theme_html = f'<p style="margin:0 0 10px 0;">Het thema is: <strong>"{theme}"</strong>{bible_suffix}.</p>' if theme else ""
         collecte_ovv_text = collecte_ovv if collecte_ovv else f"Collecte OLE {date_numeric}"
         youtube_href = ('https://www.' + re.sub(r'^https?://(?:www\.)?', '', youtube_link)) if youtube_link else '#'
+
+        # Adjust collecte text based on whether second QR is provided
+        collecte_count = "2 keer" if (second_qr_text or second_qr_image) else "1 keer"
+        collecte_prefix = "De eerste collecte is" if (second_qr_text or second_qr_image) else "De collecte is"
+
+        # Generate second QR section if provided
+        second_qr_section = ""
+        if second_qr_text or second_qr_image:
+            # Auto-convert URLs in text to clickable links
+            second_qr_text_display = second_qr_text if second_qr_text else ''
+            if second_qr_text:
+                import re as _re
+                # Convert http/https URLs to clickable links
+                url_pattern = r'(https?://[^\s]+)'
+                second_qr_text_display = _re.sub(url_pattern, r'<a href="\1" style="color:#2CB191;text-decoration:underline;">\1</a>', second_qr_text_display)
+            
+            second_qr_section = f"""<table width="100%" cellpadding="0" cellspacing="0" style="margin:25px 0 10px 0;">
+    <tr>
+        <td align="left" style="text-align:left;">
+            <p style="margin:0 0 10px 0;text-align:left;">{second_qr_text_display}</p>
+        </td>
+    </tr>
+    <tr>
+        <td align="center">
+            {second_qr_img if second_qr_image else ''}
+        </td>
+    </tr>
+</table>"""
 
         return f"""<!DOCTYPE html>
 <html lang="nl">
@@ -296,7 +355,7 @@ class SenderCampaignGenerator:
     </tr>
 </table>
 <!-- Collecte -->
-<p style="margin:0 0 10px 0;">In deze dienst wordt er 1 keer gecollecteerd.<br><br>De collecte is bestemd voor Landelijke kas (OLE). U kunt dit overmaken via: <a href="{collecte_url}" style="color:#2CB191;text-decoration:underline;">{collecte_url}</a></p>
+<p style="margin:0 0 10px 0;">In deze dienst wordt er {collecte_count} gecollecteerd.<br><br>{collecte_prefix} bestemd voor Landelijke kas (OLE). U kunt dit overmaken via: <a href="{collecte_url}" style="color:#2CB191;text-decoration:underline;">{collecte_url}</a></p>
 <p style="margin:0 0 25px 0;">of door overmaking aan GEREJA KRISTEN INDONESIA NEDERLAND, IBAN: NL19 INGB 0002 6182 90 o.v.v. {collecte_ovv_text}.</p>
 <!-- QR Code centered -->
 <table width="100%" cellpadding="0" cellspacing="0" style="margin:10px 0;">
@@ -308,6 +367,8 @@ class SenderCampaignGenerator:
         <td width="160"></td>
     </tr>
 </table>
+<!-- Second QR Code (optional) -->
+{second_qr_section}
 <!-- Signature -->
 <p style="margin:0 0 10px 0;">Wij wensen u allen een gezegende dienst toe.<br></p>
 <p style="margin:0 0 10px 0;">Met broederlijke groet in Christus,</p>
@@ -526,7 +587,8 @@ class SenderCampaignGenerator:
                                youtube_link: str = "", liturgie_url: str = "",
                                collecte_url: str = "",
                                ole_location: str = "", ole_time: str = "10:00",
-                               collecte_ovv: str = "", recipient_name: str = "Monica") -> str:
+                               collecte_ovv: str = "", recipient_name: str = "Monica",
+                               second_qr_text: str = "", second_qr_image: str = "") -> str:
         """Generate a plain-text AM OLE announcement email draft (QR image must be attached manually)."""
         months = ['januari', 'februari', 'maart', 'april', 'mei', 'juni',
                   'juli', 'augustus', 'september', 'oktober', 'november', 'december']
@@ -547,7 +609,7 @@ class SenderCampaignGenerator:
         theme_line = ""
         if theme:
             bible_suffix = f" genomen uit {bible_verse}" if bible_verse else ""
-            theme_line = f"Het thema van deze eredienst is: “{theme}”{bible_suffix}.\n\n"
+            theme_line = f"Het thema van deze eredienst is: \"{theme}\"{bible_suffix}.\n\n"
 
         # YouTube line
         youtube_line = ""
@@ -574,6 +636,13 @@ class SenderCampaignGenerator:
 
         qr_filename = f"{ovv}.png"
 
+        # Add second QR info if provided
+        second_qr_info = ""
+        if second_qr_text or second_qr_image:
+            second_qr_info = f"\n\nExtra informatie: {second_qr_text if second_qr_text else ''}"
+            if second_qr_image:
+                second_qr_info += f"\nExtra QR code bijgevoegd."
+
         return (
             f"Beste {recipient_name},\n\n"
             f"Bijgaand de aankondiging, liturgie van de GKIN Online Landelijke Eredienst van a.s. {date_str}.\n\n"
@@ -589,7 +658,8 @@ class SenderCampaignGenerator:
             f"{youtube_line}"
             f"{liturgie_line}\n"
             f"{collecte_lines}\n"
-            f"{qr_filename}\n\n"
+            f"{qr_filename}\n"
+            f"{second_qr_info}\n\n"
             f"Wij wensen u allen een gezegende dienst toe.\n\n"
             f"————————————————————————————————————————"
         )

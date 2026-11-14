@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Gebedspunten — GKIN Amstelveen</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        html{overflow-y:scroll}.text-gkin-green{color:#3A7C22}.bg-gkin-green{background:#3A7C22}.bg-gkin-dark{background:#2d6119}
+        @media print {
+            .no-print{display:none !important}
+            body{background:#fff !important}
+            #printArea{box-shadow:none !important;border:none !important;padding:0 !important}
+        }
+        @page { margin: 18mm; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+<header class="sticky top-0 z-10 bg-gkin-green shadow-md no-print">
+    <div class="max-w-md mx-auto px-4 py-3 flex items-center gap-3">
+        <img src="/static/logo2.png" alt="GKIN" class="h-10 w-10 object-contain shrink-0">
+        <div class="flex-1 min-w-0">
+            <h1 class="text-white text-lg font-bold tracking-tight whitespace-nowrap" data-i18n="gebed.title">Gebedspunten</h1>
+            <p class="text-green-100 text-xs mt-0.5 whitespace-nowrap truncate" data-i18n="gebed.subtitle">Regio Amstelveen</p>
+        </div>
+        <div class="flex items-center gap-1 bg-gkin-dark rounded-lg p-1">
+            <button class="lang-btn text-xs px-2 py-1 rounded" data-lang="nl">NL</button>
+            <button class="lang-btn text-xs px-2 py-1 rounded" data-lang="id">ID</button>
+            <button class="lang-btn text-xs px-2 py-1 rounded" data-lang="en">EN</button>
+        </div>
+    </div>
+</header>
+
+<div class="max-w-md mx-auto px-3 py-4">
+    {% if edit_code_required %}
+    <div class="no-print mb-3 bg-white rounded-lg shadow-sm p-3 flex items-center gap-2">
+        <label class="text-xs text-gray-600 shrink-0" data-i18n="rooster.edit_code">Bewerkcode</label>
+        <input id="editCode" type="password" class="flex-1 border rounded px-2 py-1 text-sm" placeholder="••••••">
+    </div>
+    {% endif %}
+
+    <div class="no-print flex items-center gap-2 mb-3">
+        <a href="/rooster"
+           class="w-20 text-center text-xs font-semibold text-gkin-green border border-gkin-green rounded-lg py-2.5"
+           data-i18n="gebed.back">Terug</a>
+        <div class="flex-1"></div>
+        <button onclick="window.print()"
+                class="w-20 text-center text-xs font-semibold text-gkin-green border border-gkin-green rounded-lg py-2.5 inline-flex items-center justify-center gap-1"
+                data-i18n="gebed.print">Print</button>
+        <button id="modeBtn" onclick="toggleMode()"
+                class="w-20 text-center bg-gkin-green text-white font-semibold rounded-lg py-2.5 text-xs"
+                data-i18n="gebed.edit">Bewerk</button>
+        <div id="editBar" class="hidden flex-1 justify-end gap-1.5">
+            <button id="saveBtn" onclick="saveText(this)"
+                    class="w-20 text-center bg-gkin-green text-white font-semibold rounded-lg py-2 text-xs"
+                    data-i18n="gebed.save">Opslaan</button>
+            <button onclick="toggleMode()"
+                    class="w-20 text-center text-xs font-semibold text-gkin-green border border-gkin-green rounded-lg py-2"
+                    data-i18n="gebed.cancel">Annuleer</button>
+        </div>
+    </div>
+
+    <div id="viewMode">
+        <div id="printArea" class="bg-white rounded-lg shadow-sm p-4 mb-3">
+            <div class="mb-3 pb-2 border-b border-gray-100">
+                <div class="font-bold text-gkin-green text-sm" data-i18n="gebed.title">Gebedspunten</div>
+                <div class="text-xs text-gray-500" id="sourceLine"></div>
+            </div>
+            <div id="contentView" class="text-sm text-gray-800 leading-relaxed"></div>
+        </div>
+    </div>
+
+    <div id="editMode" class="hidden no-print">
+        <div class="bg-white rounded-lg shadow-sm p-3 mb-3">
+            <textarea id="editArea" rows="24" spellcheck="false"
+                      class="w-full border border-gray-200 rounded-lg p-2.5 text-sm font-mono leading-relaxed focus:outline-none focus:ring-2 focus:ring-gkin-green/30 focus:border-gkin-green"></textarea>
+            <p class="text-[11px] text-gray-400 mt-1.5" data-i18n="gebed.edit_hint">Wijzigingen worden opgeslagen in Gebedspunten.txt op SharePoint.</p>
+        </div>
+    </div>
+
+    <p id="emptyState" class="hidden text-center text-sm text-gray-500 py-8" data-i18n="gebed.empty">
+        Geen gebedspunten gevonden</p>
+    <p id="errorState" class="hidden text-center text-sm text-red-500 py-8"></p>
+</div>
+
+<script src="/static/i18n.js"></script>
+<script>
+const RAW_TEXT = {{ text | tojson }};
+const LOAD_ERROR = {{ load_error | tojson }};
+const EDIT_CODE_REQUIRED = {{ 'true' if edit_code_required else 'false' }};
+const codeInput = document.getElementById('editCode');
+if (codeInput) codeInput.value = localStorage.getItem('rooster_edit_code') || '';
+
+let curLang = localStorage.getItem('gkin_lang') || 'nl';
+const DICT = () => (window.GKIN_I18N && window.GKIN_I18N[curLang]) || {};
+const T = (k, fb) => (DICT()[k] !== undefined ? DICT()[k] : fb);
+const esc = s => (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let currentText = RAW_TEXT;
+let editMode = false;
+
+// Render the plain-text file: "Titel:" lines become bold headers,
+// "- item" lines become bullets, other lines plain paragraphs.
+function renderContent(text) {
+    const wrap = document.getElementById('contentView');
+    const lines = (text || '').split(/\r?\n/);
+    let html = '';
+    let inList = false;
+    for (const raw of lines) {
+        const line = raw.trimEnd();
+        const t = line.trim();
+        if (!t) {
+            if (inList) { html += '</ul>'; inList = false; }
+            html += '<div class="h-2"></div>';
+            continue;
+        }
+        if (t.startsWith('- ')) {
+            if (!inList) { html += '<ul class="list-disc pl-5 space-y-0.5 mb-1">'; inList = true; }
+            html += `<li>${esc(t.slice(2))}</li>`;
+            continue;
+        }
+        if (inList) { html += '</ul>'; inList = false; }
+        if (t.endsWith(':')) {
+            html += `<div class="font-bold text-gray-900 mt-3 first:mt-0">${esc(t)}</div>`;
+        } else {
+            html += `<div>${esc(t)}</div>`;
+        }
+    }
+    if (inList) html += '</ul>';
+    wrap.innerHTML = html;
+}
+
+function toggleMode() {
+    editMode = !editMode;
+    document.getElementById('viewMode').classList.toggle('hidden', editMode);
+    document.getElementById('editMode').classList.toggle('hidden', !editMode);
+    document.getElementById('modeBtn').classList.toggle('hidden', editMode);
+    document.getElementById('editBar').classList.toggle('hidden', !editMode);
+    document.getElementById('editBar').classList.toggle('flex', editMode);
+    if (editMode) document.getElementById('editArea').value = currentText;
+}
+
+async function saveText(btn) {
+    if (btn.disabled) return;
+    btn.disabled = true;
+    btn.classList.add('opacity-60');
+    const orig = btn.textContent;
+    btn.textContent = '…';
+    const body = {text: document.getElementById('editArea').value};
+    if (EDIT_CODE_REQUIRED && codeInput) {
+        body.code = codeInput.value;
+        localStorage.setItem('rooster_edit_code', body.code);
+    }
+    try {
+        const r = await fetch('/rooster/gebedspunten', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(body)});
+        const data = await r.json();
+        if (data.ok) {
+            currentText = body.text;
+            renderContent(currentText);
+            btn.textContent = '✓';
+            setTimeout(() => { toggleMode(); btn.textContent = orig; }, 800);
+        } else {
+            alert((data.error) || 'Fout');
+        }
+    } catch (e) {
+        alert('Fout: ' + e);
+    }
+    btn.disabled = false;
+    btn.classList.remove('opacity-60');
+    if (btn.textContent === '…') btn.textContent = orig;
+}
+
+function render() {
+    const hasText = (currentText || '').trim().length > 0;
+    document.getElementById('emptyState').classList.toggle('hidden', hasText || !!LOAD_ERROR);
+    document.getElementById('viewMode').classList.toggle('hidden', !hasText);
+    if (LOAD_ERROR) {
+        const e = document.getElementById('errorState');
+        e.textContent = LOAD_ERROR;
+        e.classList.remove('hidden');
+    }
+    document.getElementById('sourceLine').textContent = T('gebed.source', 'Bron: Gebedspunten.txt (SharePoint)');
+    renderContent(currentText);
+}
+
+document.addEventListener('gkin:langchange', e => {
+    if (e.detail?.lang && e.detail.lang !== curLang) { curLang = e.detail.lang; render(); }
+});
+render();
+</script>
+</body>
+</html>

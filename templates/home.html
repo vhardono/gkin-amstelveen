@@ -27,6 +27,9 @@
                 <button class="lang-btn text-xs px-2 py-1 rounded" data-lang="id">ID</button>
                 <button class="lang-btn text-xs px-2 py-1 rounded" data-lang="en">EN</button>
             </div>
+            {% if session.get('entra_user') or session.get('authenticated') or session.get('landing_authenticated') %}
+            <a href="/logout" title="{{ (session.get('entra_user') or {}).get('name') or (session.get('entra_user') or {}).get('email') or 'Log out' }}" data-i18n-title="nav.logout" class="text-green-200 hover:text-white transition p-1.5 rounded-lg hover:bg-gkin-dark" aria-label="Log out"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg></a>
+            {% endif %}
         </div>
     </header>
 
@@ -528,13 +531,14 @@
         const TASK_LABELS = {
             predikant:   'Predikant',
             ovd:         'OvD',
-            '1eo':       '1e Ouderling',
+            '1eo':       '1e Ontvangst',
             beamer:      'Beamer',
             muziek:      'Muziek',
             voorzangers: 'Voorzangers',
             multimedia:  'Multimedia',
             knd:         'KND',
             tieners:     'Tieners',
+            bijbellezers: 'Bijbellezers',
         };
 
         // Populate dropdown with localized labels

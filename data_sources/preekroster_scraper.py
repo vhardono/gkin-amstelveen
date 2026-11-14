@@ -104,6 +104,7 @@ class PreekrosterScraper:
                 'retrieved_at': datetime.now().isoformat(),
                 'am_table': am_table,
                 'ole_table': ole_table,
+                'region_times': region_times,
                 'roster': roster  # Keep original for compatibility
             }
             
@@ -444,11 +445,12 @@ class PreekrosterScraper:
                 continue
             region = raw_entry.get('region', '')
             # Get time from region_times via a fresh parse or from ole_table
-            time_val = '10:00'
-            for ole_entry in roster_data.get('ole_table', []):
-                if ole_entry.get('regio') == region:
-                    time_val = ole_entry.get('time', '10:00')
-                    break
+            time_val = roster_data.get('region_times', {}).get(region, '')
+            if not time_val:
+                for ole_entry in roster_data.get('ole_table', []):
+                    if ole_entry.get('regio') == region and ole_entry.get('date') == self._format_date(raw_entry.get('date', '')):
+                        time_val = ole_entry.get('time', '')
+                        break
             return {
                 'predikant': raw_entry.get('speaker', ''),
                 'location': region,

@@ -31,9 +31,37 @@ from bulletin_generator import BulletinGenerator
 from voorlees_generator import VoorleesGenerator, parse_meded_blocks, align_id_blocks
 
 app = Flask(__name__)
+from werkzeug.middleware.proxy_fix import ProxyFix
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)  # Fly terminates TLS; trust X-Forwarded-Proto
 app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10MB max upload
 app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'gkin-amstelveen-secret-2026')
 SITE_PASSWORD = os.environ.get('SITE_PASSWORD', '')
+LANDING_PASSWORD = os.environ.get('LANDING_PASSWORD', '')
+IFRAME_TOKEN = os.environ.get('IFRAME_TOKEN', '')  # Token for iframe/SharePoint access
+
+# Microsoft Entra ID SSO (OIDC auth code flow)
+MICROSOFT_CLIENT_ID = os.environ.get('MICROSOFT_CLIENT_ID', '')
+MICROSOFT_TENANT_ID = os.environ.get('MICROSOFT_TENANT_ID', '')
+MICROSOFT_CLIENT_SECRET = os.environ.get('MICROSOFT_CLIENT_SECRET', '')
+MICROSOFT_SSO_ENABLED = bool(MICROSOFT_CLIENT_ID and MICROSOFT_TENANT_ID and MICROSOFT_CLIENT_SECRET)
+
+# Optional Entra group restrictions (object IDs; empty = no restriction)
+ENTRA_SITE_GROUP_ID = os.environ.get('ENTRA_SITE_GROUP_ID', '')          # e.g. GKIN Amstelveen team group
+ENTRA_KERKENRAAD_GROUP_ID = os.environ.get('ENTRA_KERKENRAAD_GROUP_ID', '')  # e.g. AM-Kerkenraad group
+KERKENRAAD_PATH_PREFIXES = ('/preekbevestiging', '/mededelingen', '/campaign')
+
+# Configure session cookies for iframe compatibility
+app.config['SESSION_COOKIE_SAMESITE'] = 'None'
+app.config['SESSION_COOKIE_SECURE'] = True
+app.config['PREFERRED_URL_SCHEME'] = 'https'  # Behind Fly proxy; needed for correct OAuth redirect_uri
+
+# Allow embedding in iframes (for SharePoint integration)
+@app.after_request
+def add_security_headers(response):
+    # Allow embedding from SharePoint and for testing
+    response.headers.pop('X-Frame-Options', None)
+    response.headers['Content-Security-Policy'] = "frame-ancestors 'self' https://gkinportal.sharepoint.com"
+    return response
 
 # ── Checklist SQLite storage ──────────────────────────────────────────────────
 import sqlite3
@@ -101,11 +129,91 @@ def checklist_get_all():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+def _is_token_valid(request):
+    """Check if the iframe token is valid in the URL."""
+    token = request.args.get('token', '')
+    return token and token == IFRAME_TOKEN
+
+_msal_app = None
+
+def _microsoft_client():
+    """Lazily create the MSAL confidential client for Entra SSO."""
+    global _msal_app
+    if _msal_app is None:
+        import msal
+        _msal_app = msal.ConfidentialClientApplication(
+            MICROSOFT_CLIENT_ID,
+            authority=f'https://login.microsoftonline.com/{MICROSOFT_TENANT_ID}',
+            client_credential=MICROSOFT_CLIENT_SECRET)
+    return _msal_app
+
+_entra_jwks_client = None
+
+def _validate_entra_id_token(id_token):
+    """Verify Entra ID token signature, audience and issuer; return claims or None."""
+    global _entra_jwks_client
+    import jwt as pyjwt
+    if _entra_jwks_client is None:
+        _entra_jwks_client = pyjwt.PyJWKClient(
+            f'https://login.microsoftonline.com/{MICROSOFT_TENANT_ID}/discovery/v2.0/keys')
+    try:
+        signing_key = _entra_jwks_client.get_signing_key_from_jwt(id_token)
+        return pyjwt.decode(
+            id_token,
+            signing_key.key,
+            algorithms=['RS256'],
+            audience=MICROSOFT_CLIENT_ID,
+            issuer=f'https://login.microsoftonline.com/{MICROSOFT_TENANT_ID}/v2.0')
+    except Exception as e:
+        print(f'[SSO] id_token validation failed: {e}')
+        return None
+
+def _user_in_group(group_id):
+    """True if the current SSO user belongs to the given Entra group."""
+    return bool(group_id) and group_id in set(session.get('entra_user', {}).get('groups') or [])
+
+def _requires_kerkenraad(path):
+    """True if this path is restricted to the Kerkenraad group."""
+    if not ENTRA_KERKENRAAD_GROUP_ID:
+        return False
+    # Iframe routes are gated by their own token instead
+    if path.endswith('-iframe') or '-iframe/' in path:
+        return False
+    return any(path == p or path.startswith(p + '/') or path.startswith(p + '-')
+               for p in KERKENRAAD_PATH_PREFIXES)
+
 def _password_required(f):
     from functools import wraps
     @wraps(f)
     def decorated(*args, **kwargs):
+        # Check iframe token first
+        if _is_token_valid(request):
+            session['authenticated'] = True
+            return f(*args, **kwargs)
+        # Then check SSO session
+        if session.get('entra_user'):
+            if _requires_kerkenraad(request.path) and not _user_in_group(ENTRA_KERKENRAAD_GROUP_ID):
+                return render_template('forbidden.html'), 403
+            return f(*args, **kwargs)
+        # Then check password / SSO
         if SITE_PASSWORD and not session.get('authenticated'):
+            return redirect(url_for('login_page', next=request.path))
+        return f(*args, **kwargs)
+    return decorated
+
+def _landing_password_required(f):
+    from functools import wraps
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        # Check iframe token first
+        if _is_token_valid(request):
+            session['landing_authenticated'] = True
+            return f(*args, **kwargs)
+        # Then check SSO session
+        if session.get('entra_user'):
+            return f(*args, **kwargs)
+        # Then check password / SSO
+        if LANDING_PASSWORD and not session.get('landing_authenticated'):
             return redirect(url_for('login_page', next=request.path))
         return f(*args, **kwargs)
     return decorated
@@ -113,25 +221,119 @@ def _password_required(f):
 @app.route('/login', methods=['GET', 'POST'])
 def login_page():
     error = None
+    # Check if iframe token is valid - if so, redirect to next page
+    if _is_token_valid(request):
+        next_url = request.args.get('next') or '/'
+        session['authenticated'] = True
+        session['landing_authenticated'] = True
+        return redirect(next_url)
+    
     if request.method == 'POST':
-        if request.form.get('password') == SITE_PASSWORD:
+        password = request.form.get('password')
+        # Check both passwords - landing password first, then site password
+        if password == LANDING_PASSWORD:
+            session['landing_authenticated'] = True
+            next_url = request.args.get('next') or '/'
+            return redirect(next_url)
+        elif password == SITE_PASSWORD:
             session['authenticated'] = True
             next_url = request.args.get('next') or '/'
             return redirect(next_url)
         error = 'Onjuist wachtwoord. Probeer opnieuw.'
+    show_password_form = (not MICROSOFT_SSO_ENABLED
+                          or request.args.get('fallback') == '1'
+                          or request.method == 'POST')
     return render_template('login.html', error=error,
-                           next=request.args.get('next', '/'))
+                           next=request.args.get('next', '/'),
+                           sso_enabled=MICROSOFT_SSO_ENABLED,
+                           show_password_form=show_password_form)
+
+@app.route('/login/microsoft')
+def login_microsoft():
+    """Start Microsoft Entra ID sign-in (OIDC auth code flow)."""
+    if not MICROSOFT_SSO_ENABLED:
+        return redirect(url_for('login_page'))
+    next_url = request.args.get('next') or '/'
+    if not next_url.startswith('/'):
+        next_url = '/'
+    try:
+        flow = _microsoft_client().initiate_auth_code_flow(
+            scopes=[],  # openid/profile/offline_access are added automatically
+            redirect_uri=url_for('microsoft_callback', _external=True))
+    except Exception as e:
+        print(f'[SSO] failed to start sign-in: {e}')
+        return render_template('login.html',
+                               error='Microsoft sign-in is temporarily unavailable. Use the password.',
+                               next='/', sso_enabled=MICROSOFT_SSO_ENABLED)
+    session['entra_auth_flow'] = flow
+    session['entra_next'] = next_url
+    return redirect(flow['auth_uri'])
+
+@app.route('/auth/microsoft/callback')
+def microsoft_callback():
+    """Complete Entra ID sign-in and establish the app session."""
+    if not MICROSOFT_SSO_ENABLED:
+        return redirect(url_for('login_page'))
+    flow = session.pop('entra_auth_flow', None)
+    next_url = session.pop('entra_next', '/')
+    error_msg = 'Microsoft sign-in was cancelled or failed. Try again or use the password.'
+    if not flow:
+        return render_template('login.html', error=error_msg, next='/',
+                               sso_enabled=MICROSOFT_SSO_ENABLED)
+    try:
+        result = _microsoft_client().acquire_token_by_auth_code_flow(flow, request.args)
+    except Exception as e:
+        print(f'[SSO] token exchange failed: {e}')
+        return render_template('login.html', error=error_msg, next='/',
+                               sso_enabled=MICROSOFT_SSO_ENABLED)
+    claims = _validate_entra_id_token(result.get('id_token', ''))
+    if not claims or claims.get('tid') != MICROSOFT_TENANT_ID:
+        return render_template('login.html', error=error_msg, next='/',
+                               sso_enabled=MICROSOFT_SSO_ENABLED)
+    session['authenticated'] = True
+    session['landing_authenticated'] = True
+    user_groups = set(claims.get('groups') or [])
+    if ENTRA_SITE_GROUP_ID and ENTRA_SITE_GROUP_ID not in user_groups:
+        return render_template('login.html',
+                               error='Your account is not allowed to access this application.',
+                               next='/', sso_enabled=MICROSOFT_SSO_ENABLED,
+                               show_password_form=False)
+    session['entra_user'] = {
+        'name':   claims.get('name', ''),
+        'email':  claims.get('preferred_username') or claims.get('email', ''),
+        'oid':    claims.get('oid', ''),
+        'groups': list(user_groups),
+    }
+    return redirect(next_url)
 
 @app.route('/logout')
 def logout():
+    """Clear app session; if signed in via Microsoft, also end the Entra session."""
+    from urllib.parse import quote
+    was_sso = bool(session.get('entra_user'))
     session.clear()
+    if MICROSOFT_SSO_ENABLED and was_sso:
+        post_logout = quote(url_for('signed_out', _external=True), safe='')
+        return redirect(
+            f'https://login.microsoftonline.com/{MICROSOFT_TENANT_ID}/oauth2/v2.0/logout'
+            f'?post_logout_redirect_uri={post_logout}')
     return redirect('/')
+
+@app.route('/signed-out')
+def signed_out():
+    """Landing page after Microsoft sign-out."""
+    return render_template('signed_out.html')
 
 @app.route('/verify-password', methods=['POST'])
 def verify_password():
     from flask import jsonify
     pw = request.get_json(silent=True) or {}
-    if pw.get('password') == SITE_PASSWORD:
+    password = pw.get('password')
+    # Check both passwords
+    if password == LANDING_PASSWORD:
+        session['landing_authenticated'] = True
+        return jsonify({'ok': True})
+    elif password == SITE_PASSWORD:
         session['authenticated'] = True
         return jsonify({'ok': True})
     return jsonify({'ok': False}), 401
@@ -141,6 +343,7 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 # Cache takenrooster on startup
 _takenrooster_cache = None
+_takenrooster_cache_year = None
 
 # Cache bijbelbasics KND data (slug -> {title, verse, date_day, date_month})
 _knd_cache = None
@@ -194,10 +397,11 @@ def _load_knd_cache():
 
 
 def _get_takenrooster():
-    global _takenrooster_cache
-    if _takenrooster_cache is None:
+    global _takenrooster_cache, _takenrooster_cache_year
+    if _takenrooster_cache is None or _takenrooster_cache_year != datetime.now().year:
         reader = DropboxExcelReader()
         _takenrooster_cache = reader.get_takenrooster()
+        _takenrooster_cache_year = datetime.now().year
     return _takenrooster_cache
 
 
@@ -254,7 +458,8 @@ def _get_mededelingen_dates():
 
 
 def _get_takenrooster_and_render_page():
-    return render_template('mededelingen.html', dates=_get_mededelingen_dates())
+    template = 'mededelingen-iframe.html' if request.path == '/mededelingen-iframe' else 'mededelingen.html'
+    return render_template(template, dates=_get_mededelingen_dates())
 
 
 @app.route('/mededelingen-editor')
@@ -312,9 +517,11 @@ def mededelingen_editor_save():
     """Save one year sheet row and recompute Output."""
     from data_sources.dropbox_reader import DropboxExcelReader
     data = request.get_json() or {}
+    print(f"[save request] data={data!r}")
     year = data.get('year')
     row_index = data.get('row_index')
     if not year or row_index is None:
+        print(f"[save request] bad request year={year!r} row_index={row_index!r}")
         return jsonify({'error': 'Missing year or row_index'}), 400
 
     reader = DropboxExcelReader()
@@ -330,6 +537,13 @@ def mededelingen_editor_save():
         'status': data.get('status', ''),
     })
     if result.get('success'):
+        # Store voorlezen override only when the checkbox is on; cleared otherwise
+        if data.get('voorlezen_different'):
+            reader.save_voorlezen_override(year, row_index,
+                                           data.get('voorlezen_nl', ''),
+                                           data.get('voorlezen_id', ''))
+        else:
+            reader.save_voorlezen_override(year, row_index)
         return jsonify({'success': True})
     return jsonify({'error': result.get('error', 'Unknown error')}), 500
 
@@ -357,6 +571,10 @@ def mededelingen_editor_add():
         'status': data.get('status', 'Active'),
     })
     if result.get('success'):
+        if data.get('voorlezen_different'):
+            reader.save_voorlezen_override(year, result.get('row_index'),
+                                           data.get('voorlezen_nl', ''),
+                                           data.get('voorlezen_id', ''))
         return jsonify({'success': True, 'row_index': result.get('row_index')})
     return jsonify({'error': result.get('error', 'Unknown error')}), 500
 
@@ -461,6 +679,7 @@ def mededelingen_image(year, row_index, filename):
 
 
 @app.route('/')
+@_landing_password_required
 def home():
     # Build schedule data for the date picker on the landing page
     schedule_dates = []
@@ -492,12 +711,154 @@ def home():
                 'multimedia': entry.get('multimedia', ''),
                 'knd': entry.get('knd', ''),
                 'tieners': entry.get('tieners', ''),
+                'bijbellezers': entry.get('bijbellezers', ''),
                 'opmerking': entry.get('opmerking', ''),
                 'tijd': entry.get('tijd', '10:30') or '10:30',
             })
     except Exception as e:
         print(f"[Home] takenrooster load error: {e}")
     return render_template('home.html', schedule_dates=schedule_dates)
+
+ROOSTER_EDIT_CODE = os.environ.get('ROOSTER_EDIT_CODE', '')
+
+
+def _rooster_services():
+    """Upcoming (next ~3 months) service entries for the public roster pages."""
+    services = []
+    try:
+        taken = _get_takenrooster()
+        today = datetime.now().date()
+        horizon = today + timedelta(days=90)   # next 3 months only
+        # Bijbellezers history: last 4 weeks, but not before the column existed
+        start = max(today - timedelta(days=28), datetime(2026, 11, 15).date())
+        for e in (taken.get('all_entries') or taken.get('entries', [])):
+            d = e.get('date')
+            if not d or d.date() < start or d.date() > horizon:
+                continue
+            services.append({
+                'value': d.strftime('%Y-%m-%d'),
+                'day_idx': d.weekday(),
+                'month_idx': d.month - 1,
+                'day_num': d.day,
+                'year': d.year,
+                'tijd': e.get('tijd', ''),
+                'dienst': (e.get('opmerking', '').split(':')[0] or '').strip(),
+                'predikant': e.get('predikant', ''),
+                'ovd': e.get('ovd', ''),
+                '1eo': e.get('1eo', ''),
+                'beamer': e.get('beamer', ''),
+                'muziek': e.get('muziek', ''),
+                'voorzangers': e.get('voorzangers', ''),
+                'multimedia': e.get('multimedia', ''),
+                'knd': e.get('knd', ''),
+                'tieners': e.get('tieners', ''),
+                'bijbellezers': e.get('bijbellezers', ''),
+                'past': d.date() < today,
+            })
+    except Exception as ex:
+        print(f"[Rooster] load error: {ex}")
+    return services
+
+
+@app.route('/rooster')
+def rooster_page():
+    """Public mobile-friendly duty roster. Unauthenticated but unindexed
+    (robots.txt already disallows the site; page also carries noindex)."""
+    return render_template('rooster.html', services=_rooster_services(),
+                           edit_code_required=bool(ROOSTER_EDIT_CODE))
+
+
+@app.route('/rooster/persoon')
+def rooster_persoon_page():
+    """Public 'my duties' lookup: pick a name, see upcoming duty dates/roles."""
+    return render_template('rooster_persoon.html', services=_rooster_services())
+
+
+@app.route('/rooster/bijbellezers', methods=['POST'])
+def rooster_bijbellezers_save():
+    """Public endpoint to update the Bijbellezers field for a service date.
+    Only bijbellezers is writable, only for today/future dates; an optional
+    shared edit code (ROOSTER_EDIT_CODE) can be enforced via env."""
+    data = request.get_json(silent=True) or {}
+    if ROOSTER_EDIT_CODE and data.get('code') != ROOSTER_EDIT_CODE:
+        return jsonify({'ok': False, 'error': 'Ongeldige bewerkcode'}), 403
+    date_str = (data.get('date') or '').strip()
+    value = (data.get('value') or '').strip()[:200]
+    try:
+        service_date = datetime.strptime(date_str, '%Y-%m-%d')
+    except Exception:
+        return jsonify({'ok': False, 'error': 'Ongeldige datum'}), 400
+    if service_date.date() < datetime.now().date():
+        return jsonify({'ok': False, 'error': 'Alleen toekomstige diensten zijn aanpasbaar'}), 400
+    result = DropboxExcelReader().save_takenrooster_bijbellezers(service_date, value)
+    if result.get('ok'):
+        global _takenrooster_cache
+        _takenrooster_cache = None
+    return jsonify(result)
+
+
+@app.route('/rooster/gebedspunten', methods=['GET'])
+def rooster_gebedspunten_page():
+    """Public gebedspunten (prayer points) page: view/print the SharePoint
+    Gebedspunten.txt in the browser and edit it in place (same optional
+    ROOSTER_EDIT_CODE gate as the bijbellezers editor)."""
+    result = DropboxExcelReader().get_gebedspunten()
+    return render_template('gebedspunten.html',
+                           text=result.get('text', ''),
+                           load_error=None if result.get('ok') else result.get('error'),
+                           edit_code_required=bool(ROOSTER_EDIT_CODE))
+
+
+@app.route('/rooster/gebedspunten', methods=['POST'])
+def rooster_gebedspunten_save():
+    """Save edited gebedspunten text back to the SharePoint source file."""
+    data = request.get_json(silent=True) or {}
+    if ROOSTER_EDIT_CODE and data.get('code') != ROOSTER_EDIT_CODE:
+        return jsonify({'ok': False, 'error': 'Ongeldige bewerkcode'}), 403
+    text = (data.get('text') or '')[:20000]
+    return jsonify(DropboxExcelReader().save_gebedspunten(text))
+
+
+@app.route('/takenrooster-iframe')
+@_landing_password_required
+def takenrooster_iframe():
+    # Compact takenrooster for iframe embedding
+    schedule_dates = []
+    try:
+        taken = _get_takenrooster()
+        dutch_months = ['januari','februari','maart','april','mei','juni',
+                        'juli','augustus','september','oktober','november','december']
+        dutch_days = ['maandag','dinsdag','woensdag','donderdag','vrijdag','zaterdag','zondag']
+        today = datetime.now().date()
+        for entry in taken.get('entries', []):
+            d = entry['date']
+            d_date = d.date() if hasattr(d, 'date') else d
+            if d_date < today:
+                continue
+            label = f"{dutch_days[d.weekday()]} {d.day} {dutch_months[d.month - 1]} {d.year}"
+            schedule_dates.append({
+                'value': d.strftime('%Y-%m-%d'),
+                'label': label,
+                'day_idx': d.weekday(),
+                'month_idx': d.month - 1,
+                'day_num': d.day,
+                'year': d.year,
+                'predikant': entry.get('predikant', ''),
+                'ovd': entry.get('ovd', ''),
+                '1eo': entry.get('1eo', ''),
+                'beamer': entry.get('beamer', ''),
+                'muziek': entry.get('muziek', ''),
+                'voorzangers': entry.get('voorzangers', ''),
+                'multimedia': entry.get('multimedia', ''),
+                'knd': entry.get('knd', ''),
+                'tieners': entry.get('tieners', ''),
+                'bijbellezers': entry.get('bijbellezers', ''),
+                'opmerking': entry.get('opmerking', ''),
+            })
+    except Exception as e:
+        print(f"[Iframe] takenrooster load error: {e}")
+    return render_template('takenrooster-iframe.html', dates=schedule_dates)
+
 
 
 @app.route('/proxy-download')
@@ -529,6 +890,13 @@ def proxy_download():
 @app.route('/mededelingen')
 @_password_required
 def mededelingen_index():
+    return _get_takenrooster_and_render_page()
+
+
+@app.route('/mededelingen-iframe')
+@_password_required
+def mededelingen_iframe():
+    # Compact mededelingen generator for iframe embedding
     return _get_takenrooster_and_render_page()
 
 
@@ -585,7 +953,16 @@ def preekbevestiging_index():
             'tieners':      entry.get('tieners', ''),
             'unresolved_names': entry.get('unresolved_names', []),
         })
-    return render_template('preekbevestiging.html', dates=dates)
+    template = 'preekbevestiging-iframe.html' if request.path == '/preekbevestiging-iframe' else 'preekbevestiging.html'
+    return render_template(template, dates=dates)
+
+
+@app.route('/preekbevestiging-iframe')
+@_password_required
+def preekbevestiging_iframe():
+    # Compact preekbevestiging for iframe embedding
+    return preekbevestiging_index()
+
 
 
 @app.route('/generate-preekbevestiging', methods=['POST'])
@@ -765,18 +1142,28 @@ def generate():
 
         # Parse activiteiten rows (datum_0, activiteit_0, locatie_0, ...)
         activiteiten = []
-        i = 0
-        while request.form.get(f'act_datum_{i}') is not None:
+        
+        # Find all act_datum_N indices
+        indices = set()
+        for key in request.form.keys():
+            if key.startswith('act_datum_'):
+                try:
+                    idx = int(key.split('_')[-1])
+                    indices.add(idx)
+                except (ValueError, IndexError):
+                    pass
+        
+        # Sort indices and parse rows
+        for idx in sorted(indices):
             row = {
-                'datum': fv(f'act_datum_{i}'),
-                'tijd': fv(f'act_tijd_{i}'),
-                'activiteit': fv(f'act_activiteit_{i}'),
-                'olv': fv(f'act_olv_{i}'),
-                'locatie': fv(f'act_locatie_{i}'),
+                'datum': fv(f'act_datum_{idx}'),
+                'tijd': fv(f'act_tijd_{idx}'),
+                'activiteit': fv(f'act_activiteit_{idx}'),
+                'olv': fv(f'act_olv_{idx}'),
+                'locatie': fv(f'act_locatie_{idx}'),
             }
             if any(row.values()):
                 activiteiten.append(row)
-            i += 1
 
         # Handle QR image uploads — prefer file upload, fall back to email-fetched path
         def save_upload(field_name, fallback_field):
@@ -856,7 +1243,7 @@ def generate_voorlees():
             return jsonify({'error': f'Geen rooster gevonden voor {date_str}'}), 404
 
         reader = DropboxExcelReader()
-        meded  = reader.get_mededelingen(mededelingen_date=selected_date)
+        meded  = reader.get_mededelingen(mededelingen_date=selected_date, for_voorlezen=True)
         mededelingen_rows = reader.get_mededelingen_rows(selected_date.year)
 
         def fv(key): return request.form.get(key, '').strip()
@@ -1362,11 +1749,21 @@ PHONE_DROPBOX_PATH_L   = '/working folder/telephone.gif'
 
 def _get_dbx_liturgie():
     import dropbox
+    if os.environ.get('STORAGE_BACKEND', 'dropbox') == 'sharepoint':
+        from data_sources.graph_client import GraphDrive
+        return GraphDrive()
     return dropbox.Dropbox(
         oauth2_refresh_token=DROPBOX_REFRESH_L,
         app_key=DROPBOX_APP_KEY_L,
         app_secret=DROPBOX_APP_SECRET_L,
     )
+
+
+def _is_file_entry(entry):
+    """True for Dropbox FileMetadata and GraphEntry files (not folders)."""
+    if entry.__class__.__module__.startswith('dropbox.'):
+        return isinstance(entry, dropbox.files.FileMetadata)
+    return not getattr(entry, 'is_folder', False)
 
 
 WORKING_FOLDER = '/working folder/file mingguan'
@@ -1384,11 +1781,12 @@ def _list_main_liturgy_files(dbx=None):
             return []
     try:
         result = dbx.files_list_folder(WORKING_FOLDER, include_non_downloadable_files=False)
+        print(f"[Liturgie] folder listing: {[e.name for e in result.entries]}")
     except Exception:
         return []
     files = []
     for entry in result.entries:
-        if not isinstance(entry, dropbox.files.FileMetadata):
+        if not _is_file_entry(entry):
             continue
         name = os.path.basename(entry.path_lower or '')
         match = MAIN_LITURGY_PATTERN.match(name)
@@ -1433,7 +1831,7 @@ def _list_preek_files(dbx=None):
         return []
     files = []
     for entry in result.entries:
-        if not isinstance(entry, dropbox.files.FileMetadata):
+        if not _is_file_entry(entry):
             continue
         name = os.path.basename(entry.path_lower or '')
         if PREEK_PATTERN.match(name):
@@ -1610,7 +2008,7 @@ def _run_liturgi(excel_bytes: bytes, preek_bytes, work_dir: str,
         else:
             try:
                 reader = DropboxExcelReader()
-                meded = reader.get_mededelingen(mededelingen_date=service_date)
+                meded = reader.get_mededelingen(mededelingen_date=service_date, for_voorlezen=True)
                 mededelingen_rows = reader.get_mededelingen_rows(service_date.year)
                 image_map = {}
                 for row in mededelingen_rows:
@@ -1719,7 +2117,15 @@ def _run_liturgi(excel_bytes: bytes, preek_bytes, work_dir: str,
 
 @app.route('/liturgie')
 def liturgie_index():
-    return render_template('liturgie.html')
+    template = 'liturgie-iframe.html' if request.path == '/liturgie-iframe' else 'liturgie.html'
+    return render_template(template)
+
+
+@app.route('/liturgie-iframe')
+@_password_required
+def liturgie_iframe():
+    # Compact liturgie generator for iframe embedding
+    return liturgie_index()
 
 
 PREEK_DROPBOX_PATH = '/working folder/file mingguan/Preek.docx'
@@ -1739,6 +2145,7 @@ def liturgie_list_preek_files():
 
 @app.route('/liturgie/generate', methods=['POST'])
 def liturgie_generate():
+    print(f"[liturgie generate] Starting generation")
     excel_source = request.form.get('excel_source', 'upload')
     preek_source = request.form.get('preek_source', 'upload')
     want_a = request.form.get('want_a', '1') == '1'
@@ -1746,6 +2153,7 @@ def liturgie_generate():
     want_p = request.form.get('want_p', '1') == '1'
     include_mededelingen = request.form.get('include_mededelingen', '0') == '1'
     mededelingen_language = request.form.get('mededelingen_lang', 'nl') if include_mededelingen else None
+    print(f"[liturgie generate] excel_source={excel_source}, preek_source={preek_source}, want_a={want_a}, want_b={want_b}, want_p={want_p}, include_mededelingen={include_mededelingen}")
 
     # Get Excel bytes
     if excel_source == 'dropbox':
@@ -1798,6 +2206,7 @@ def liturgie_generate():
 
     except Exception as e:
         traceback.print_exc()
+        print(f"[liturgie generate] Exception: {e}")
         return jsonify({'error': str(e)}), 500
     finally:
         shutil.rmtree(work_dir, ignore_errors=True)
@@ -3179,7 +3588,7 @@ def fetch_ole_data():
         location_code = ole_data.get('location', '')
         location_names = {
             'AM': 'Kerkgebouw in Amstelveen',
-            'DH': 'Kerkgebouw in Den Haag',
+            'DH': 'Marcuskerk in Den Haag',
             'TB': 'Pauluskerk te Tilburg'
         }
         location_full = location_names.get(location_code, location_code)
@@ -3209,7 +3618,7 @@ def fetch_ole_data():
                     ole_data['predikant'] = web_data['predikant']
                 if web_data.get('location_code'):
                     location_code = web_data['location_code']
-                    location_full = web_data.get('location', location_full)
+                    location_full = location_names.get(location_code, web_data.get('location', location_full))
                 if web_data.get('time'):
                     ole_data['time'] = web_data['time']
                 if web_data.get('collecte_url') and not ole_url:
@@ -3290,6 +3699,13 @@ def campaign_index():
     return render_template('campaign_select.html')
 
 
+@app.route('/campaign-iframe')
+@_password_required
+def campaign_iframe():
+    """Compact campaign template selection for iframe embedding."""
+    return render_template('campaign-select-iframe.html')
+
+
 @app.route('/campaign/ole')
 @_password_required
 def campaign_ole():
@@ -3319,7 +3735,14 @@ def campaign_ole():
             'beamer': entry.get('beamer', ''),
             'voorzangers': entry.get('voorzangers', ''),
         })
-    return render_template('campaign.html', dates=dates)
+    template = 'campaign-ole-iframe.html' if request.path == '/campaign-iframe/ole' else 'campaign.html'
+    return render_template(template, dates=dates)
+
+
+@app.route('/campaign-iframe/ole')
+@_password_required
+def campaign_ole_iframe():
+    return campaign_ole()
 
 
 @app.route('/campaign/preview', methods=['POST'])
@@ -3364,6 +3787,8 @@ def campaign_preview():
         ole_time = data.get('ole_time', '10:00')
         ole_predikant = data.get('ole_predikant', '')
         collecte_ovv = data.get('collecte_ovv', '')
+        second_qr_text = data.get('second_qr_text', '')
+        second_qr_image = data.get('second_qr_image', '')
         
         predikant_to_use = ole_predikant if ole_predikant else entry.get('predikant', '')
         
@@ -3379,7 +3804,9 @@ def campaign_preview():
             qr_image_url=qr_image_url,
             ole_location=ole_location,
             ole_time=ole_time,
-            collecte_ovv=collecte_ovv
+            collecte_ovv=collecte_ovv,
+            second_qr_text=second_qr_text,
+            second_qr_image=second_qr_image
         )
         
         nl_months = ['januari', 'februari', 'maart', 'april', 'mei', 'juni',
@@ -3444,6 +3871,8 @@ def campaign_ole_am_template():
         ole_predikant = data.get('ole_predikant', '')
         collecte_ovv = data.get('collecte_ovv', '')
         recipient_name = data.get('recipient_name', 'Monica')
+        second_qr_text = data.get('second_qr_text', '')
+        second_qr_image = data.get('second_qr_image', '')
 
         predikant_to_use = ole_predikant if ole_predikant else entry.get('predikant', '')
 
@@ -3459,7 +3888,9 @@ def campaign_ole_am_template():
             ole_location=ole_location,
             ole_time=ole_time,
             collecte_ovv=collecte_ovv,
-            recipient_name=recipient_name
+            recipient_name=recipient_name,
+            second_qr_text=second_qr_text,
+            second_qr_image=second_qr_image
         )
 
         nl_months = ['januari', 'februari', 'maart', 'april', 'mei', 'juni',
@@ -3753,7 +4184,9 @@ def campaign_create():
             qr_image_url=qr_image_url,
             ole_location=ole_location,
             ole_time=ole_time,
-            collecte_ovv=collecte_ovv
+            collecte_ovv=collecte_ovv,
+            second_qr_text=data.get('second_qr_text', ''),
+            second_qr_image=data.get('second_qr_image', '')
         )
         
         nl_months = ['januari', 'februari', 'maart', 'april', 'mei', 'juni',
@@ -3969,7 +4402,14 @@ def campaign_pm():
             'beamer': entry.get('beamer', ''),
             'voorzangers': entry.get('voorzangers', ''),
         })
-    return render_template('campaign_pm.html', dates=dates)
+    template = 'campaign-pm-iframe.html' if request.path == '/campaign-iframe/pm' else 'campaign_pm.html'
+    return render_template(template, dates=dates)
+
+
+@app.route('/campaign-iframe/pm')
+@_password_required
+def campaign_pm_iframe():
+    return campaign_pm()
 
 
 @app.route('/campaign/pm/preview', methods=['POST'])
@@ -4120,7 +4560,8 @@ def _extract_images_from_run(run, doc):
             rId = blip.get('{http://schemas.openxmlformats.org/officeDocument/2006/relationships}embed')
             if rId:
                 try:
-                    images.append(doc.part.get_rel(rId).target_part.blob)
+                    rel = doc.part.rels[rId]
+                    images.append(rel.target_part.blob)
                 except Exception:
                     pass
     for pict in run._r.findall('.//w:pict', ns):
@@ -4129,7 +4570,8 @@ def _extract_images_from_run(run, doc):
             rId = im.get('{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id')
             if rId:
                 try:
-                    images.append(doc.part.get_rel(rId).target_part.blob)
+                    rel = doc.part.rels[rId]
+                    images.append(rel.target_part.blob)
                 except Exception:
                     pass
     return images
@@ -4140,6 +4582,7 @@ def _extract_preek_blocks(file_bytes):
     Strips any existing translation section when a translation marker is found."""
     import io
     from docx import Document
+    from docx.oxml.text.paragraph import CT_P
 
     doc = Document(io.BytesIO(file_bytes))
     blocks = []
@@ -4152,6 +4595,7 @@ def _extract_preek_blocks(file_bytes):
         'indonesian translation',
         'dutch translation',
     ]
+    
     for p in doc.paragraphs:
         text = p.text.strip()
         if text:
@@ -4163,33 +4607,96 @@ def _extract_preek_blocks(file_bytes):
         current_bold = any(r.bold for r in p.runs) if p.runs else False
         current_italic = any(r.italic for r in p.runs) if p.runs else False
         any_images = False
+        
+        # Check for images in this paragraph using multiple methods
+        paragraph_images = []
+        
+        # Method 1: Check runs for inline images
         for run in p.runs:
-            images = _extract_images_from_run(run, doc)
-            if images:
-                if current_text:
-                    blocks.append({'type': 'text', 'text': current_text, 'bold': current_bold, 'italic': current_italic})
-                    current_text = ''
-                blocks.append({'type': 'image', 'images': images})
-                any_images = True
-            else:
+            # Check if run has inline shapes (images)
+            if hasattr(run._element, 'xpath'):
+                # Try to find drawing elements
+                for drawing in run._element.xpath('.//w:drawing'):
+                    for blip in drawing.xpath('.//a:blip'):
+                        rId = blip.get('{http://schemas.openxmlformats.org/officeDocument/2006/relationships}embed')
+                        if rId:
+                            try:
+                                # Correct API: use doc.part.rels[rId]
+                                rel = doc.part.rels[rId]
+                                image_part = rel.target_part
+                                paragraph_images.append(image_part.blob)
+                                print(f"DEBUG: Found image via drawing/blip")
+                            except Exception as e:
+                                print(f"DEBUG: Error extracting image via drawing/blip: {e}")
+                
+                # Try to find pict elements (older format)
+                for pict in run._element.xpath('.//w:pict'):
+                    for imagedata in pict.xpath('.//v:imagedata'):
+                        rId = imagedata.get('{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id')
+                        if rId:
+                            try:
+                                rel = doc.part.rels[rId]
+                                image_part = rel.target_part
+                                paragraph_images.append(image_part.blob)
+                                print(f"DEBUG: Found image via pict/imagedata")
+                            except Exception as e:
+                                print(f"DEBUG: Error extracting image via pict/imagedata: {e}")
+
+        # Method 2: Check paragraph for inline shapes
+        if hasattr(p, '_element'):
+            for drawing in p._element.xpath('.//w:drawing'):
+                for blip in drawing.xpath('.//a:blip'):
+                    rId = blip.get('{http://schemas.openxmlformats.org/officeDocument/2006/relationships}embed')
+                    if rId:
+                        try:
+                            rel = doc.part.rels[rId]
+                            image_part = rel.target_part
+                            if image_part.blob not in paragraph_images:
+                                paragraph_images.append(image_part.blob)
+                                print(f"DEBUG: Found image via paragraph drawing")
+                        except Exception as e:
+                            print(f"DEBUG: Error extracting image via paragraph: {e}")
+
+        if paragraph_images:
+            print(f"DEBUG: Found {len(paragraph_images)} image(s) in paragraph")
+            if current_text:
+                blocks.append({'type': 'text', 'text': current_text, 'bold': current_bold, 'italic': current_italic})
+                current_text = ''
+            blocks.append({'type': 'image', 'images': paragraph_images})
+            any_images = True
+        else:
+            # Process text runs
+            for run in p.runs:
                 if run.text:
                     current_text += run.text
+        
         if current_text or (not any_images and not p.runs):
             blocks.append({'type': 'text', 'text': current_text, 'bold': current_bold, 'italic': current_italic})
+    
+    print(f"DEBUG: Total blocks extracted: {len(blocks)}, text blocks: {sum(1 for b in blocks if b['type'] == 'text')}, image blocks: {sum(1 for b in blocks if b['type'] == 'image')}")
     return blocks
 
 
 def _translate_text_blocks(client, text_blocks):
     """Translate a list of text blocks and return a list of translated strings.
-    Uses [[BLOCK_N]] markers to keep translations aligned with the original."""
+    Uses [[BLOCK_N]] markers to keep translations aligned with the original.
+    Image blocks are skipped in translation but their positions are preserved."""
     import re
     if not text_blocks:
         return []
 
+    # Only translate text blocks, skip image blocks
     source_lines = []
+    text_block_indices = []
     for i, b in enumerate(text_blocks):
-        source_lines.append(f'[[BLOCK_{i}]]')
-        source_lines.append(b['text'])
+        if b['type'] == 'text':
+            source_lines.append(f'[[BLOCK_{len(text_block_indices)}]]')
+            source_lines.append(b['text'])
+            text_block_indices.append(i)
+    
+    if not source_lines:
+        return []
+    
     source_text = '\n'.join(source_lines)
 
     PROMPT = (
@@ -4215,15 +4722,20 @@ def _translate_text_blocks(client, text_blocks):
         result = [''] * len(text_blocks)
         for idx_str, text in matches:
             idx = int(idx_str)
-            if 0 <= idx < len(text_blocks):
-                result[idx] = text.strip()
+            if idx < len(text_block_indices):
+                original_idx = text_block_indices[idx]
+                result[original_idx] = text
         return result
 
     # Fallback: if the model ignored markers, split by lines and assign in order.
     parts = [p.strip() for p in translated.splitlines() if p.strip()]
-    if len(parts) >= len(text_blocks):
-        return parts[:len(text_blocks)]
-    return parts + [''] * (len(text_blocks) - len(parts))
+    if len(parts) >= len(text_block_indices):
+        result = [''] * len(text_blocks)
+        for i, idx in enumerate(text_block_indices):
+            if i < len(parts):
+                result[idx] = parts[i]
+        return result
+    return parts + [''] * (len(text_block_indices) - len(parts))
 
 
 def _build_bilingual_preek_docx(blocks, translated_texts):
@@ -4257,9 +4769,8 @@ def _build_bilingual_preek_docx(blocks, translated_texts):
 
     col_width = Cm(8.0)
     temp_image_paths = []
-    tb_idx = 0
 
-    for b in blocks:
+    for idx, b in enumerate(blocks):
         row = table.add_row()
         left_cell = row.cells[0]
         right_cell = row.cells[1]
@@ -4282,7 +4793,7 @@ def _build_bilingual_preek_docx(blocks, translated_texts):
                 left_run.italic = True
 
             right_para = right_cell.paragraphs[0]
-            right_text = translated_texts[tb_idx] if tb_idx < len(translated_texts) else ''
+            right_text = translated_texts[idx] if idx < len(translated_texts) else ''
             right_run = right_para.add_run(right_text)
             right_run.font.name = FONT
             right_run.font.color.rgb = BLUE
@@ -4291,32 +4802,60 @@ def _build_bilingual_preek_docx(blocks, translated_texts):
             if b.get('italic'):
                 right_run.italic = True
 
-            tb_idx += 1
-
         elif b['type'] == 'image':
             for img_bytes in b['images']:
-                if img_bytes[:2] == b'\xff\xd8':
-                    ext = 'jpg'
-                elif img_bytes[:6] in (b'GIF87a', b'GIF89a'):
-                    ext = 'gif'
-                elif img_bytes[:4] == b'\x89PNG':
-                    ext = 'png'
-                elif img_bytes[:4] == b'RIFF' and img_bytes[8:12] == b'WEBP':
-                    ext = 'webp'
-                else:
-                    ext = 'png'
-                tmp_path = os.path.join(tempfile.gettempdir(), f'preek_img_{uuid.uuid4().hex}.{ext}')
-                with open(tmp_path, 'wb') as f:
-                    f.write(img_bytes)
-                temp_image_paths.append(tmp_path)
+                try:
+                    # Convert image to PNG using PIL to ensure compatibility
+                    from PIL import Image
+                    import io
+                    
+                    # Open image from bytes
+                    img = Image.open(io.BytesIO(img_bytes))
+                    
+                    # Convert to PNG
+                    png_bytes = io.BytesIO()
+                    img.save(png_bytes, format='PNG')
+                    png_bytes.seek(0)
+                    
+                    # Save to temp file
+                    tmp_path = os.path.join(tempfile.gettempdir(), f'preek_img_{uuid.uuid4().hex}.png')
+                    with open(tmp_path, 'wb') as f:
+                        f.write(png_bytes.getvalue())
+                    temp_image_paths.append(tmp_path)
 
-                left_para = left_cell.paragraphs[0]
-                left_run = left_para.add_run()
-                left_run.add_picture(tmp_path, width=Cm(7.3))
+                    left_para = left_cell.paragraphs[0]
+                    left_run = left_para.add_run()
+                    left_run.add_picture(tmp_path, width=Cm(7.3))
 
-                right_para = right_cell.paragraphs[0]
-                right_run = right_para.add_run()
-                right_run.add_picture(tmp_path, width=Cm(7.3))
+                    right_para = right_cell.paragraphs[0]
+                    right_run = right_para.add_run()
+                    right_run.add_picture(tmp_path, width=Cm(7.3))
+                    
+                    break  # Only add first image per block
+                except Exception as e:
+                    print(f"DEBUG: Error adding image to DOCX: {e}")
+                    # Fallback: try original method without conversion
+                    try:
+                        if img_bytes[:2] == b'\xff\xd8':
+                            ext = 'jpg'
+                        elif img_bytes[:4] == b'\x89PNG':
+                            ext = 'png'
+                        else:
+                            ext = 'png'
+                        tmp_path = os.path.join(tempfile.gettempdir(), f'preek_img_{uuid.uuid4().hex}.{ext}')
+                        with open(tmp_path, 'wb') as f:
+                            f.write(img_bytes)
+                        temp_image_paths.append(tmp_path)
+
+                        left_para = left_cell.paragraphs[0]
+                        left_run = left_para.add_run()
+                        left_run.add_picture(tmp_path, width=Cm(7.3))
+
+                        right_para = right_cell.paragraphs[0]
+                        right_run = right_para.add_run()
+                        right_run.add_picture(tmp_path, width=Cm(7.3))
+                    except Exception as e2:
+                        print(f"DEBUG: Fallback also failed: {e2}")
 
     out = io.BytesIO()
     doc.save(out)
@@ -4392,13 +4931,24 @@ def _bilingual_preek_from_bytes(client, file_bytes, filename=''):
     else:
         blocks = _extract_preek_blocks(file_bytes)
 
-    all_text_blocks = [b for b in blocks if b['type'] == 'text']
-    non_empty_indices = [i for i, b in enumerate(all_text_blocks) if b['text'].strip()]
-    non_empty_blocks = [all_text_blocks[i] for i in non_empty_indices]
+    # Separate text blocks for translation, preserve image block positions
+    text_block_indices = [i for i, b in enumerate(blocks) if b['type'] == 'text']
+    text_blocks = [blocks[i] for i in text_block_indices]
+    
+    # Filter non-empty text blocks for translation
+    non_empty_indices = [i for i, b in enumerate(text_blocks) if b['text'].strip()]
+    non_empty_blocks = [text_blocks[i] for i in non_empty_indices]
     translated_non_empty = _translate_text_blocks(client, non_empty_blocks)
-    translated_texts = [''] * len(all_text_blocks)
-    for pos, all_idx in enumerate(non_empty_indices):
-        translated_texts[all_idx] = translated_non_empty[pos] if pos < len(translated_non_empty) else ''
+    
+    # Build translated_texts array matching the full blocks length
+    # Text blocks get translations, image blocks get empty strings
+    translated_texts = [''] * len(blocks)
+    
+    # Map translated non-empty blocks back to their positions
+    for pos, text_idx in enumerate(non_empty_indices):
+        if pos < len(translated_non_empty):
+            original_block_idx = text_block_indices[text_idx]
+            translated_texts[original_block_idx] = translated_non_empty[pos]
 
     docx_bytes = _build_bilingual_preek_docx(blocks, translated_texts)
     source_sample = ' '.join(b['text'] for b in non_empty_blocks)[:5000]
@@ -4491,6 +5041,44 @@ def translate_preek_inline():
 @app.route('/help')
 def help_page():
     return render_template('help.html')
+
+
+@app.route('/mededelingen-translate', methods=['POST'])
+def translate_mededelingen():
+    """Translate Dutch text to Indonesian for mededelingen."""
+    import os
+
+    api_key = os.environ.get('GEMINI_API_KEY', '')
+    if not api_key:
+        return jsonify({'error': 'Gemini API key niet geconfigureerd (GEMINI_API_KEY).'}), 500
+
+    data = request.get_json() or {}
+    text = data.get('text', '').strip()
+    if not text:
+        return jsonify({'error': 'Geen tekst om te vertalen.'}), 400
+
+    try:
+        from google import genai
+        client = genai.Client(api_key=api_key)
+
+        PROMPT = (
+            "You are a professional church announcement translator.\n"
+            "Your task: Translate the following Dutch (Nederlands) text to Indonesian (Bahasa Indonesia).\n"
+            "Use proper church and liturgical terminology in Indonesian.\n"
+            "Preserve the paragraph structure and line breaks.\n"
+            "Output ONLY the translated text without any explanations.\n\n"
+            "TEXT TO TRANSLATE:\n" + text
+        )
+
+        response = client.models.generate_content(model='gemini-2.5-flash', contents=PROMPT)
+        translated = response.text.strip()
+
+        return jsonify({'success': True, 'translated': translated})
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': f'Vertaling mislukt: {str(e)}'}), 500
 
 
 @app.route('/health')

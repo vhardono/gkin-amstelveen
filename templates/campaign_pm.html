@@ -11,8 +11,18 @@
         }
     </script>
     <script src="/static/i18n.js"></script>
+    {% if embedded %}
+    <style>
+        body { padding: 0.5rem; font-size: 0.875rem; }
+        main { max-width: none !important; padding: 0 !important; }
+        main > div { padding: 1rem !important; margin-bottom: 0.75rem !important; }
+        main h2 { font-size: 0.875rem !important; }
+        input, select, textarea { font-size: 0.875rem !important; }
+    </style>
+    {% endif %}
 </head>
 <body class="bg-gray-50 min-h-screen">
+    {% if not embedded %}
     <header class="bg-gkin-green shadow-md">
         <div class="max-w-2xl mx-auto px-6 py-5 flex items-center gap-4">
             <a href="/"><img src="/static/logo2.png" alt="GKIN Logo" class="h-12 w-12 object-contain shrink-0"></a>
@@ -27,9 +37,10 @@
             </div>
         </div>
     </header>
+    {% endif %}
 
     <main class="max-w-2xl mx-auto px-6 py-8">
-        <a href="/campaign" class="inline-flex items-center gap-1 text-sm text-gkin-green hover:text-gkin-dark mb-5">
+        <a href="/campaign" data-back-to-select class="inline-flex items-center gap-1 text-sm text-gkin-green hover:text-gkin-dark mb-5">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
             </svg>
@@ -186,6 +197,9 @@
             <button id="createBtn" class="flex-1 bg-gkin-green hover:bg-gkin-dark text-white font-medium py-2.5 px-4 rounded-lg text-sm transition hidden">
                 <span data-i18n="camp.create">Campagne aanmaken</span>
             </button>
+            <button id="senderBtn" class="flex-1 bg-gray-300 text-gray-500 font-medium py-2.5 px-4 rounded-lg text-sm transition hidden cursor-not-allowed" disabled onclick="window.open('https://app.sender.net/campaigns', '_blank')">
+                <span data-i18n="camp.sender">Verifiëren in Sender</span>
+            </button>
         </div>
 
         <div id="previewSection" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-5 hidden">
@@ -197,11 +211,41 @@
     </main>
 
     <script>
+        const embedded = {{ (embedded | default(false)) | tojson }};
+        const iframeToken = embedded ? new URLSearchParams(location.search).get('token') : null;
+
+        function campUrl(url) {
+            const target = new URL(url, location.origin);
+            if (iframeToken && target.origin === location.origin) target.searchParams.set('token', iframeToken);
+            return target.href;
+        }
+
+        function campFetch(url, options) {
+            return window.fetch(campUrl(url), options);
+        }
+
+        if (embedded) {
+            const backLink = document.querySelector('[data-back-to-select]');
+            if (backLink) {
+                const target = new URL('/campaign-iframe', location.origin);
+                new URLSearchParams(location.search).forEach((v, k) => target.searchParams.set(k, v));
+                backLink.href = target.href;
+            }
+            const resizeIframe = () => window.parent.postMessage(
+                { type: 'gkin-campaign-resize', height: document.documentElement.scrollHeight }, '*'
+            );
+            window.addEventListener('load', resizeIframe);
+            window.addEventListener('resize', resizeIframe);
+            document.addEventListener('gkin:langchange', resizeIframe);
+            if (window.ResizeObserver) new ResizeObserver(resizeIframe).observe(document.body);
+        }
+
         const dateSelect      = document.getElementById('dateSelect');
         const pmSection       = document.getElementById('pmSection');
         const campaignDetails = document.getElementById('campaignDetails');
         const previewBtn      = document.getElementById('previewBtn');
         const createBtn       = document.getElementById('createBtn');
+        const senderBtn       = document.getElementById('senderBtn');
         const previewSection  = document.getElementById('previewSection');
         const previewContent  = document.getElementById('previewContent');
         const resultSection   = document.getElementById('resultSection');
@@ -210,7 +254,7 @@
         const NL_DAYS   = ['zondag','maandag','dinsdag','woensdag','donderdag','vrijdag','zaterdag'];
 
         function t(key) {
-            const lang = localStorage.getItem('gkin_lang') || 'nl';
+            const lang = document.documentElement.lang || 'nl';
             return (window.GKIN_I18N && window.GKIN_I18N[lang] && window.GKIN_I18N[lang][key]) || key;
         }
 
@@ -237,15 +281,28 @@
                 campaignDetails.classList.add('hidden');
                 previewBtn.classList.add('hidden');
                 createBtn.classList.add('hidden');
+                senderBtn.classList.add('hidden');
                 previewSection.classList.add('hidden');
                 return;
             }
+
+            // Reset sender button to disabled state when date changes
+            senderBtn.disabled = true;
+            senderBtn.classList.remove('bg-orange-500', 'hover:bg-orange-600', 'text-white', 'cursor-pointer');
+            senderBtn.classList.add('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
+            // Hide result section
+            resultSection.classList.add('hidden');
 
             // Show sections immediately
             pmSection.classList.remove('hidden');
             campaignDetails.classList.remove('hidden');
             previewBtn.classList.remove('hidden');
             createBtn.classList.remove('hidden');
+            senderBtn.classList.remove('hidden');
+            // Reset sender button to disabled state when showing
+            senderBtn.disabled = true;
+            senderBtn.classList.remove('bg-orange-500', 'hover:bg-orange-600', 'text-white', 'cursor-pointer');
+            senderBtn.classList.add('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
             previewSection.classList.add('hidden');
             if (resultSection) resultSection.innerHTML = '';
 
@@ -277,7 +334,7 @@
             badge.classList.add('hidden');
 
             try {
-                const resp = await fetch('/fetch-pm-data', {
+                const resp = await campFetch('/fetch-pm-data', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ date }),
@@ -331,7 +388,7 @@
             loading.classList.remove('hidden');
             container.classList.add('hidden');
             try {
-                const resp = await fetch('/campaign/lists');
+                const resp = await campFetch('/campaign/lists');
                 const data = await resp.json();
                 if (data.success && data.lists && data.lists.length > 0) {
                     loading.classList.add('hidden');
@@ -380,7 +437,7 @@
             previewBtn.disabled = true;
             previewBtn.innerHTML = `<span data-i18n="common.loading">${t('common.loading')}</span>`;
             try {
-                const resp = await fetch('/campaign/pm/preview', {
+                const resp = await campFetch('/campaign/pm/preview', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(buildPayload()),
@@ -429,7 +486,7 @@
                     })(),
                     list_ids: Array.from(document.querySelectorAll('.list-checkbox:checked')).map(el => el.value),
                 };
-                const resp = await fetch('/campaign/pm/create', {
+                const resp = await campFetch('/campaign/pm/create', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload),
@@ -440,6 +497,10 @@
                         ? ` · ${t('pm.scheduled')} ${data.schedule_time} UTC`
                         : (data.schedule_error ? ` · ⚠ ${t('pm.schedule_error')}: ${data.schedule_error}` : '');
                     resultSection.innerHTML = `<div class="bg-green-50 border border-green-200 rounded-lg p-4 text-green-800 text-sm">✓ ${t('pm.created')}: ${data.campaign_id}${schedMsg}</div>`;
+                    // Enable sender button after successful creation
+                    senderBtn.disabled = false;
+                    senderBtn.classList.remove('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
+                    senderBtn.classList.add('bg-orange-500', 'hover:bg-orange-600', 'text-white', 'cursor-pointer');
                 } else {
                     resultSection.innerHTML = `<div class="bg-red-50 border border-red-200 rounded-lg p-4 text-red-800 text-sm">✗ ${t('pm.error')}: ${data.error || t('pm.error')}</div>`;
                 }

@@ -115,7 +115,7 @@
                     <option value="Huwelijks">Huwelijks</option>
                     <option value="Doop">Doop</option>
                 </select>
-                <select id="m_first" class="rounded border border-gray-300 px-2 py-1.5 text-sm">
+                <select id="m_first" class="rounded border border-gray-300 px-2 py-1.5 text-sm" onchange="filterToDateOptions()">
                     <option value="">-- kies van --</option>
                     {% for d in takenrooster_dates %}<option value="{{ d }}">{{ d }}</option>{% endfor %}
                 </select>
@@ -135,10 +135,38 @@
                     <textarea id="m_nl_body" rows="5" class="w-full rounded border border-gray-300 px-2 py-1.5 text-sm resize-y"></textarea>
                 </div>
                 <div>
-                    <label class="block text-xs text-gray-500 mb-1">ID Titel</label>
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="block text-xs text-gray-500">ID Titel</label>
+                        <button type="button" onclick="autoTranslate()" class="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded px-2 py-0.5">Auto-translate NL → ID</button>
+                    </div>
                     <input id="m_id_title" type="text" class="w-full rounded border border-gray-300 px-2 py-1.5 text-sm mb-2">
                     <label class="block text-xs text-gray-500 mb-1">ID Inhoud</label>
                     <textarea id="m_id_body" rows="5" class="w-full rounded border border-gray-300 px-2 py-1.5 text-sm resize-y"></textarea>
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                    <input type="checkbox" id="m_vl_diff" onchange="toggleVoorlezen()" class="rounded border-gray-300 text-gkin-green focus:ring-gkin-green w-4 h-4">
+                    Voorlezen gebruikt een andere tekst dan mededelingen
+                </label>
+            </div>
+
+            <div id="m_vlBox" class="hidden grid grid-cols-1 md:grid-cols-2 gap-6 mb-4 p-4 bg-amber-50 rounded-lg border border-amber-200">
+                <div>
+                    <p class="text-xs font-medium text-amber-700 mb-2">Voorlezen — Nederlands</p>
+                    <label class="block text-xs text-gray-500 mb-1">NL Titel</label>
+                    <input id="m_vl_nl_title" type="text" class="w-full rounded border border-gray-300 px-2 py-1.5 text-sm mb-2">
+                    <label class="block text-xs text-gray-500 mb-1">NL Inhoud</label>
+                    <textarea id="m_vl_nl_body" rows="4" class="w-full rounded border border-gray-300 px-2 py-1.5 text-sm resize-y"></textarea>
+                </div>
+                <div>
+                    <p class="text-xs font-medium text-amber-700 mb-2">Voorlezen — Bahasa Indonesia</p>
+                    <label class="block text-xs text-gray-500 mb-1">ID Titel</label>
+                    <input id="m_vl_id_title" type="text" class="w-full rounded border border-gray-300 px-2 py-1.5 text-sm mb-2">
+                    <label class="block text-xs text-gray-500 mb-1">ID Inhoud</label>
+                    <textarea id="m_vl_id_body" rows="4" class="w-full rounded border border-gray-300 px-2 py-1.5 text-sm resize-y"></textarea>
+                    <p class="text-xs text-gray-400 mt-1">Leeg gelaten = zelfde tekst als mededelingen</p>
                 </div>
             </div>
 
@@ -227,6 +255,21 @@
         function openModal() { document.getElementById('editModal').classList.remove('hidden'); }
         function closeModal() { document.getElementById('editModal').classList.add('hidden'); }
 
+        function toggleVoorlezen() {
+            document.getElementById('m_vlBox').classList.toggle('hidden',
+                !document.getElementById('m_vl_diff').checked);
+        }
+
+        function setVoorlezenFields(row) {
+            const hasVl = !!(row && ((row.voorlezen_nl || '').trim() || (row.voorlezen_id || '').trim()));
+            document.getElementById('m_vl_diff').checked = hasVl;
+            document.getElementById('m_vl_nl_title').value = row ? (row.voorlezen_nl_title || '') : '';
+            document.getElementById('m_vl_nl_body').value  = row ? (row.voorlezen_nl_body || '') : '';
+            document.getElementById('m_vl_id_title').value = row ? (row.voorlezen_id_title || '') : '';
+            document.getElementById('m_vl_id_body').value  = row ? (row.voorlezen_id_body || '') : '';
+            toggleVoorlezen();
+        }
+
         function openEdit(idx) {
             const row = ROWS.find(r => r.row_index == idx);
             if (!row) return;
@@ -242,12 +285,46 @@
             document.getElementById('m_nl_body').value = row.nl_body;
             document.getElementById('m_id_title').value = row.id_title;
             document.getElementById('m_id_body').value = row.id_body;
+            setVoorlezenFields(row);
             document.getElementById('m_status').textContent = `Status: ${row.status}`;
 
             renderImages(row.images || []);
             document.getElementById('m_imgUpload').value = '';
             document.getElementById('m_imgLabel').textContent = 'Kies afbeelding(en)...';
+            
+            // For editing, restore all dates in both dropdowns (past and future)
+            restoreAllDates();
+            
             openModal();
+        }
+
+        function restoreAllDates() {
+            const m_first = document.getElementById('m_first');
+            const m_last = document.getElementById('m_last');
+            
+            // Save current selection
+            const currentFirst = m_first.value;
+            const currentLast = m_last.value;
+            
+            // Restore all dates in both dropdowns
+            m_first.innerHTML = '<option value="">-- kies van --</option>';
+            m_last.innerHTML = '<option value="">-- kies tot --</option>';
+            
+            TAKENROOSTER_DATES.forEach(dateStr => {
+                const option = document.createElement('option');
+                option.value = dateStr;
+                option.textContent = dateStr;
+                m_first.appendChild(option);
+                
+                const lastOption = document.createElement('option');
+                lastOption.value = dateStr;
+                lastOption.textContent = dateStr;
+                m_last.appendChild(lastOption);
+            });
+            
+            // Restore selection
+            if (currentFirst) m_first.value = currentFirst;
+            if (currentLast) m_last.value = currentLast;
         }
 
         function openAdd() {
@@ -257,9 +334,141 @@
                 document.getElementById(id).value = id === 'm_cat' ? 'Regionale' : '';
             });
             document.getElementById('m_type').value = 'Others';
+            setVoorlezenFields(null);
             document.getElementById('m_status').textContent = '';
             renderImages([]);
+            
+            // Filter m_first to show only dates from today onwards
+            filterFromDateOptions();
+            
             openModal();
+        }
+
+        function filterFromDateOptions() {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            const m_first = document.getElementById('m_first');
+            const m_last = document.getElementById('m_last');
+            
+            // Save current selection
+            const currentFirst = m_first.value;
+            const currentLast = m_last.value;
+            
+            // Clear and rebuild m_first options (only future dates for new records)
+            m_first.innerHTML = '<option value="">-- kies van --</option>';
+            m_last.innerHTML = '<option value="">-- kies tot --</option>';
+            
+            TAKENROOSTER_DATES.forEach(dateStr => {
+                const date = new Date(dateStr);
+                date.setHours(0, 0, 0, 0);
+                
+                // Add to m_first if date is today or future (for new records)
+                if (date >= today) {
+                    const option = document.createElement('option');
+                    option.value = dateStr;
+                    option.textContent = dateStr;
+                    m_first.appendChild(option);
+                }
+                
+                // Add to m_last (all dates for now, will be filtered when m_first changes)
+                const lastOption = document.createElement('option');
+                lastOption.value = dateStr;
+                lastOption.textContent = dateStr;
+                m_last.appendChild(lastOption);
+            });
+            
+            // Restore selection if still valid
+            if (currentFirst) {
+                const optionExists = Array.from(m_first.options).some(opt => opt.value === currentFirst);
+                if (optionExists) m_first.value = currentFirst;
+            }
+            if (currentLast) {
+                const optionExists = Array.from(m_last.options).some(opt => opt.value === currentLast);
+                if (optionExists) m_last.value = currentLast;
+            }
+            
+            // For new records, also filter To dates to future dates initially
+            const isNew = document.getElementById('m_index').value === 'new';
+            if (isNew) {
+                filterToDateOptionsForNew();
+            }
+        }
+
+        function filterToDateOptionsForNew() {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            const m_first = document.getElementById('m_first');
+            const m_last = document.getElementById('m_last');
+            const selectedFirst = m_first.value;
+            
+            // Save current selection
+            const currentLast = m_last.value;
+            
+            // Clear and rebuild m_last options
+            m_last.innerHTML = '<option value="">-- kies tot --</option>';
+            
+            TAKENROOSTER_DATES.forEach(dateStr => {
+                const date = new Date(dateStr);
+                date.setHours(0, 0, 0, 0);
+                
+                // If From date is selected, filter to dates on or after From date
+                // If From date is not selected, filter to today or future dates
+                if (selectedFirst) {
+                    const firstDate = new Date(selectedFirst);
+                    firstDate.setHours(0, 0, 0, 0);
+                    if (date >= firstDate) {
+                        const option = document.createElement('option');
+                        option.value = dateStr;
+                        option.textContent = dateStr;
+                        m_last.appendChild(option);
+                    }
+                } else {
+                    if (date >= today) {
+                        const option = document.createElement('option');
+                        option.value = dateStr;
+                        option.textContent = dateStr;
+                        m_last.appendChild(option);
+                    }
+                }
+            });
+            
+            // Restore selection if still valid
+            if (currentLast) {
+                const optionExists = Array.from(m_last.options).some(opt => opt.value === currentLast);
+                if (optionExists) m_last.value = currentLast;
+            }
+        }
+
+        function filterToDateOptions() {
+            const m_first = document.getElementById('m_first');
+            const m_last = document.getElementById('m_last');
+            const selectedFirst = m_first.value;
+            const isNew = document.getElementById('m_index').value === 'new';
+            
+            // For new records, use the special filtering
+            if (isNew) {
+                filterToDateOptionsForNew();
+                return;
+            }
+            
+            // For edit mode, show all dates in To dropdown
+            const currentLast = m_last.value;
+            m_last.innerHTML = '<option value="">-- kies tot --</option>';
+            
+            TAKENROOSTER_DATES.forEach(dateStr => {
+                const option = document.createElement('option');
+                option.value = dateStr;
+                option.textContent = dateStr;
+                m_last.appendChild(option);
+            });
+            
+            // Restore selection if still valid
+            if (currentLast) {
+                const optionExists = Array.from(m_last.options).some(opt => opt.value === currentLast);
+                if (optionExists) m_last.value = currentLast;
+            }
         }
 
         async function saveModal() {
@@ -279,6 +488,9 @@
                 source: document.getElementById('m_source').value,
                 nl: buildText(document.getElementById('m_nl_title').value, document.getElementById('m_nl_body').value),
                 id: buildText(document.getElementById('m_id_title').value, document.getElementById('m_id_body').value),
+                voorlezen_different: document.getElementById('m_vl_diff').checked,
+                voorlezen_nl: buildText(document.getElementById('m_vl_nl_title').value, document.getElementById('m_vl_nl_body').value),
+                voorlezen_id: buildText(document.getElementById('m_vl_id_title').value, document.getElementById('m_vl_id_body').value),
             };
             if (!isNew) payload.row_index = parseInt(idx, 10);
 
@@ -346,6 +558,55 @@
                 }
             } catch (e) {
                 alert('Fout: ' + e.message);
+            }
+        }
+
+        async function autoTranslate() {
+            const nlTitle = document.getElementById('m_nl_title').value.trim();
+            const nlBody = document.getElementById('m_nl_body').value.trim();
+            
+            if (!nlTitle && !nlBody) {
+                alert('Vul eerst NL Titel en/of NL Inhoud in.');
+                return;
+            }
+            
+            const textToTranslate = buildText(nlTitle, nlBody);
+            if (!textToTranslate) {
+                alert('Geen tekst om te vertalen.');
+                return;
+            }
+            
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'Vertalen...';
+            
+            try {
+                const resp = await fetch('/mededelingen-translate', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({text: textToTranslate})
+                });
+                const data = await resp.json();
+                if (data.error) throw new Error(data.error);
+                
+                // Parse the translated text to separate title and body
+                const translated = data.translated || '';
+                const lines = translated.split('\n');
+                
+                // First line is title, rest is body
+                if (lines.length > 0) {
+                    document.getElementById('m_id_title').value = lines[0].trim();
+                    document.getElementById('m_id_body').value = lines.slice(1).join('\n').trim();
+                } else {
+                    document.getElementById('m_id_body').value = translated;
+                }
+                
+            } catch (e) {
+                alert('Vertalingsfout: ' + e.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = originalText;
             }
         }
 

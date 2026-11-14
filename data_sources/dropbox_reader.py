@@ -16,7 +16,23 @@ from typing import Dict, List, Any, Optional
 from config import Config
 
 TAKENROOSTER_PATH = '/# Kerkbode GKIN Amstelveen/Rooster/Takenrooster_GKIN_Amstelveen_2026.xlsx'
+TAKENROOSTER_PATH_TEMPLATE = '/# Kerkbode GKIN Amstelveen/Rooster/Takenrooster_GKIN_Amstelveen_{year}.xlsx'
 MEDEDELINGEN_PATH_TEMPLATE = '/# Kerkbode GKIN Amstelveen/{year}/Mededelingen Overzicht.xlsx'
+GEBEDSPUNTEN_PATH = '/working folder/Gebedspunten.txt'
+
+STORAGE_BACKEND = os.environ.get('STORAGE_BACKEND', 'dropbox')
+_graph_drive = None
+
+def _storage(dbx=None):
+    """Return the SharePoint GraphDrive when the sharepoint backend is enabled,
+    otherwise the passed Dropbox client."""
+    if STORAGE_BACKEND == 'sharepoint':
+        global _graph_drive
+        if _graph_drive is None:
+            from data_sources.graph_client import GraphDrive
+            _graph_drive = GraphDrive()
+        return _graph_drive
+    return dbx
 
 MEDEDELINGEN_IMG_DIR = os.getenv('MEDEDELINGEN_IMAGES_DIR',
                                  '/data/mededelingen_images' if os.path.isdir('/data') else './mededelingen_images')
@@ -40,6 +56,26 @@ def _mededelingen_image_meta() -> dict:
 def _save_mededelingen_image_meta(meta: dict) -> None:
     os.makedirs(MEDEDELINGEN_IMG_DIR, exist_ok=True)
     with open(MEDEDELINGEN_IMG_META, 'w', encoding='utf-8') as f:
+        json.dump(meta, f, ensure_ascii=False, indent=2)
+
+
+MEDEDELINGEN_VOORLEZEN_META = os.path.join(MEDEDELINGEN_IMG_DIR, 'voorlezen.json')
+
+
+def _mededelingen_voorlezen_meta() -> dict:
+    """Voorlezen text overrides per row: {"<year>-<row_index>": {"nl": ..., "id": ...}}"""
+    if not os.path.exists(MEDEDELINGEN_VOORLEZEN_META):
+        return {}
+    try:
+        with open(MEDEDELINGEN_VOORLEZEN_META, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+def _save_mededelingen_voorlezen_meta(meta: dict) -> None:
+    os.makedirs(MEDEDELINGEN_IMG_DIR, exist_ok=True)
+    with open(MEDEDELINGEN_VOORLEZEN_META, 'w', encoding='utf-8') as f:
         json.dump(meta, f, ensure_ascii=False, indent=2)
 
 
@@ -130,35 +166,157 @@ class DropboxExcelReader:
             'entries' – list of dicts with keys: date, dag, predikant, ovd, opmerking
                         where ovd is the full name with salutation from People tab.
         """
+        # Merge previous/current/next year files so the schedule rolls
+        # across the year boundary without code changes.
+        year = datetime.now().year
+        paths = [TAKENROOSTER_PATH_TEMPLATE.format(year=y)
+                 for y in (year - 1, year, year + 1)]
         try:
-            _, response = self.dbx.files_download(TAKENROOSTER_PATH)
-            content = BytesIO(response.content)
+            entries = []
+            loaded_paths = []
+            for path in paths:
+                try:
+                    _, response = _storage(self.dbx).files_download(path)
+                except Exception as e:
+                    print(f"Takenrooster: skipping {path} ({e})")
+                    continue
+                content = BytesIO(response.content)
+                try:
+                    # Merge People tabs in year order so newer-year additions
+                    # override entries from older files.
+                    people_df = pd.read_excel(content, sheet_name='People', header=0)
+                    self._build_people_map(people_df)
+                    content.seek(0)
+                    current_df = pd.read_excel(content, sheet_name='CURRENT', header=None)
+                    entries.extend(self._parse_current_sheet(current_df))
+                    loaded_paths.append(path)
+                except Exception as e:
+                    print(f"Takenrooster: failed parsing {path}: {e}")
 
-            people_df = pd.read_excel(content, sheet_name='People', header=0)
-            self._build_people_map(people_df)
+            # Dedupe by service date, keep chronological order
+            seen = set()
+            deduped = []
+            for e in sorted(entries, key=lambda x: x['date'] or datetime.min):
+                key = e['date'].strftime('%Y-%m-%d') if e['date'] else id(e)
+                if key in seen:
+                    continue
+                seen.add(key)
+                deduped.append(e)
 
-            content.seek(0)
-            current_df = pd.read_excel(content, sheet_name='CURRENT', header=None)
+            # Hide dates that have no one assigned to any duty
+            _duty_fields = ('predikant', 'ovd', '1eo', 'beamer', 'muziek',
+                            'voorzangers', 'multimedia', 'knd', 'tieners', 'bijbellezers')
+            all_deduped = deduped
+            deduped = [e for e in deduped
+                       if any((e.get(k) or '').strip() for k in _duty_fields)]
 
-            entries = self._parse_current_sheet(current_df)
-            dates = [e['date'] for e in entries]
-
-            print(f"Takenrooster: {len(entries)} services loaded")
+            dates = [e['date'] for e in deduped]
+            print(f"Takenrooster: {len(deduped)} services loaded from {len(loaded_paths)} file(s)")
             return {
-                'source': TAKENROOSTER_PATH,
+                'source': loaded_paths or TAKENROOSTER_PATH,
                 'dates': dates,
-                'entries': entries,
+                'entries': deduped,
+                'all_entries': all_deduped,
             }
 
         except Exception as e:
             print(f"Error reading takenrooster: {e}")
             return {'error': str(e), 'dates': [], 'entries': []}
 
-    def get_mededelingen(self, mededelingen_date: datetime = None) -> Dict[str, Any]:
+    def save_takenrooster_bijbellezers(self, service_date, value: str) -> Dict[str, Any]:
+        """Write the Bijbellezers value (column N / BIJBELEZERS) for a service date."""
+        from openpyxl import load_workbook
+        import dropbox
+        year = service_date.year
+        path = TAKENROOSTER_PATH_TEMPLATE.format(year=year)
+        try:
+            _, response = _storage(self.dbx).files_download(path)
+            wb = load_workbook(BytesIO(response.content))
+            ws = wb['CURRENT']
+
+            header_row = None
+            headers = []
+            for i in range(1, min(11, ws.max_row + 1)):
+                vals = [str(c.value).strip().upper() if c.value is not None else '' for c in ws[i]]
+                if 'DAG' in vals and 'DATUM' in vals:
+                    header_row, headers = i, vals
+                    break
+            if not header_row:
+                return {'ok': False, 'error': 'Header row not found in CURRENT sheet'}
+
+            bijbel_col = next((idx for idx, h in enumerate(headers, start=1)
+                               if h.replace('\n', ' ').strip() == 'BIJBELEZERS'), 14)
+            datum_col = headers.index('DATUM') + 1 if 'DATUM' in headers else 2
+
+            target_row = None
+            for r in range(header_row + 1, ws.max_row + 1):
+                v = ws.cell(row=r, column=datum_col).value
+                if v is None:
+                    continue
+                try:
+                    d = v if isinstance(v, datetime) else pd.to_datetime(v)
+                    if d.date() == service_date.date():
+                        target_row = r
+                        break
+                except Exception:
+                    continue
+            if not target_row:
+                return {'ok': False, 'error': f'No row found for {service_date.date()}'}
+
+            ws.cell(row=target_row, column=bijbel_col).value = (value or '').strip() or None
+
+            out = BytesIO()
+            wb.save(out)
+            out.seek(0)
+            _storage(self.dbx).files_upload(out.read(), path,
+                                            mode=dropbox.files.WriteMode.overwrite)
+            return {'ok': True, 'row': target_row}
+        except Exception as e:
+            print(f'Takenrooster: save bijbellezers failed: {e}')
+            return {'ok': False, 'error': str(e)}
+
+    def get_gebedspunten(self) -> Dict[str, Any]:
+        """Read the Gebedspunten.txt prayer-points file from storage."""
+        try:
+            _, response = _storage(self.dbx).files_download(GEBEDSPUNTEN_PATH)
+            return {'ok': True, 'path': GEBEDSPUNTEN_PATH,
+                    'text': response.content.decode('utf-8', errors='replace')}
+        except Exception as e:
+            print(f'Gebedspunten: read failed: {e}')
+            return {'ok': False, 'error': str(e), 'text': ''}
+
+    def save_gebedspunten(self, text: str) -> Dict[str, Any]:
+        """Overwrite Gebedspunten.txt with the edited content (UTF-8)."""
+        import dropbox
+        try:
+            _storage(self.dbx).files_upload(
+                text.encode('utf-8'), GEBEDSPUNTEN_PATH,
+                mode=dropbox.files.WriteMode.overwrite)
+            return {'ok': True}
+        except Exception as e:
+            print(f'Gebedspunten: save failed: {e}')
+            return {'ok': False, 'error': str(e)}
+
+    def save_voorlezen_override(self, year: int, row_index: int, nl: str = '', id_: str = '') -> Dict[str, Any]:
+        """Store/clear the voorlezen text override for one year-sheet row."""
+        try:
+            meta = _mededelingen_voorlezen_meta()
+            key = f"{year}-{row_index}"
+            if (nl or '').strip() or (id_ or '').strip():
+                meta[key] = {'nl': (nl or '').strip(), 'id': (id_ or '').strip()}
+            else:
+                meta.pop(key, None)
+            _save_mededelingen_voorlezen_meta(meta)
+            return {'success': True}
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+
+    def get_mededelingen(self, mededelingen_date: datetime = None, for_voorlezen: bool = False) -> Dict[str, Any]:
         """Compute active mededelingen for the selected date from the year sheet.
 
         The year in the file path is derived from the selected mededelingen_date.
         If mededelingen_date is not provided, the current year/upcoming Sunday is used.
+        If for_voorlezen is True, per-row voorlezen override text is used when present.
 
         Returns dict with:
             'regionale_nl'  – Regionale Mededelingen (Nederlands)
@@ -188,16 +346,21 @@ class DropboxExcelReader:
 
             for row in active_rows:
                 cat = (row.get('category') or '').strip().lower()
+                nl_txt = row.get('nl')
+                id_txt = row.get('id')
+                if for_voorlezen:
+                    nl_txt = row.get('voorlezen_nl') or nl_txt
+                    id_txt = row.get('voorlezen_id') or id_txt
                 if cat == 'regionale':
-                    if row.get('nl'):
-                        regionale_nl.append(str(row['nl']).strip())
-                    if row.get('id'):
-                        regionale_id.append(str(row['id']).strip())
+                    if nl_txt:
+                        regionale_nl.append(str(nl_txt).strip())
+                    if id_txt:
+                        regionale_id.append(str(id_txt).strip())
                 elif cat == 'landelijke':
-                    if row.get('nl'):
-                        landelijke_nl.append(str(row['nl']).strip())
-                    if row.get('id'):
-                        landelijke_id.append(str(row['id']).strip())
+                    if nl_txt:
+                        landelijke_nl.append(str(nl_txt).strip())
+                    if id_txt:
+                        landelijke_id.append(str(id_txt).strip())
 
             result = {
                 'source': path,
@@ -223,7 +386,7 @@ class DropboxExcelReader:
         path = MEDEDELINGEN_PATH_TEMPLATE.format(year=year)
         try:
             print(f"Writing Mededelingen Overzicht: {path}")
-            _, response = self.dbx.files_download(path)
+            _, response = _storage(self.dbx).files_download(path)
 
             wb = load_workbook(BytesIO(response.content))
             if 'Output' not in wb.sheetnames:
@@ -242,7 +405,7 @@ class DropboxExcelReader:
             wb.save(out)
             out.seek(0)
 
-            self.dbx.files_upload(
+            _storage(self.dbx).files_upload(
                 out.read(),
                 path,
                 mode=dropbox.files.WriteMode.overwrite,
@@ -269,7 +432,7 @@ class DropboxExcelReader:
         path = MEDEDELINGEN_PATH_TEMPLATE.format(year=year)
         rows = []
         try:
-            _, response = self.dbx.files_download(path)
+            _, response = _storage(self.dbx).files_download(path)
             df = pd.read_excel(BytesIO(response.content), sheet_name=str(year), header=0)
 
             for idx, raw in df.iterrows():
@@ -306,6 +469,14 @@ class DropboxExcelReader:
                 id_ = _cell(3)
                 nl_title, nl_body = _split_title_body(nl)
                 id_title, id_body = _split_title_body(id_)
+
+                # voorlezen override sidecar
+                vl_meta = _mededelingen_voorlezen_meta()
+                vl_rec = vl_meta.get(f"{year}-{idx}") or {}
+                vl_nl = str(vl_rec.get('nl') or '').strip()
+                vl_id = str(vl_rec.get('id') or '').strip()
+                vl_nl_title, vl_nl_body = _split_title_body(vl_nl)
+                vl_id_title, vl_id_body = _split_title_body(vl_id)
 
                 # image sidecar (single dict legacy or list of dicts)
                 meta = _mededelingen_image_meta()
@@ -344,6 +515,12 @@ class DropboxExcelReader:
                     'nl_body': nl_body,
                     'id_title': id_title,
                     'id_body': id_body,
+                    'voorlezen_nl': vl_nl,
+                    'voorlezen_id': vl_id,
+                    'voorlezen_nl_title': vl_nl_title,
+                    'voorlezen_nl_body': vl_nl_body,
+                    'voorlezen_id_title': vl_id_title,
+                    'voorlezen_id_body': vl_id_body,
                     'first_date': first_date,
                     'last_date': last_date,
                     'event_date': _date_cell(6),
@@ -370,7 +547,7 @@ class DropboxExcelReader:
 
         path = MEDEDELINGEN_PATH_TEMPLATE.format(year=year)
         try:
-            _, response = self.dbx.files_download(path)
+            _, response = _storage(self.dbx).files_download(path)
             wb = load_workbook(BytesIO(response.content))
 
             year_ws = wb[str(year)]
@@ -436,7 +613,7 @@ class DropboxExcelReader:
             wb.save(out)
             out.seek(0)
 
-            self.dbx.files_upload(
+            _storage(self.dbx).files_upload(
                 out.read(),
                 path,
                 mode=dropbox.files.WriteMode.overwrite,
@@ -455,7 +632,7 @@ class DropboxExcelReader:
 
         path = MEDEDELINGEN_PATH_TEMPLATE.format(year=year)
         try:
-            _, response = self.dbx.files_download(path)
+            _, response = _storage(self.dbx).files_download(path)
             wb = load_workbook(BytesIO(response.content))
 
             year_ws = wb[str(year)]
@@ -516,7 +693,7 @@ class DropboxExcelReader:
             wb.save(out)
             out.seek(0)
 
-            self.dbx.files_upload(
+            _storage(self.dbx).files_upload(
                 out.read(),
                 path,
                 mode=dropbox.files.WriteMode.overwrite,
@@ -643,7 +820,7 @@ class DropboxExcelReader:
 
         try:
             print(f"Reading Activiteiten Kalender: {path}, sheet={sheet_name}")
-            _, response = self.dbx.files_download(path)
+            _, response = _storage(self.dbx).files_download(path)
             df = pd.read_excel(BytesIO(response.content), sheet_name=sheet_name, header=None)
 
             activities = []
@@ -844,7 +1021,7 @@ class DropboxExcelReader:
             h_norm = h.strip().upper().replace('\n', ' ')
             # Canonical mappings
             if h_norm in ('DAG', 'DATUM', 'PREDIKANT', 'OPMERKING', 'TIJD',
-                          'BEAMER', 'MUZIEK', 'MULTIMEDIA'):
+                          'BEAMER', 'MUZIEK', 'MULTIMEDIA', 'BIJBELEZERS'):
                 col[h_norm] = idx
             elif h_norm in ('OVD', 'OVD.', 'OV D'):
                 col['OVD'] = idx
@@ -932,6 +1109,9 @@ class DropboxExcelReader:
             tieners_raw = _cell('TIENERS', 8)
             knd         = _resolve_name_list(knd_raw) if knd_raw and knd_raw != '-' else ''
             tieners     = _resolve_name_list(tieners_raw) if tieners_raw and tieners_raw != '-' else ''
+            # Bijbellezers: display raw column value, no People-tab lookup
+            bijbel_raw  = _cell('BIJBELEZERS', 13)
+            bijbellezers = bijbel_raw if bijbel_raw and bijbel_raw != '-' else ''
 
             # Resolve OVD/1EO/Beamer names (tracks unresolved)
             ovd_full    = self._resolve_name(ovd_short) or ovd_short
@@ -975,6 +1155,7 @@ class DropboxExcelReader:
                 'multimedia':      multimedia,
                 'knd':             knd,
                 'tieners':         tieners,
+                'bijbellezers':    bijbellezers,
                 'unresolved_names': unresolved,
             })
 

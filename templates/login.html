@@ -49,6 +49,22 @@
             </div>
             {% endif %}
 
+            {% if sso_enabled %}
+            <a href="/login/microsoft?next={{ next }}"
+               class="w-full flex items-center justify-center gap-2 bg-[#2F2F2F] hover:bg-black text-white font-semibold py-2.5 rounded-lg transition text-sm mb-4">
+                <svg class="w-4 h-4" viewBox="0 0 23 23"><rect x="1" y="1" width="10" height="10" fill="#f35325"/><rect x="12" y="1" width="10" height="10" fill="#81bc06"/><rect x="1" y="12" width="10" height="10" fill="#05a6f0"/><rect x="12" y="12" width="10" height="10" fill="#ffba08"/></svg>
+                <span data-i18n="login.microsoft">Inloggen met Microsoft</span>
+            </a>
+            {% endif %}
+
+            {% if show_password_form %}
+            {% if sso_enabled %}
+            <div class="flex items-center gap-3 mb-4">
+                <div class="flex-1 border-t border-gray-200"></div>
+                <span class="text-xs text-gray-400" data-i18n="login.or">of</span>
+                <div class="flex-1 border-t border-gray-200"></div>
+            </div>
+            {% endif %}
             <form method="POST" action="/login?next={{ next }}">
                 <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-700 mb-1" data-i18n="login.password">Wachtwoord</label>
@@ -61,6 +77,11 @@
                     <span data-i18n="login.btn">Inloggen</span>
                 </button>
             </form>
+            {% elif sso_enabled %}
+            <p class="text-xs text-center text-gray-400 mt-2">
+                <a href="/login?fallback=1&amp;next={{ next }}" class="hover:text-gray-600 underline" data-i18n="login.pw_fallback">Gebruik wachtwoord</a>
+            </p>
+            {% endif %}
         </div>
     </main>
 

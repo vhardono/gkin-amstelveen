@@ -11,8 +11,17 @@
         }
     </script>
     <script src="/static/i18n.js"></script>
+    {% if embedded %}
+    <style>
+        body { padding: 0.75rem; }
+        main { max-width: none !important; padding: 0 !important; }
+        .grid > a { padding: 1rem !important; gap: 0.75rem !important; }
+        .grid > a > div:first-child { width: 2.5rem !important; height: 2.5rem !important; }
+    </style>
+    {% endif %}
 </head>
 <body class="bg-gray-50 min-h-screen">
+    {% if not embedded %}
     <header class="bg-gkin-green shadow-md">
         <div class="max-w-2xl mx-auto px-6 py-5 flex items-center gap-4">
             <a href="/"><img src="/static/logo2.png" alt="GKIN Logo" class="h-12 w-12 object-contain shrink-0"></a>
@@ -27,21 +36,24 @@
             </div>
         </div>
     </header>
+    {% endif %}
 
     <main class="max-w-2xl mx-auto px-6 py-8">
+        {% if not embedded %}
         <a href="/" class="inline-flex items-center gap-1 text-sm text-gkin-green hover:text-gkin-dark mb-6">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
             </svg>
             <span data-i18n="nav.back_dashboard">Terug naar dashboard</span>
         </a>
+        {% endif %}
 
         <h2 class="text-xl font-semibold text-gray-800 mb-2" data-i18n="cs.heading">Kies een e-mail template</h2>
         <p class="text-sm text-gray-500 mb-6" data-i18n="cs.subheading">Selecteer het type campagne dat u wilt aanmaken.</p>
 
         <div class="grid gap-4">
             <!-- OLE Information -->
-            <a href="/campaign/ole"
+            <a href="/campaign/ole" data-iframe-target="/campaign-iframe/ole"
                class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex items-start gap-5 hover:border-gkin-green hover:shadow-md transition group">
                 <div class="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center shrink-0 group-hover:bg-green-100 transition">
                     <svg class="w-6 h-6 text-gkin-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -59,7 +71,7 @@
             </a>
 
             <!-- Preek & Mededelingen -->
-            <a href="/campaign/pm"
+            <a href="/campaign/pm" data-iframe-target="/campaign-iframe/pm"
                class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex items-start gap-5 hover:border-gkin-green hover:shadow-md transition group">
                 <div class="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center shrink-0 group-hover:bg-green-100 transition">
                     <svg class="w-6 h-6 text-gkin-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -77,5 +89,24 @@
             </a>
         </div>
     </main>
+    <script>
+        (function () {
+            const embedded = {{ (embedded | default(false)) | tojson }};
+            if (!embedded) return;
+            const params = new URLSearchParams(location.search);
+            document.querySelectorAll('[data-iframe-target]').forEach(link => {
+                const target = new URL(link.dataset.iframeTarget, location.origin);
+                params.forEach((value, key) => target.searchParams.set(key, value));
+                link.href = target.href;
+            });
+            const resize = () => window.parent.postMessage(
+                { type: 'gkin-campaign-resize', height: document.documentElement.scrollHeight }, '*'
+            );
+            window.addEventListener('load', resize);
+            window.addEventListener('resize', resize);
+            document.addEventListener('gkin:langchange', resize);
+            if (window.ResizeObserver) new ResizeObserver(resize).observe(document.body);
+        })();
+    </script>
 </body>
 </html>

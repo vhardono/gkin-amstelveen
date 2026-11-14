@@ -16,11 +16,21 @@
         .spinner { animation: spin 1s linear infinite; }
         .drop-zone { transition: border-color 0.2s, background-color 0.2s; }
         .drop-zone.drag-over { border-color: #3A7C22; background-color: #f0fdf4; }
+        {% if embedded %}
+        body { font-size: 0.875rem; }
+        main { max-width: none !important; padding: 0.5rem !important; }
+        main > div, main > form > div { padding: 1rem !important; margin-bottom: 0.75rem !important; }
+        main h2 { font-size: 0.875rem !important; margin-bottom: 0.75rem !important; }
+        input, select, textarea, button { font-size: 0.875rem; }
+        #previewModal > div { max-width: 95vw !important; }
+        #previewModal .p-6 { padding: 1rem; }
+        {% endif %}
     </style>
     <script src="/static/i18n.js"></script>
 </head>
 <body class="bg-gray-50 min-h-screen">
 
+    {% if not embedded %}
     <!-- Header -->
     <header class="bg-gkin-green shadow-md">
         <div class="max-w-2xl mx-auto px-6 py-5 flex items-center gap-4">
@@ -36,15 +46,18 @@
             </div>
         </div>
     </header>
+    {% endif %}
 
     <!-- Main -->
     <main class="max-w-2xl mx-auto px-6 py-8">
+        {% if not embedded %}
         <a href="/" class="inline-flex items-center gap-1 text-sm text-gkin-green hover:text-gkin-dark mb-5">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
             </svg>
             <span data-i18n="common.back">Terug</span>
         </a>
+        {% endif %}
 
         <!-- Info card -->
         <div class="bg-green-50 border border-green-200 rounded-xl p-4 mb-6 text-sm text-green-800">
@@ -70,7 +83,7 @@
                         <input type="radio" name="excelSource" value="dropbox" class="mt-1" checked>
                         <div>
                             <div class="font-medium text-gray-700" data-i18n="lit.use_current">Gebruik huidige week bestand</div>
-                            <div class="text-xs text-gray-500" data-i18n="lit.use_current_hint">Main Liturgy file.xlsx uit werkomap (Dropbox)</div>
+                            <div class="text-xs text-gray-500" data-i18n="lit.use_current_hint">Main Liturgy file.xlsx uit werkomap (SharePoint)</div>
                         </div>
                     </label>
                     <label class="flex items-start gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition">
@@ -97,7 +110,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
                                   d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
                         </svg>
-                        <p class="text-sm text-gray-500">Sleep bestand hier of <span class="text-gkin-green font-medium underline">klik om te bladeren</span></p>
+                        <p class="text-sm text-gray-500" data-i18n-html="lit.dropzone_hint">Sleep bestand hier of <span class="text-gkin-green font-medium underline">klik om te bladeren</span></p>
                     </div>
                     <div id="excelName" class="hidden flex items-center gap-2 text-sm text-gray-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
                         <svg class="w-4 h-4 text-gkin-green shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -148,7 +161,7 @@
                         <input type="radio" name="preekSource" value="dropbox" class="mt-1" checked>
                         <div>
                             <div class="font-medium text-gray-700" data-i18n="lit.preek_use_current">Gebruik huidige week bestand</div>
-                            <div class="text-xs text-gray-500" data-i18n="lit.preek_use_hint">Preek.docx uit werkomap (Dropbox)</div>
+                            <div class="text-xs text-gray-500" data-i18n="lit.preek_use_hint">Preek.docx uit werkomap (SharePoint)</div>
                         </div>
                     </label>
                     <label class="flex items-start gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition">
@@ -174,7 +187,7 @@
                         <svg class="w-8 h-8 mx-auto text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
                         </svg>
-                        <p class="text-sm text-gray-500">Sleep bestand hier of <span class="text-gkin-green font-medium underline">klik om te bladeren</span></p>
+                        <p class="text-sm text-gray-500" data-i18n-html="lit.dropzone_hint">Sleep bestand hier of <span class="text-gkin-green font-medium underline">klik om te bladeren</span></p>
                     </div>
                     <div id="preekName" class="hidden flex items-center gap-2 text-sm text-gray-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
                         <svg class="w-4 h-4 text-gkin-green shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -246,7 +259,7 @@
                         <svg class="w-4 h-4 shrink-0 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
                         </svg>
-                        Direct vanuit Dropbox werkomap
+                        Direct vanuit SharePoint werkomap
                     </h3>
                     <button type="button" id="workingFolderPreviewBtn"
                             class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg transition flex items-center justify-center gap-2">
@@ -263,31 +276,31 @@
                 <div id="autoFillAlerts" class="hidden mt-4">
                     <!-- Download filled file button -->
                     <div id="downloadSection" class="hidden bg-blue-50 border border-blue-200 rounded-lg p-4 mb-3">
-                        <h4 class="text-sm font-semibold text-blue-800 mb-2">Excel bestand ingevuld!</h4>
-                        <p class="text-xs text-blue-600 mb-3">Download het ingevulde bestand en upload het hierboven opnieuw.</p>
+                        <h4 class="text-sm font-semibold text-blue-800 mb-2" data-i18n="lit.filled_title">Excel bestand ingevuld!</h4>
+                        <p class="text-xs text-blue-600 mb-3" data-i18n="lit.filled_hint">Download het ingevulde bestand en upload het hierboven opnieuw.</p>
                         <button type="button" id="downloadFilledBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition flex items-center justify-center gap-2">
                             <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4-4m0 0l-4 4m4-4v12"/>
                             </svg>
-                            <span>Download ingevuld bestand</span>
+                            <span data-i18n="lit.download_filled">Download ingevuld bestand</span>
                         </button>
                     </div>
 
                     <div id="autoFillSuccess" class="hidden bg-green-50 border border-green-200 rounded-lg p-3 mb-2">
-                        <h4 class="text-sm font-semibold text-green-800 mb-1">Automatisch ingevuld:</h4>
+                        <h4 class="text-sm font-semibold text-green-800 mb-1" data-i18n="lit.autofill_success">Automatisch ingevuld:</h4>
                         <ul id="autoFilledList" class="text-xs text-green-700 space-y-0.5"></ul>
                     </div>
                     <div id="autoFillWarning" class="hidden bg-amber-50 border border-amber-200 rounded-lg p-3">
-                        <h4 class="text-sm font-semibold text-amber-800 mb-1">Reeds ingevuld (niet gewijzigd):</h4>
+                        <h4 class="text-sm font-semibold text-amber-800 mb-1" data-i18n="lit.autofill_warning">Reeds ingevuld (niet gewijzigd):</h4>
                         <ul id="alreadyFilledList" class="text-xs text-amber-700 space-y-0.5"></ul>
                     </div>
                     <div id="dankofferInfo" class="hidden mt-2 bg-blue-50 border border-blue-200 rounded-lg p-3">
                         <p class="text-xs text-blue-700 mb-1">
-                            <span class="font-semibold">Dankoffer:</span> <span id="dankofferVerseText"></span>
+                            <span class="font-semibold" data-i18n="lit.dankoffer_label">Dankoffer:</span> <span id="dankofferVerseText"></span>
                         </p>
                         <p id="dankofferStatusDetail" class="text-xs text-blue-600"></p>
                         <p id="dankofferError" class="hidden text-xs text-red-600 mt-1 font-semibold">
-                            ⚠️ Kon Dankoffer.xlsx niet bijwerken: <span id="dankofferErrorText">controleer logs</span>
+                            ⚠️ <span data-i18n="lit.dankoffer_error">Kon Dankoffer.xlsx niet bijwerken:</span> <span id="dankofferErrorText">controleer logs</span>
                         </p>
                     </div>
                 </div>
@@ -297,7 +310,7 @@
                     <div class="bg-white rounded-xl shadow-lg w-full mx-4 max-h-[80vh] overflow-y-auto" style="max-width:480px">
                         <div class="p-6">
                             <h3 class="text-lg font-semibold text-gray-800 mb-4" data-i18n="lit.modal_title">Wijzigingen bekijken</h3>
-                            <p class="text-sm text-gray-600 mb-4">Datum: <span id="previewDate" class="font-medium"></span></p>
+                            <p class="text-sm text-gray-600 mb-4"><span data-i18n="lit.modal_date">Datum:</span> <span id="previewDate" class="font-medium"></span></p>
                             
                             <div id="previewNotFound" class="hidden mb-4 bg-red-50 border border-red-200 rounded-lg p-3">
                                 <h4 class="text-sm font-semibold text-red-800 mb-1" data-i18n="lit.modal_not_found">Niet gevonden:</h4>
@@ -429,6 +442,31 @@
     </main>
 
     <script>
+        const embedded = {{ (embedded | default(false)) | tojson }};
+        const iframeToken = embedded ? new URLSearchParams(location.search).get('token') : null;
+
+        function litFetch(url, options) {
+            const target = new URL(url, location.origin);
+            if (iframeToken && target.origin === location.origin) target.searchParams.set('token', iframeToken);
+            return window.fetch(target.href, options);
+        }
+
+        function resizeIframe() {
+            if (!embedded) return;
+            window.parent.postMessage(
+                { type: 'gkin-liturgie-resize', height: document.documentElement.scrollHeight },
+                '*'
+            );
+        }
+
+        window.addEventListener('load', resizeIframe);
+        window.addEventListener('resize', resizeIframe);
+        document.addEventListener('gkin:langchange', function() {
+            document.title = 'GKIN Amstelveen – ' + t('lit.subtitle');
+            resizeIframe();
+        });
+        if (embedded && window.ResizeObserver) new ResizeObserver(resizeIframe).observe(document.body);
+
         // --- Drop zone helper ---
         function setupDropZone(dropId, inputId, nameId, nameTextId, clearId, accept, onFileSelected) {
             const drop = document.getElementById(dropId);
@@ -562,7 +600,7 @@
                 const fd = new FormData();
                 fd.append('preek_file', file);
                 fd.append('main_file', getSelectedMainFile());
-                const resp = await fetch('/liturgie/translate-preek-inline', { method: 'POST', body: fd });
+                const resp = await litFetch('/liturgie/translate-preek-inline', { method: 'POST', body: fd });
                 const data = await resp.json();
 
                 if (data.success) {
@@ -580,11 +618,11 @@
                         if (sel) sel.value = _translatedFilename;
                     }
                 } else {
-                    document.getElementById('translateError').textContent = data.error || 'Onbekende fout';
+                    document.getElementById('translateError').textContent = data.error || t('lit.unknown_error');
                     document.getElementById('translateError').classList.remove('hidden');
                 }
             } catch (err) {
-                document.getElementById('translateError').textContent = 'Verbindingsfout: ' + err.message;
+                document.getElementById('translateError').textContent = t('lit.network_error') + ': ' + err.message;
                 document.getElementById('translateError').classList.remove('hidden');
             } finally {
                 document.getElementById('translateSpinner').classList.add('hidden');
@@ -651,7 +689,7 @@
             const select = document.getElementById('mainFileSelect');
             if (!select) return;
             try {
-                const resp = await fetch('/liturgie/list-main-files');
+                const resp = await litFetch('/liturgie/list-main-files');
                 if (!resp.ok) return;
                 const data = await resp.json();
                 const files = data.files || [];
@@ -692,7 +730,7 @@
             const select = document.getElementById('preekFileSelect');
             if (!select) return;
             try {
-                const resp = await fetch('/liturgie/list-preek-files');
+                const resp = await litFetch('/liturgie/list-preek-files');
                 if (!resp.ok) {
                     select.innerHTML = '';
                     updatePreekSelectVisibility();
@@ -764,7 +802,7 @@
                         <input type="checkbox" class="change-checkbox rounded border-gray-300" data-field="${field}" ${hasChange ? 'checked' : ''} ${hasChange ? '' : 'disabled'}>
                     </td>
                     <td class="py-1 px-1 text-gray-600" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${field}</td>
-                    <td class="py-1 px-1 ${currentVal ? 'text-gray-600' : 'text-gray-400 italic'}" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${currentVal || ''}">${displayCurrent || '(leeg)'}</td>
+                    <td class="py-1 px-1 ${currentVal ? 'text-gray-600' : 'text-gray-400 italic'}" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${currentVal || ''}">${displayCurrent || t('lit.empty')}</td>
                     <td class="py-1 px-1 ${hasChange ? 'text-green-600 font-medium' : 'text-gray-400'}" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${hasChange ? newVal : ''}">${hasChange ? displayNew : '-'}</td>
                 `;
                 changesTable.appendChild(row);
@@ -804,10 +842,10 @@
                 let previewData;
                 if (source === 'dropbox') {
                     const mainFile = encodeURIComponent(getSelectedMainFile());
-                    const resp = await fetch('/liturgie/preview-working-file?main_file=' + mainFile);
+                    const resp = await litFetch('/liturgie/preview-working-file?main_file=' + mainFile);
                     previewData = await resp.json();
                     if (!resp.ok) {
-                        showStatus('Fout bij laden preview: ' + (previewData.error || 'Onbekende fout'), 'error');
+                        showStatus(t('lit.error_load_preview') + ': ' + (previewData.error || t('lit.unknown_error')), 'error');
                         return;
                     }
                 } else {
@@ -819,16 +857,16 @@
                         uploadSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
                         uploadSection.querySelector('.drop-zone').classList.add('ring-2', 'ring-red-400');
                         setTimeout(() => uploadSection.querySelector('.drop-zone').classList.remove('ring-2', 'ring-red-400'), 2000);
-                        showStatus('Selecteer eerst een Excel bestand via het upload-vak hierboven.', 'error');
+                        showStatus(t('lit.select_excel'), 'error');
                         return;
                     }
                     _currentExcelFile = excelFile;
                     const fd = new FormData();
                     fd.append('excel_data', excelFile);
-                    const resp = await fetch('/liturgie/preview-fill-data', { method: 'POST', body: fd });
+                    const resp = await litFetch('/liturgie/preview-fill-data', { method: 'POST', body: fd });
                     previewData = await resp.json();
                     if (!resp.ok) {
-                        showStatus('Fout bij laden preview: ' + (previewData.error || 'Onbekende fout'), 'error');
+                        showStatus(t('lit.error_load_preview') + ': ' + (previewData.error || t('lit.unknown_error')), 'error');
                         return;
                     }
                 }
@@ -839,15 +877,15 @@
                 // Wire apply button based on source
                 const applyBtn = document.getElementById('applyChangesBtn');
                 applyBtn.querySelector('span').textContent = source === 'dropbox'
-                    ? 'Opslaan naar Dropbox'
-                    : 'Toepassen & downloaden';
+                    ? t('lit.save_dropbox')
+                    : t('lit.apply_download');
                 applyBtn.onclick = source === 'dropbox'
                     ? applyDropboxChanges
                     : applyUploadChanges;
 
                 document.getElementById('previewModal').classList.remove('hidden');
             } catch (err) {
-                showStatus('Netwerkfout bij laden preview: ' + err.message, 'error');
+                showStatus(t('lit.error_load_preview') + ': ' + err.message, 'error');
             } finally {
                 setUpdateLoading(false);
             }
@@ -864,7 +902,7 @@
             const selectedChanges = [];
             document.querySelectorAll('.change-checkbox:checked').forEach(cb => selectedChanges.push(cb.dataset.field));
             try {
-                const resp = await fetch('/liturgie/auto-fill-working-file', {
+                const resp = await litFetch('/liturgie/auto-fill-working-file', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ selected_changes: selectedChanges, main_file: getSelectedMainFile() })
@@ -872,17 +910,17 @@
                 const data = await resp.json();
                 if (resp.ok && data.success) {
                     showAutoFillAlerts(data.alerts, data.dankoffer_info, false);
-                    showStatus(`✓ Bestand bijgewerkt op Dropbox voor ${data.service_date}`, 'success');
+                    showStatus(`✓ ${t('lit.updated_dropbox')} ${data.service_date}`, 'success');
                     await loadMainFileList();
                     if (data.saved_as) {
                         const sel = document.getElementById('mainFileSelect');
                         if (sel) sel.value = data.saved_as;
                     }
                 } else {
-                    showStatus('Fout bij bijwerken: ' + (data.error || 'Onbekende fout'), 'error');
+                    showStatus(t('lit.error_update') + ': ' + (data.error || t('lit.unknown_error')), 'error');
                 }
             } catch (err) {
-                showStatus('Netwerkfout: ' + err.message, 'error');
+                showStatus(t('lit.network_error') + ': ' + err.message, 'error');
             } finally {
                 setUpdateLoading(false);
             }
@@ -891,7 +929,7 @@
         async function applyUploadChanges() {
             document.getElementById('previewModal').classList.add('hidden');
             if (!_currentExcelFile) {
-                showStatus('Geen Excel bestand geselecteerd.', 'error');
+                showStatus(t('lit.select_excel'), 'error');
                 return;
             }
             setUpdateLoading(true);
@@ -899,7 +937,7 @@
             const fd = new FormData();
             fd.append('excel_file', _currentExcelFile);
             try {
-                const resp = await fetch('/liturgie/fill-data', { method: 'POST', body: fd });
+                const resp = await litFetch('/liturgie/fill-data', { method: 'POST', body: fd });
                 const data = await resp.json();
                 if (resp.ok && data.excel_data) {
                     _filledExcelData = data.excel_data;
@@ -912,12 +950,12 @@
                     a.href = url; a.download = data.filename;
                     document.body.appendChild(a); a.click(); a.remove();
                     URL.revokeObjectURL(url);
-                    showStatus(`✓ Bestand ingevuld & gedownload voor ${data.service_date}.`, 'success');
+                    showStatus(`✓ ${t('lit.filled_downloaded')} ${data.service_date}.`, 'success');
                 } else {
-                    showStatus('Fout bij auto-vullen: ' + (data.error || 'Onbekende fout'), 'error');
+                    showStatus(t('lit.error_autofill') + ': ' + (data.error || t('lit.unknown_error')), 'error');
                 }
             } catch (err) {
-                showStatus('Netwerkfout bij auto-vullen: ' + err.message, 'error');
+                showStatus(t('lit.network_error') + ': ' + err.message, 'error');
             } finally {
                 setUpdateLoading(false);
             }
@@ -945,8 +983,7 @@
             if (previewBtn) previewBtn.disabled = on;
             if (spinner) spinner.classList.toggle('hidden', !on);
             if (btnText) {
-                const lang = localStorage.getItem('gkin_lang') || 'nl';
-                const d = (window.GKIN_I18N && window.GKIN_I18N[lang]) || {};
+                const d = (window.GKIN_I18N && window.GKIN_I18N[document.documentElement.lang]) || {};
                 btnText.textContent = on ? (d['common.loading'] || 'Bezig...') : (d['lit.preview_btn'] || 'Wijzigingen bekijken & bijwerken');
             }
         }
@@ -1026,7 +1063,7 @@
             if (excelSource === 'upload') {
                 const excelFile = document.getElementById('excelFile').files[0];
                 if (!excelFile) {
-                    showStatus('Upload eerst het Excel bestand.', 'error');
+                    showStatus(t('lit.upload_excel'), 'error');
                     return;
                 }
             }
@@ -1039,7 +1076,7 @@
             const wantP = document.getElementById('chkP').checked;
 
             if (!wantA && !wantB && !wantP) {
-                showStatus('Selecteer minimaal één bestand om te genereren.', 'error');
+                showStatus(t('lit.select_output'), 'error');
                 setLoading(false);
                 return;
             }
@@ -1070,7 +1107,7 @@
             }
 
             try {
-                const resp = await fetch('/liturgie/generate', { method: 'POST', body: fd });
+                const resp = await litFetch('/liturgie/generate', { method: 'POST', body: fd });
 
                 if (resp.ok) {
                     const payload = await resp.json();
@@ -1090,7 +1127,7 @@
                         a.remove();
                         URL.revokeObjectURL(url);
                     }
-                    let msg = `✓ ${files.length} bestand(en) gedownload.`;
+                    let msg = `✓ ${files.length} ${t('lit.files_downloaded')}`;
                     const overview = buildOverview(payload.summary);
                     if (overview) msg += '\n' + overview;
                     if (warnings.length) {
@@ -1100,11 +1137,11 @@
                         showStatus(msg, 'success');
                     }
                 } else {
-                    const data = await resp.json().catch(() => ({ error: 'Onbekende fout.' }));
-                    showStatus('Fout: ' + (data.error || resp.statusText), 'error');
+                    const data = await resp.json().catch(() => ({ error: t('lit.unknown_error') }));
+                    showStatus(t('lit.error_prefix') + ': ' + (data.error || resp.statusText), 'error');
                 }
             } catch (err) {
-                showStatus('Netwerkfout: ' + err.message, 'error');
+                showStatus(t('lit.network_error') + ': ' + err.message, 'error');
             } finally {
                 setLoading(false);
             }
@@ -1115,30 +1152,30 @@
             const lines = [];
 
             if (summary.mededelingen) {
-                const lang = summary.mededelingen_language === 'id' ? 'Indonesisch' : 'Nederlands';
-                lines.push(`• Welkomstwoord: ${summary.welkomstwoord ? 'geladen' : 'niet geladen'} (${lang})`);
-                lines.push(`• Regionale mededelingen: ${summary.regionale || 0}`);
-                lines.push(`• Landelijke mededelingen: ${summary.landelijke || 0}`);
+                const lang = summary.mededelingen_language === 'id' ? t('lit.lang_indonesian') : t('lit.lang_dutch');
+                lines.push(`• ${t('lit.summary_welkomstwoord')}: ${summary.welkomstwoord ? t('lit.summary_loaded') : t('lit.summary_not_loaded')} (${lang})`);
+                lines.push(`• ${t('lit.summary_regionale')}: ${summary.regionale || 0}`);
+                lines.push(`• ${t('lit.summary_landelijke')}: ${summary.landelijke || 0}`);
             } else {
-                lines.push('• Mededelingen: niet toegevoegd');
+                lines.push(`• ${t('lit.summary_mededelingen')}: ${t('lit.summary_not_added')}`);
             }
 
             if (summary.collecte_filled > 0) {
-                let collecte = `• Collecte opbrengst: ${summary.collecte_filled} bedrag(en) geladen`;
+                let collecte = `• ${t('lit.summary_collecte')}: ${summary.collecte_filled} ${t('lit.summary_amounts_loaded')}`;
                 if (summary.collecte_total && summary.collecte_total !== '...') {
                     collecte += ` — totaal € ${summary.collecte_total}`;
                 }
-                if (!summary.collecte_bezoekers) collecte += ' (aantal bezoekers ontbreekt)';
+                if (!summary.collecte_bezoekers) collecte += ` (${t('lit.summary_missing_visitors')})`;
                 lines.push(collecte);
             } else {
-                lines.push('• Collecte opbrengst: geen bedragen gevonden');
+                lines.push(`• ${t('lit.summary_collecte')}: ${t('lit.summary_no_amounts')}`);
             }
 
             if (summary.preek) {
-                lines.push(`• Preek: ${summary.preek_slides || 0} slide(s)` +
-                    (summary.preek_translation ? ', vertaling in de notities' : ', geen vertaling in de notities'));
+                lines.push(`• ${t('lit.summary_preek')}: ${summary.preek_slides || 0} ${t('lit.summary_slides')}` +
+                    (summary.preek_translation ? `, ${t('lit.summary_translation_notes')}` : `, ${t('lit.summary_no_translation')}`));
             } else {
-                lines.push('• Preek: niet geladen');
+                lines.push(`• ${t('lit.summary_preek')}: ${t('lit.summary_preek_not_loaded')}`);
             }
 
             return lines.join('\n');
@@ -1148,7 +1185,7 @@
             document.getElementById('genBtn').disabled = on;
             document.getElementById('btnIcon').classList.toggle('hidden', on);
             document.getElementById('btnSpinner').classList.toggle('hidden', !on);
-            document.getElementById('btnText').textContent = on ? 'Bezig met genereren…' : 'Genereer';
+            document.getElementById('btnText').textContent = on ? t('lit.generating') : t('lit.generate');
         }
 
         function showStatus(msg, type) {
@@ -1164,10 +1201,12 @@
             box.textContent = msg;
             box.classList.remove('hidden');
             box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            resizeIframe();
         }
 
         function hideStatus() {
             document.getElementById('statusBox').classList.add('hidden');
+            resizeIframe();
         }
 
     </script>

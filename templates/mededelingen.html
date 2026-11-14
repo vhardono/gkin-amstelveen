@@ -14,11 +14,46 @@
         html { overflow-y: scroll; }
         @keyframes spin { to { transform: rotate(360deg); } }
         .spinner { animation: spin 1s linear infinite; }
+        /* Better layout for iframe embedding */
+        body.iframe-mode {
+            padding: 0.5rem;
+        }
+        body.iframe-mode .container {
+            max-width: 100%;
+            padding: 0.5rem;
+        }
+        body.iframe-mode .bg-white {
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+        }
+        body.iframe-mode h2 {
+            font-size: 0.875rem;
+        }
+        body.iframe-mode .text-sm {
+            font-size: 0.75rem;
+        }
+        body.iframe-mode input, body.iframe-mode select {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+        }
+        body.iframe-mode button {
+            padding: 0.375rem 0.75rem;
+            font-size: 0.875rem;
+        }
+        {% if embedded %}
+        body { padding: 0.5rem; font-size: 0.875rem; }
+        main { max-width: none !important; padding: 0 !important; }
+        main > div, main > form > div { padding: 1rem !important; margin-bottom: 0.75rem !important; }
+        main h2 { font-size: 0.875rem !important; }
+        input, select, textarea { font-size: 0.875rem !important; }
+        #waAmModal > div, #waOleModal > div { max-width: 95vw !important; }
+        {% endif %}
     </style>
     <script src="/static/i18n.js"></script>
 </head>
 <body class="bg-gray-50 min-h-screen">
 
+    {% if not embedded %}
     <!-- Header -->
     <header class="bg-gkin-green shadow-md">
         <div class="max-w-2xl mx-auto px-6 py-5 flex items-center gap-4">
@@ -35,15 +70,18 @@
             </div>
         </div>
     </header>
+    {% endif %}
 
     <!-- Main -->
     <main class="max-w-2xl mx-auto px-6 py-8">
+        {% if not embedded %}
         <a href="/" class="inline-flex items-center gap-1 text-sm text-gkin-green hover:text-gkin-dark mb-5">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
             </svg>
             <span data-i18n="common.back">Terug</span>
         </a>
+        {% endif %}
         <form id="genForm" action="/generate" method="POST" enctype="multipart/form-data">
 
         <!-- 1. Datum -->
@@ -62,9 +100,9 @@
             </select>
             <div id="infoCard" class="hidden mt-4 bg-green-50 border border-green-200 rounded-lg p-4">
                 <div class="grid grid-cols-3 gap-4 text-sm">
-                    <div><p class="text-gray-500 text-xs uppercase tracking-wide mb-0.5">Predikant</p><p id="infoPred" class="font-semibold text-gray-800">—</p></div>
-                    <div class="text-center"><p class="text-gray-500 text-xs uppercase tracking-wide mb-0.5">Ouderling van Dienst</p><p id="infoOvd" class="font-semibold text-gray-800">—</p></div>
-                    <div class="text-right"><p class="text-gray-500 text-xs uppercase tracking-wide mb-0.5">Eerste Ontvangst</p><p id="info1eo" class="font-semibold text-gray-800">—</p></div>
+                    <div><p class="text-gray-500 text-xs uppercase tracking-wide mb-0.5" data-i18n="pb.predikant">Predikant</p><p id="infoPred" class="font-semibold text-gray-800">—</p></div>
+                    <div class="text-center"><p class="text-gray-500 text-xs uppercase tracking-wide mb-0.5" data-i18n="pb.ovd">Ouderling van Dienst</p><p id="infoOvd" class="font-semibold text-gray-800">—</p></div>
+                    <div class="text-right"><p class="text-gray-500 text-xs uppercase tracking-wide mb-0.5" data-i18n="pb.first_reception">Eerste Ontvangst</p><p id="info1eo" class="font-semibold text-gray-800">—</p></div>
                 </div>
             </div>
         </div>
@@ -84,15 +122,15 @@
         </div>
         <!-- Device-code login dialog -->
         <div id="deviceCodeDialog" class="hidden mb-5 p-4 bg-amber-50 border border-amber-200 rounded-xl text-sm">
-            <p class="font-semibold text-amber-800 mb-2">Stap 1: Open in je browser</p>
+            <p class="font-semibold text-amber-800 mb-2" data-i18n="med.device_step1">Stap 1: Open in je browser</p>
             <a id="deviceCodeUrl" href="" target="_blank"
                class="text-blue-600 underline font-mono text-xs break-all"></a>
-            <p class="mt-3 font-semibold text-amber-800">Stap 2: Voer deze code in</p>
+            <p class="mt-3 font-semibold text-amber-800" data-i18n="med.device_step2">Stap 2: Voer deze code in</p>
             <p id="deviceCodeValue" class="font-mono text-2xl font-bold tracking-widest text-amber-900 mt-1"></p>
-            <p class="mt-3 text-amber-700 text-xs">Na inloggen in de browser, klik hieronder:</p>
+            <p class="mt-3 text-amber-700 text-xs" data-i18n="med.device_hint">Na inloggen in de browser, klik hieronder:</p>
             <button type="button" id="deviceCodeDoneBtn"
                     class="mt-2 text-xs bg-green-600 hover:bg-green-700 text-white rounded-lg px-4 py-2 disabled:opacity-50">
-                Ik heb ingelogd ✓
+                <span data-i18n="med.device_done">Ik heb ingelogd ✓</span>
             </button>
         </div>
 
@@ -190,7 +228,7 @@
                         <label class="block text-sm font-medium text-gray-700 mb-1" data-i18n="med.qr_upload">QR code afbeelding</label>
                         <label class="flex items-center gap-2 w-full rounded-lg border border-dashed border-gray-300 px-3 py-2 bg-white cursor-pointer hover:border-gkin-green transition-colors">
                             <svg class="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                            <span class="text-sm text-gray-500 qr-label-{{ loop.index }}">Kies afbeelding...</span>
+                            <span class="text-sm text-gray-500 qr-label-{{ loop.index }}" data-i18n="med.choose_image">Kies afbeelding...</span>
                             <input type="file" name="{{ qr_name }}" accept="image/*" class="hidden"
                                    onchange="updateFileLabel(this, '.qr-label-{{ loop.index }}'); clearEmailQr('{{ path_name }}', '{{ url_prefix }}_qr_preview')">
                         </label>
@@ -266,13 +304,13 @@
                 <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
                 </svg>
-                E-mail concepten
+                <span data-i18n="med.drafts_section">E-mail concepten</span>
             </h2>
-            <p class="text-xs text-gray-400 mb-4">Klik om een e-mail concept te openen in uw e-mailprogramma.</p>
+            <p class="text-xs text-gray-400 mb-4" data-i18n="med.drafts_hint">Klik om een e-mail concept te openen in uw e-mailprogramma.</p>
 
             <!-- Missing email warning -->
             <div id="mededWarning" class="hidden mb-4 bg-amber-50 border border-amber-200 rounded-lg p-3">
-                <p class="text-xs font-semibold text-amber-700 mb-1">⚠ Ontbrekende e-mailadressen:</p>
+                <p class="text-xs font-semibold text-amber-700 mb-1" data-i18n="med.missing_emails">⚠ Ontbrekende e-mailadressen:</p>
                 <ul id="mededWarningList" class="text-xs text-amber-700 list-disc list-inside space-y-0.5"></ul>
             </div>
 
@@ -280,23 +318,23 @@
                 <!-- Definitieve Mededelingen -->
                 <div class="flex items-center justify-between gap-3 p-3 rounded-lg border border-gray-100 bg-gray-50">
                     <div>
-                        <p class="text-sm font-medium text-gray-800">Definitieve Mededelingen</p>
-                        <p class="text-xs text-gray-500 mt-0.5">Naar predikant + kerkenraad + beamer</p>
+                        <p class="text-sm font-medium text-gray-800" data-i18n="med.draft_final">Definitieve Mededelingen</p>
+                        <p class="text-xs text-gray-500 mt-0.5" data-i18n="med.draft_final_hint">Naar predikant + kerkenraad + beamer</p>
                     </div>
                     <button type="button" id="draftDefBtn"
                             class="shrink-0 text-sm bg-gkin-green hover:bg-gkin-dark text-white font-medium px-4 py-2 rounded-lg transition-colors">
-                        Maak concept
+                        <span data-i18n="med.make_draft">Maak concept</span>
                     </button>
                 </div>
                 <!-- Mededelingen Voorlezen -->
                 <div class="flex items-center justify-between gap-3 p-3 rounded-lg border border-gray-100 bg-gray-50">
                     <div>
-                        <p class="text-sm font-medium text-gray-800">Mededelingen Voorlezen</p>
-                        <p class="text-xs text-gray-500 mt-0.5">Naar 1eO + Beamer</p>
+                        <p class="text-sm font-medium text-gray-800" data-i18n="med.draft_voorlees">Mededelingen Voorlezen</p>
+                        <p class="text-xs text-gray-500 mt-0.5" data-i18n="med.draft_voorlees_hint">Naar 1eO + Beamer</p>
                     </div>
                     <button type="button" id="draftVoorlBtn"
                             class="shrink-0 text-sm bg-gkin-green hover:bg-gkin-dark text-white font-medium px-4 py-2 rounded-lg transition-colors">
-                        Maak concept
+                        <span data-i18n="med.make_draft">Maak concept</span>
                     </button>
                 </div>
             </div>
@@ -435,6 +473,40 @@
     </main>
 
     <script>
+        // Detect if running in iframe and apply compact layout
+        if (window.self !== window.top) {
+            document.body.classList.add('iframe-mode');
+        }
+
+        const embedded = {{ (embedded | default(false)) | tojson }};
+        const iframeToken = embedded ? new URLSearchParams(location.search).get('token') : null;
+
+        function medUrl(url) {
+            const target = new URL(url, location.origin);
+            if (iframeToken && target.origin === location.origin) target.searchParams.set('token', iframeToken);
+            return target.href;
+        }
+
+        function medFetch(url, options) {
+            return window.fetch(medUrl(url), options);
+        }
+
+        function resizeIframe() {
+            if (!embedded) return;
+            window.parent.postMessage(
+                { type: 'gkin-mededelingen-resize', height: document.documentElement.scrollHeight },
+                '*'
+            );
+        }
+
+        window.addEventListener('load', resizeIframe);
+        window.addEventListener('resize', resizeIframe);
+        document.addEventListener('gkin:langchange', function() {
+            document.title = 'GKIN Amstelveen – ' + t('med.subtitle');
+            resizeIframe();
+        });
+        if (embedded && window.ResizeObserver) new ResizeObserver(resizeIframe).observe(document.body);
+        
         const dateData = {{ dates | tojson }};
         const dateSelect = document.getElementById('date');
         const infoCard = document.getElementById('infoCard');
@@ -460,7 +532,6 @@
             'elhamras@gmail.com',
             'joyce.uning@gmail.com',
             'davidsyong@hotmail.com',
-            'fsitumeang@gmail.com',
             'sallysnoek@gmail.com',
         ];
 
@@ -522,7 +593,7 @@
 
         document.getElementById('draftVoorlBtn').addEventListener('click', () => {
             const sel = dateSelect._currentSel;
-            if (!sel) { alert('Selecteer eerst een datum.'); return; }
+            if (!sel) { alert(t('med.select_date')); return; }
             const iso       = sel.value;
             const dateLong  = formatDateLong(iso);
             const eo1       = sel['1eo']       || '';
@@ -557,7 +628,7 @@
 
         document.getElementById('draftDefBtn').addEventListener('click', () => {
             const sel = dateSelect._currentSel;
-            if (!sel) { alert('Selecteer eerst een datum.'); return; }
+            if (!sel) { alert(t('med.select_date')); return; }
             const iso      = sel.value;
             const dateShort = formatDateShort(iso);
             const dateLong  = formatDateLong(iso);
@@ -762,30 +833,30 @@
         // Load activities from mededelingen
         document.getElementById('loadActBtn').addEventListener('click', async () => {
             const dateVal = dateSelect.value;
-            if (!dateVal) { alert('Selecteer eerst een datum'); return; }
+            if (!dateVal) { alert(t('med.select_date')); return; }
             const btn = document.getElementById('loadActBtn');
             const btnLabel = document.getElementById('loadActText');
             btn.disabled = true;
-            btnLabel.textContent = 'Laden...';
+            btnLabel.textContent = t('common.loading');
             try {
                 const fd = new FormData();
                 fd.append('date', dateVal);
-                const resp = await fetch('/get-mededelingen', { method: 'POST', body: fd });
+                const resp = await medFetch('/get-mededelingen', { method: 'POST', body: fd });
                 const data = await resp.json();
                 if (data.error) throw new Error(data.error);
                 if (data.activities && data.activities.length > 0) {
                     document.getElementById('activiteitenRows').innerHTML = '';
                     actRowCount = 0;
                     data.activities.forEach(a => addActRow(a.datum, a.tijd, a.activiteit, a.olv, a.locatie));
-                    btnLabel.textContent = `${data.activities.length} activiteit(en) geladen`;
+                    btnLabel.textContent = `${data.activities.length} ${t('med.loaded')}`;
                 } else {
-                    btnLabel.textContent = 'Geen activiteiten gevonden';
+                    btnLabel.textContent = t('med.nothing_found');
                 }
             } catch(e) {
-                btnLabel.textContent = 'Fout: ' + e.message;
+                btnLabel.textContent = t('med.error_prefix') + ': ' + e.message;
             } finally {
                 btn.disabled = false;
-                setTimeout(() => { btnLabel.textContent = 'Laden uit mededelingen'; }, 3000);
+                setTimeout(() => { btnLabel.textContent = t('med.load_act'); }, 3000);
             }
         });
 
@@ -822,10 +893,8 @@
                 pill.className = 'text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500';
             }
             // Re-run translations so text reflects current language
-            if (typeof applyLang === 'function') {
-                applyLang(localStorage.getItem('gkin_lang') || 'nl');
-            } else if (window.GKIN_APPLY_LANG) {
-                window.GKIN_APPLY_LANG(localStorage.getItem('gkin_lang') || 'nl');
+            if (window.GKIN_APPLY_LANG) {
+                window.GKIN_APPLY_LANG(document.documentElement.lang || 'nl');
             }
             updateFetchButtons();
         }
@@ -850,7 +919,7 @@
         // Check auth status on page load
         (async () => {
             try {
-                const r = await fetch('/email-auth-status');
+                const r = await medFetch('/email-auth-status');
                 const d = await r.json();
                 setOutlookConnected(!!d.authenticated);
             } catch(e) { setOutlookConnected(false); }
@@ -861,9 +930,9 @@
             const btn = document.getElementById('emailLoginBtn');
             const lbl = document.getElementById('emailLoginText');
             btn.disabled = true;
-            lbl.textContent = 'Bezig...';
+            lbl.textContent = t('common.loading');
             try {
-                const resp = await fetch('/email-login-start', { method: 'POST' });
+                const resp = await medFetch('/email-login-start', { method: 'POST' });
                 const data = await resp.json();
                 if (data.error) throw new Error(data.error);
                 // Show device-code dialog
@@ -886,7 +955,7 @@
             doneBtn.disabled = true;
             doneBtn.textContent = 'Controleren...';
             try {
-                const resp = await fetch('/email-login-complete', { method: 'POST' });
+                const resp = await medFetch('/email-login-complete', { method: 'POST' });
                 const data = await resp.json();
                 if (data.status === 'ok') {
                     setOutlookConnected(true);
@@ -914,7 +983,7 @@
             lbl.textContent = 'Zoeken...';
             try {
                 const selectedDate = document.getElementById('date').value; // e.g. "2026-05-10"
-                const resp = await fetch('/fetch-email-collecte', {
+                const resp = await medFetch('/fetch-email-collecte', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ date: selectedDate }),
@@ -975,7 +1044,7 @@
             statusEl.classList.add('hidden');
             try {
                 const selectedDate = document.getElementById('date').value;
-                const resp = await fetch('/fetch-email-overdenking', {
+                const resp = await medFetch('/fetch-email-overdenking', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ date: selectedDate }),
@@ -1027,7 +1096,7 @@
             statusEl.classList.add('hidden');
             try {
                 const selectedDate = document.getElementById('date').value;
-                const resp = await fetch('/fetch-email-opbrengst', {
+                const resp = await medFetch('/fetch-email-opbrengst', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ date: selectedDate }),
@@ -1124,7 +1193,7 @@
         // Handle form submit with fetch for download
         genForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            if (!dateSelect.value) { alert('Selecteer eerst een datum'); return; }
+            if (!dateSelect.value) { alert(t('med.select_date')); return; }
 
             const doGedrukt   = document.getElementById('chkGedrukt').checked;
             const doVoorlezen = document.getElementById('chkVoorlezen').checked;
@@ -1141,7 +1210,7 @@
             statusMsg.classList.add('hidden');
 
             async function downloadFrom(endpoint, fallbackName) {
-                const resp = await fetch(endpoint, { method: 'POST', body: new FormData(genForm) });
+                const resp = await medFetch(endpoint, { method: 'POST', body: new FormData(genForm) });
                 if (!resp.ok) {
                     const err = await resp.json().catch(() => ({}));
                     throw new Error(err.error || `Fout bij ${endpoint}`);
@@ -1219,12 +1288,12 @@
 
                 // Fire both requests in parallel
                 const [oleData, colData] = await Promise.all([
-                    fetch('/fetch-ole-data', {
+                    medFetch('/fetch-ole-data', {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify({ date: iso })
                     }).then(r => r.json()).catch(e => { console.warn('[WA-OLE] fetch-ole-data failed', e); return {}; }),
-                    fetch('/fetch-email-collecte', {
+                    medFetch('/fetch-email-collecte', {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify({ date: iso })
@@ -1260,7 +1329,7 @@ Dankoffer Amstelveen: ${dankofferUrl || '(nog niet ingevuld)'}`;
             document.getElementById('waLiturgieBtn').addEventListener('click', () => {
                 if (_cachedLiturgieUrl) {
                     const filename = _cachedLiturgieUrl.split('/').pop().split('?')[0] || 'Liturgie.pdf';
-                    const proxyUrl = '/proxy-download?url=' + encodeURIComponent(_cachedLiturgieUrl) + '&filename=' + encodeURIComponent(filename);
+                    const proxyUrl = medUrl('/proxy-download?url=' + encodeURIComponent(_cachedLiturgieUrl) + '&filename=' + encodeURIComponent(filename));
                     const a = document.createElement('a');
                     a.href = proxyUrl;
                     a.download = filename;
@@ -1338,7 +1407,7 @@ Dankoffer Amstelveen: ${dankofferUrl || '(nog niet ingevuld)'}`;
                 if (!tikkieUrl) {
                     amLoading.classList.remove('hidden');
                     try {
-                        const colResp = await fetch('/fetch-email-collecte', {
+                        const colResp = await medFetch('/fetch-email-collecte', {
                             method: 'POST',
                             headers: {'Content-Type': 'application/json'},
                             body: JSON.stringify({ date: iso })
@@ -1391,7 +1460,7 @@ Dankoffer Amstelveen: ${dankofferUrl || '(nog niet ingevuld)'}`;
                 attStatus.className = 'text-xs rounded-lg p-2 border mb-3 bg-blue-50 border-blue-200 text-blue-700';
                 attStatus.classList.remove('hidden');
                 try {
-                    const r = await fetch('/fetch-wa-attachments', {
+                    const r = await medFetch('/fetch-wa-attachments', {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify({ date: sel.value })
@@ -1412,7 +1481,7 @@ Dankoffer Amstelveen: ${dankofferUrl || '(nog niet ingevuld)'}`;
             }
 
             function _triggerDownload(url, filename) {
-                const proxyUrl = '/proxy-download?url=' + encodeURIComponent(window.location.origin + url) + '&filename=' + encodeURIComponent(filename);
+                const proxyUrl = medUrl('/proxy-download?url=' + encodeURIComponent(window.location.origin + url) + '&filename=' + encodeURIComponent(filename));
                 const a = document.createElement('a');
                 a.href = proxyUrl;
                 a.download = filename;

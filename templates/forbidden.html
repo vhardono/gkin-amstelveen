@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GKIN Amstelveen – Geen toegang</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: { extend: { colors: { gkin: { green: '#3A7C22', dark: '#2d6119' } } } }
+        }
+    </script>
+    <style>html { overflow-y: scroll; }</style>
+    <script src="/static/i18n.js"></script>
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col">
+
+    <header class="bg-gkin-green shadow-md">
+        <div class="max-w-2xl mx-auto px-6 py-5 flex items-center gap-4">
+            <img src="/static/logo2.png" alt="GKIN Logo" class="h-12 w-12 object-contain shrink-0">
+            <div class="flex-1">
+                <h1 class="text-white text-2xl font-bold tracking-tight">GKIN Amstelveen</h1>
+                <p class="text-green-100 text-sm mt-0.5" data-i18n="login.subtitle">Beveiligde toegang</p>
+            </div>
+            <div class="flex items-center gap-1 bg-gkin-dark rounded-lg p-1">
+                <button class="lang-btn text-xs px-2 py-1 rounded" data-lang="nl">NL</button>
+                <button class="lang-btn text-xs px-2 py-1 rounded" data-lang="id">ID</button>
+                <button class="lang-btn text-xs px-2 py-1 rounded" data-lang="en">EN</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 flex items-center justify-center px-6 py-12">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8 w-full max-w-sm text-center">
+            <div class="flex justify-center mb-4">
+                <div class="w-14 h-14 rounded-full bg-amber-50 flex items-center justify-center">
+                    <svg class="w-7 h-7 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                    </svg>
+                </div>
+            </div>
+            <h2 class="text-lg font-semibold text-gray-800 mb-1" data-i18n="sso.forbidden_title">Geen toegang</h2>
+            <p class="text-sm text-gray-500 mb-6" data-i18n="sso.forbidden_desc">Deze pagina is alleen beschikbaar voor leden van AM-Kerkenraad.</p>
+            <a href="/"
+               class="w-full flex items-center justify-center gap-2 bg-gkin-green hover:bg-gkin-dark text-white font-semibold py-2.5 rounded-lg transition text-sm">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l9-9 9 9M5 10v10a1 1 0 001 1h3a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1h3a1 1 0 001-1V10"/></svg>
+                <span data-i18n="sso.back_home">Terug naar overzicht</span>
+            </a>
+        </div>
+    </main>
+
+</body>
+</html>

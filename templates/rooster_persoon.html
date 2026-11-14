@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Mijn diensten — GKIN Amstelveen</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>html{overflow-y:scroll}.text-gkin-green{color:#3A7C22}.bg-gkin-green{background:#3A7C22}.bg-gkin-dark{background:#2d6119}</style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+<header class="sticky top-0 z-10 bg-gkin-green shadow-md">
+    <div class="max-w-md mx-auto px-4 py-3 flex items-center gap-3">
+        <img src="/static/logo2.png" alt="GKIN" class="h-10 w-10 object-contain shrink-0">
+        <div class="flex-1 min-w-0">
+            <h1 class="text-white text-lg font-bold tracking-tight whitespace-nowrap" data-i18n="rooster.title">Takenrooster</h1>
+            <p class="text-green-100 text-xs mt-0.5 whitespace-nowrap truncate" data-i18n="rooster.my_duties">Mijn diensten</p>
+        </div>
+        <div class="flex items-center gap-1 bg-gkin-dark rounded-lg p-1">
+            <button onclick="setLang('nl')" class="lang-btn text-xs px-2 py-1 rounded" data-lang="nl">NL</button>
+            <button onclick="setLang('id')" class="lang-btn text-xs px-2 py-1 rounded" data-lang="id">ID</button>
+            <button onclick="setLang('en')" class="lang-btn text-xs px-2 py-1 rounded" data-lang="en">EN</button>
+        </div>
+    </div>
+</header>
+
+<div class="max-w-md mx-auto px-3 py-4">
+    <div class="flex items-center gap-2 mb-3">
+        <input id="nameInput" list="nameList" oninput="renderDuties()"
+               data-i18n-placeholder="rooster.choose_name" placeholder="Typ je naam"
+               class="flex-1 min-w-0 bg-white border border-gray-200 rounded-lg px-3 py-2.5 text-sm shadow-sm">
+        <datalist id="nameList"></datalist>
+        <a href="/rooster"
+           class="w-16 shrink-0 text-center text-xs font-semibold text-gkin-green border border-gkin-green rounded-lg py-2.5"
+           data-i18n="rooster.back">Terug</a>
+    </div>
+
+    <div id="duties"></div>
+    <p id="emptyState" class="text-center text-sm text-gray-500 py-8" data-i18n="rooster.choose_name">
+        Typ je naam</p>
+</div>
+
+<script src="/static/i18n.js"></script>
+<script>
+const SERVICES = {{ services | tojson }};
+let curLang = localStorage.getItem('gkin_lang') || 'nl';
+const DICT  = () => (window.GKIN_I18N && window.GKIN_I18N[curLang]) || {};
+const DAYS   = () => DICT().days   || ['maandag','dinsdag','woensdag','donderdag','vrijdag','zaterdag','zondag'];
+const MONTHS = () => DICT().months || ['januari','februari','maart','april','mei','juni','juli','augustus','september','oktober','november','december'];
+const T = (k, fb) => (DICT()[k] !== undefined ? DICT()[k] : fb);
+const esc = s => (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const dateLabel = s => `${DAYS()[s.day_idx]} ${s.day_num} ${MONTHS()[s.month_idx]} ${s.year}`;
+const dienstOf  = s => (s.dienst || '').replace(/https?:\/\/\S+/gi,'').trim() || 'Eredienst';
+
+const FIELDS = [
+    ['predikant',   'tr.predikant',   'Predikant'],
+    ['ovd',         'tr.ovd',         'Ouderling van Dienst'],
+    ['1eo',         'tr.eo1',         'Eerste Ontvangst'],
+    ['beamer',      'tr.beamer',      'Beamer'],
+    ['muziek',      'tr.muziek',      'Muziek'],
+    ['voorzangers', 'tr.voorzangers', 'Voorzangers'],
+    ['multimedia',  'tr.multimedia',  'Multimedia'],
+    ['knd',         'tr.knd',         'KND'],
+    ['tieners',     'tr.tieners',     'Tieners'],
+    ['bijbellezers','tr.bijbellezers','Bijbellezers'],
+];
+
+// Names in a field value — split on ',', strip "(ID)"/"(NL)" suffixes.
+const peopleIn = v => (v || '').split(',')
+    .map(s => s.trim().replace(/\s*\((ID|NL)\)\s*$/i, '').trim())
+    .filter(n => n && n !== '—' && n !== '-');
+
+const allNames = () => {
+    const set = new Set();
+    SERVICES.forEach(s => FIELDS.forEach(([f]) => peopleIn(s[f]).forEach(n => set.add(n))));
+    return [...set].sort((a, b) => a.localeCompare(b, curLang === 'en' ? 'en' : curLang === 'id' ? 'id' : 'nl'));
+};
+
+// Roles of a service where any assigned name contains the query substring.
+function rolesFor(s, q) {
+    return FIELDS.filter(([f]) =>
+        peopleIn(s[f]).some(n => n.toLowerCase().includes(q)))
+        .map(([_, k, fb]) => T(k, fb));
+}
+
+function fillNameList() {
+    document.getElementById('nameList').innerHTML =
+        allNames().map(n => `<option value="${esc(n)}">`).join('');
+}
+
+function renderDuties() {
+    const q = document.getElementById('nameInput').value.trim().toLowerCase();
+    const wrap = document.getElementById('duties');
+    const emptyEl = document.getElementById('emptyState');
+    if (q.length < 2) {
+        wrap.innerHTML = '';
+        emptyEl.textContent = T('rooster.choose_name', 'Typ je naam');
+        emptyEl.classList.remove('hidden');
+        return;
+    }
+    const matches = SERVICES.map(s => ({s, roles: rolesFor(s, q)})).filter(x => x.roles.length);
+    if (!matches.length) {
+        wrap.innerHTML = '';
+        emptyEl.textContent = T('rooster.no_duties', 'Geen diensten gevonden');
+        emptyEl.classList.remove('hidden');
+        return;
+    }
+    emptyEl.classList.add('hidden');
+    wrap.innerHTML = matches.map(({s, roles}) => `
+        <div class="bg-white rounded-lg shadow-sm px-3 py-2 mb-2">
+            <div class="text-xs"><span class="text-gray-500">${dateLabel(s)}${s.tijd ? ' · ' + s.tijd : ''}</span>
+                <span class="font-bold text-gkin-green"> — ${dienstOf(s)}</span></div>
+            <div class="text-xs text-gray-700">${roles.join(' · ')}</div>
+        </div>`).join('');
+}
+
+function setLang(lang) {
+    curLang = lang;
+    try { localStorage.setItem('gkin_lang', lang); } catch(e) {}
+    if (typeof applyLang === 'function') { try { applyLang(lang); } catch(e) {} }
+    render();
+}
+
+function render() {
+    fillNameList();
+    renderDuties();
+}
+
+document.addEventListener('gkin:langchange', e => {
+    if (e.detail?.lang && e.detail.lang !== curLang) { curLang = e.detail.lang; render(); }
+});
+render();
+</script>
+</body>
+</html>

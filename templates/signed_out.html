@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GKIN Amstelveen – Signed out</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: { extend: { colors: { gkin: { green: '#3A7C22', dark: '#2d6119' } } } }
+        }
+    </script>
+    <script src="/static/i18n.js"></script>
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col">
+    <header class="bg-gkin-green shadow-md">
+        <div class="max-w-2xl mx-auto px-6 py-5 flex items-center gap-4">
+            <img src="/static/logo2.png" alt="GKIN Logo" class="h-12 w-12 object-contain shrink-0">
+            <div class="flex-1">
+                <h1 class="text-white text-2xl font-bold tracking-tight">GKIN Amstelveen</h1>
+            </div>
+        </div>
+    </header>
+    <main class="flex-1 flex items-center justify-center px-6 py-12">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8 w-full max-w-sm text-center">
+            <div class="flex justify-center mb-4">
+                <div class="w-14 h-14 rounded-full bg-green-50 flex items-center justify-center">
+                    <svg class="w-7 h-7 text-gkin-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                </div>
+            </div>
+            <h2 class="text-lg font-semibold text-gray-800 mb-1" data-i18n="sso.signed_out">Je bent uitgelogd</h2>
+            <p class="text-sm text-gray-500 mb-6" data-i18n="sso.signed_out_desc">Je sessie is volledig beëindigd bij Microsoft en in deze app.</p>
+            <a href="/login/microsoft?next=/"
+               class="w-full flex items-center justify-center gap-2 bg-[#2F2F2F] hover:bg-black text-white font-semibold py-2.5 rounded-lg transition text-sm">
+                <svg class="w-4 h-4" viewBox="0 0 23 23"><rect x="1" y="1" width="10" height="10" fill="#f35325"/><rect x="12" y="1" width="10" height="10" fill="#81bc06"/><rect x="1" y="12" width="10" height="10" fill="#05a6f0"/><rect x="12" y="12" width="10" height="10" fill="#ffba08"/></svg>
+                <span data-i18n="login.microsoft">Inloggen met Microsoft</span>
+            </a>
+        </div>
+    </main>
+</body>
+</html>

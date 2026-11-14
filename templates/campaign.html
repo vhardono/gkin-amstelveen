@@ -13,9 +13,17 @@
     <script src="/static/i18n.js"></script>
     <style>
         .drop-zone.drag-over { border-color: #3A7C22 !important; background-color: #f0fdf4 !important; }
+        {% if embedded %}
+        body { padding: 0.5rem; font-size: 0.875rem; }
+        main { max-width: none !important; padding: 0 !important; }
+        main > div { padding: 1rem !important; margin-bottom: 0.75rem !important; }
+        main h2 { font-size: 0.875rem !important; }
+        input, select, textarea { font-size: 0.875rem !important; }
+        {% endif %}
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
+    {% if not embedded %}
     <header class="bg-gkin-green shadow-md">
         <div class="max-w-2xl mx-auto px-6 py-5 flex items-center gap-4">
             <a href="/"><img src="/static/logo2.png" alt="GKIN Logo" class="h-12 w-12 object-contain shrink-0"></a>
@@ -30,9 +38,10 @@
             </div>
         </div>
     </header>
+    {% endif %}
 
     <main class="max-w-2xl mx-auto px-6 py-8">
-        <a href="/campaign" class="inline-flex items-center gap-1 text-sm text-gkin-green hover:text-gkin-dark mb-5">
+        <a href="/campaign" data-back-to-select class="inline-flex items-center gap-1 text-sm text-gkin-green hover:text-gkin-dark mb-5">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
             </svg>
@@ -109,6 +118,31 @@
                     <label class="block text-sm font-medium text-gray-700 mb-1" data-i18n="common.time">Tijd</label>
                     <input type="text" id="oleTime" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green" placeholder="Wordt automatisch ingevuld" value="">
                 </div>
+                
+                <!-- Optional second QR code section -->
+                <div class="border-t border-gray-200 pt-4 mt-4">
+                    <div class="flex items-center gap-2 mb-3">
+                        <input type="checkbox" id="secondQrEnabled" class="rounded border-gray-300 text-gkin-green focus:ring-gkin-green">
+                        <label for="secondQrEnabled" class="text-sm font-medium text-gray-700" data-i18n="camp.extra_qr_toggle">Extra QR Code toevoegen (optioneel)</label>
+                    </div>
+                    <div id="secondQrSection" class="hidden space-y-3">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1" data-i18n="camp.extra_qr_text">Extra Tekst</label>
+                            <input type="text" id="secondQrText" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green" placeholder="Beschrijving voor extra QR code">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1" data-i18n="camp.extra_qr_code">Extra QR Code</label>
+                            <input type="text" id="secondQrUrl" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gkin-green" placeholder="">
+                            <input type="hidden" id="secondQrB64">
+                            <label id="secondQrDrop" class="drop-zone mt-2 flex items-center gap-2 w-full rounded-lg border-2 border-dashed border-gray-300 px-3 py-3 bg-white cursor-pointer hover:border-gkin-green hover:bg-green-50 transition">
+                                <input type="file" id="secondQrFile" accept="image/*" class="hidden">
+                                <svg class="w-6 h-6 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                                <span id="secondQrDropLabel" class="text-sm text-gray-500" data-i18n="camp.extra_qr_drop">Drop extra QR image here or click to upload</span>
+                            </label>
+                            <div id="secondQrPreview" class="mt-2 hidden"><img id="secondQrPreviewImg" src="" alt="QR" class="h-20 rounded border border-gray-200"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -171,18 +205,21 @@
             <button id="createBtn" class="flex-1 bg-gkin-green hover:bg-gkin-dark text-white font-medium py-2.5 px-4 rounded-lg text-sm transition hidden">
                 <span data-i18n="camp.create">Campaign Aanmaken</span>
             </button>
+            <button id="senderBtn" class="flex-1 bg-gray-300 text-gray-500 font-medium py-2.5 px-4 rounded-lg text-sm transition hidden cursor-not-allowed" disabled onclick="window.open('https://app.sender.net/campaigns', '_blank')">
+                <span data-i18n="camp.sender">Verifiëren in Sender</span>
+            </button>
         </div>
 
         <div id="amEmailSection" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-5 hidden">
-            <h2 class="text-base font-semibold text-blue-700 mb-3">AM OLE Aankondigingsmail</h2>
+            <h2 class="text-base font-semibold text-blue-700 mb-3" data-i18n="camp.am_email_title">AM OLE Aankondigingsmail</h2>
             <button id="amEmailBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-4 rounded-lg text-sm transition mb-3">
-                Open in mailprogramma (concept)
+                <span data-i18n="camp.am_email_button">Open in mailprogramma (concept)</span>
             </button>
             <p class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1.5 mb-3">
-                Vergeet niet de <strong>QR code</strong> en <strong>liturgie</strong> als bijlage toe te voegen aan de e-mail.
+                <span data-i18n-html="camp.am_email_warning">Vergeet niet de <strong>QR code</strong> en <strong>liturgie</strong> als bijlage toe te voegen aan de e-mail.</span>
             </p>
             <div id="amEmailPreviewBox" class="hidden">
-                <label class="block text-xs text-gray-500 mb-1">Tekstcontrole (bij problemen kun je deze kopiëren):</label>
+                <label class="block text-xs text-gray-500 mb-1" data-i18n="camp.am_email_check">Tekstcontrole (bij problemen kun je deze kopiëren):</label>
                 <textarea id="amEmailText" readonly class="w-full h-48 border border-gray-200 rounded-lg p-2 text-xs font-mono bg-gray-50"></textarea>
             </div>
         </div>
@@ -196,6 +233,35 @@
     </main>
 
     <script>
+        const embedded = {{ (embedded | default(false)) | tojson }};
+        const iframeToken = embedded ? new URLSearchParams(location.search).get('token') : null;
+
+        function campUrl(url) {
+            const target = new URL(url, location.origin);
+            if (iframeToken && target.origin === location.origin) target.searchParams.set('token', iframeToken);
+            return target.href;
+        }
+
+        function campFetch(url, options) {
+            return window.fetch(campUrl(url), options);
+        }
+
+        if (embedded) {
+            const backLink = document.querySelector('[data-back-to-select]');
+            if (backLink) {
+                const target = new URL('/campaign-iframe', location.origin);
+                new URLSearchParams(location.search).forEach((v, k) => target.searchParams.set(k, v));
+                backLink.href = target.href;
+            }
+            const resizeIframe = () => window.parent.postMessage(
+                { type: 'gkin-campaign-resize', height: document.documentElement.scrollHeight }, '*'
+            );
+            window.addEventListener('load', resizeIframe);
+            window.addEventListener('resize', resizeIframe);
+            document.addEventListener('gkin:langchange', resizeIframe);
+            if (window.ResizeObserver) new ResizeObserver(resizeIframe).observe(document.body);
+        }
+
         // Liturgie file upload to Sender (only if the file input exists on this page)
         document.addEventListener('DOMContentLoaded', () => {
             const liturgieFile = document.getElementById('liturgieFile');
@@ -209,7 +275,7 @@
                     const formData = new FormData();
                     formData.append('file', file);
                     try {
-                        const resp = await fetch('/campaign/upload-liturgie', { method: 'POST', body: formData });
+                        const resp = await campFetch('/campaign/upload-liturgie', { method: 'POST', body: formData });
                         const data = await resp.json();
                         if (data.success && data.url) {
                             if (liturgieUrl) liturgieUrl.value = data.url;
@@ -224,7 +290,7 @@
                 });
             }
 
-            // QR image upload / drop for OLE campaign
+            // First QR image upload / drop for OLE campaign
             const qrFile = document.getElementById('qrFile');
             const qrDrop = document.getElementById('qrDrop');
             const qrUrl = document.getElementById('qrUrl');
@@ -252,7 +318,6 @@
                     if (active) qrDrop.classList.add('drag-over');
                     else qrDrop.classList.remove('drag-over');
                 }
-                // Prevent default on all drag events so Safari does not try to open the file URL
                 ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(name => {
                     qrDrop.addEventListener(name, (e) => {
                         e.preventDefault();
@@ -273,6 +338,72 @@
                 });
                 qrFile.addEventListener('change', () => handleQrFile(qrFile.files[0]));
             }
+
+            // Second QR image upload / drop (optional)
+            const secondQrFile = document.getElementById('secondQrFile');
+            const secondQrDrop = document.getElementById('secondQrDrop');
+            const secondQrUrl = document.getElementById('secondQrUrl');
+            const secondQrB64 = document.getElementById('secondQrB64');
+            const secondQrPreview = document.getElementById('secondQrPreview');
+            const secondQrPreviewImg = document.getElementById('secondQrPreviewImg');
+            const secondQrDropLabel = document.getElementById('secondQrDropLabel');
+
+            function handleSecondQrFile(file) {
+                if (!file || !file.type.startsWith('image/')) return;
+                if (secondQrDropLabel) secondQrDropLabel.textContent = file.name;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const dataUrl = e.target.result;
+                    secondQrB64.value = dataUrl;
+                    secondQrUrl.value = file.name;
+                    secondQrPreviewImg.src = dataUrl;
+                    secondQrPreview.classList.remove('hidden');
+                };
+                reader.readAsDataURL(file);
+            }
+
+            if (secondQrDrop && secondQrFile) {
+                function setSecondDropActive(active) {
+                    if (active) secondQrDrop.classList.add('drag-over');
+                    else secondQrDrop.classList.remove('drag-over');
+                }
+                ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(name => {
+                    secondQrDrop.addEventListener(name, (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                    }, false);
+                });
+                secondQrDrop.addEventListener('dragenter', () => setSecondDropActive(true));
+                secondQrDrop.addEventListener('dragover', (e) => {
+                    setSecondDropActive(true);
+                    if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+                });
+                secondQrDrop.addEventListener('dragleave', () => setSecondDropActive(false));
+                secondQrDrop.addEventListener('drop', (e) => {
+                    setSecondDropActive(false);
+                    const dt = e.dataTransfer;
+                    const file = dt ? (dt.files[0] || (dt.items && dt.items[0] && dt.items[0].getAsFile())) : null;
+                    handleSecondQrFile(file);
+                });
+                secondQrFile.addEventListener('change', () => handleSecondQrFile(secondQrFile.files[0]));
+            }
+
+            // Toggle second QR section
+            const secondQrEnabled = document.getElementById('secondQrEnabled');
+            const secondQrSection = document.getElementById('secondQrSection');
+            if (secondQrEnabled && secondQrSection) {
+                secondQrEnabled.addEventListener('change', () => {
+                    if (secondQrEnabled.checked) {
+                        secondQrSection.classList.remove('hidden');
+                    } else {
+                        secondQrSection.classList.add('hidden');
+                        // Clear second QR fields when disabled
+                        secondQrUrl.value = '';
+                        secondQrB64.value = '';
+                        secondQrPreview.classList.add('hidden');
+                    }
+                });
+            }
         });
 
         const dateSelect = document.getElementById('dateSelect');
@@ -280,6 +411,7 @@
         const campaignDetails = document.getElementById('campaignDetails');
         const previewBtn = document.getElementById('previewBtn');
         const createBtn = document.getElementById('createBtn');
+        const senderBtn = document.getElementById('senderBtn');
         const previewSection = document.getElementById('previewSection');
         const previewContent = document.getElementById('previewContent');
         const resultSection = document.getElementById('resultSection');
@@ -292,9 +424,17 @@
                 campaignDetails.classList.add('hidden');
                 previewBtn.classList.add('hidden');
                 createBtn.classList.add('hidden');
+                senderBtn.classList.add('hidden');
                 previewSection.classList.add('hidden');
                 return;
             }
+
+            // Reset sender button to disabled state when date changes
+            senderBtn.disabled = true;
+            senderBtn.classList.remove('bg-orange-500', 'hover:bg-orange-600', 'text-white', 'cursor-pointer');
+            senderBtn.classList.add('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
+            // Hide result section
+            resultSection.classList.add('hidden');
 
             // Clear all input fields
             document.getElementById('theme').value = '';
@@ -313,6 +453,15 @@
             document.getElementById('oleTime').value = '';
             document.getElementById('oleLocation').value = '';
             document.getElementById('olePredikant').value = '';
+            
+            // Clear second QR fields
+            document.getElementById('secondQrEnabled').checked = false;
+            document.getElementById('secondQrSection').classList.add('hidden');
+            document.getElementById('secondQrText').value = '';
+            document.getElementById('secondQrUrl').value = '';
+            document.getElementById('secondQrB64').value = '';
+            document.getElementById('secondQrPreview').classList.add('hidden');
+            
             if (resultSection) resultSection.innerHTML = '';
             previewSection.classList.add('hidden');
 
@@ -338,6 +487,11 @@
             campaignDetails.classList.remove('hidden');
             previewBtn.classList.remove('hidden');
             createBtn.classList.remove('hidden');
+            senderBtn.classList.remove('hidden');
+            // Reset sender button to disabled state when showing
+            senderBtn.disabled = true;
+            senderBtn.classList.remove('bg-orange-500', 'hover:bg-orange-600', 'text-white', 'cursor-pointer');
+            senderBtn.classList.add('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
             loadSenderLists();
 
             // Show loading overlay and fetch OLE data
@@ -350,7 +504,7 @@
         async function fetchOLEData(date) {
             console.log('[Frontend] Fetching OLE data for date:', date);
             try {
-                const resp = await fetch('/fetch-ole-data', {
+                const resp = await campFetch('/fetch-ole-data', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ date })
@@ -369,7 +523,7 @@
                 document.getElementById('olePredikant').value = data.ole_predikant || '';
                 window.olePredikant = data.ole_predikant || '';
                 document.getElementById('oleLocation').value = data.ole_location || '';
-                document.getElementById('oleTime').value = data.ole_time || '';
+                document.getElementById('oleTime').value = (data.ole_time || '').replace(/[uU]/g, '').replace('.', ':').trim();
                 // Set OLE data from gkin.org website
                 if (data.ole_thema) document.getElementById('theme').value = data.ole_thema;
                 if (data.ole_bible_verse) document.getElementById('bibleVerse').value = data.ole_bible_verse;
@@ -408,7 +562,7 @@
 
                 // Update preview text with actual location, day, date, time once data arrives
                 const location = data.ole_location || data.ole_location_code || '';
-                const timeClean = (data.ole_time || '').replace('u', '').replace('U', '').trim();
+                const timeClean = document.getElementById('oleTime').value;
                 if (location && timeClean) {
                     const selectedDate = dateSelect.value;
                     const dateObj = new Date(selectedDate);
@@ -446,7 +600,7 @@
             const loading = document.getElementById('listsLoading');
             const container = document.getElementById('listsContainer');
             try {
-                const resp = await fetch('/campaign/lists');
+                const resp = await campFetch('/campaign/lists');
                 const data = await resp.json();
                 if (data.success && data.lists && data.lists.length > 0) {
                     loading.classList.add('hidden');
@@ -508,13 +662,13 @@
         previewBtn.addEventListener('click', async () => {
             const date = dateSelect.value;
             if (!date) return;
-            showMissingAlert(getMissingFields());
+            if (showMissingAlert(getMissingFields())) return;
 
             previewBtn.disabled = true;
             previewBtn.textContent = 'Laden...';
 
             try {
-                const resp = await fetch('/campaign/preview', {
+                const resp = await campFetch('/campaign/preview', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -528,10 +682,13 @@
                         ole_location: document.getElementById('oleLocation').value,
                         ole_time: document.getElementById('oleTime').value,
                         ole_predikant: document.getElementById('olePredikant').value || '',
-                        collecte_ovv: document.getElementById('collecteOvv').value || ''
+                        collecte_ovv: document.getElementById('collecteOvv').value || '',
+                        second_qr_text: document.getElementById('secondQrEnabled').checked ? document.getElementById('secondQrText').value : '',
+                        second_qr_image: document.getElementById('secondQrEnabled').checked ? (document.getElementById('secondQrB64').value || document.getElementById('secondQrUrl').value || '') : ''
                     })
                 });
                 const data = await resp.json();
+                console.log('Preview response:', data);
 
                 if (data.success) {
                     // Show section first so offsetWidth is measurable
@@ -548,12 +705,16 @@
                                 </div>
                             </div>`;
                     }, 50);
+                } else {
+                    console.error('Preview failed:', data.error);
+                    alert('Fout bij genereren voorbeeld: ' + (data.error || 'Onbekende fout'));
                 }
             } catch (err) {
                 console.error('Preview error:', err);
+                alert('Fout bij genereren voorbeeld');
             } finally {
                 previewBtn.disabled = false;
-                previewBtn.querySelector('[data-i18n]').textContent = t('camp.preview');
+                previewBtn.textContent = t('camp.preview');
             }
         });
 
@@ -588,7 +749,7 @@
             btn.textContent = 'Openen...';
 
             try {
-                const resp = await fetch('/campaign/ole/am-template', {
+                const resp = await campFetch('/campaign/ole/am-template', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -601,7 +762,9 @@
                         ole_location: document.getElementById('oleLocation').value,
                         ole_time: document.getElementById('oleTime').value,
                         ole_predikant: document.getElementById('olePredikant').value || '',
-                        collecte_ovv: document.getElementById('collecteOvv').value || ''
+                        collecte_ovv: document.getElementById('collecteOvv').value || '',
+                        second_qr_text: document.getElementById('secondQrEnabled').checked ? document.getElementById('secondQrText').value : '',
+                        second_qr_image: document.getElementById('secondQrEnabled').checked ? (document.getElementById('secondQrB64').value || document.getElementById('secondQrUrl').value || '') : ''
                     })
                 });
                 const data = await resp.json();
@@ -655,7 +818,7 @@
             createBtn.textContent = 'Aanmaken...';
 
             try {
-                const resp = await fetch('/campaign/create', {
+                const resp = await campFetch('/campaign/create', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -681,6 +844,8 @@
                         ole_time: document.getElementById('oleTime').value,
                         ole_predikant: document.getElementById('olePredikant').value || '',
                         collecte_ovv: document.getElementById('collecteOvv').value || '',
+                        second_qr_text: document.getElementById('secondQrEnabled').checked ? document.getElementById('secondQrText').value : '',
+                        second_qr_image: document.getElementById('secondQrEnabled').checked ? (document.getElementById('secondQrB64').value || document.getElementById('secondQrUrl').value || '') : '',
                         list_ids: Array.from(document.querySelectorAll('.list-checkbox:checked')).map(el => el.value)
                     })
                 });
@@ -690,6 +855,10 @@
                     const schedMsg = data.scheduled ? ` · Ingepland voor ${data.schedule_time} UTC` : (data.schedule_error ? ` · ⚠ Inplannen mislukt: ${data.schedule_error}` : '');
                     resultSection.innerHTML = `<div class="bg-green-50 border border-green-200 rounded-lg p-4 text-green-800 text-sm">✓ Campaign aangemaakt: ${data.campaign_id}${schedMsg}</div>`;
                     resultSection.classList.remove('hidden');
+                    // Enable sender button after successful creation
+                    senderBtn.disabled = false;
+                    senderBtn.classList.remove('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
+                    senderBtn.classList.add('bg-orange-500', 'hover:bg-orange-600', 'text-white', 'cursor-pointer');
                 } else {
                     resultSection.innerHTML = `<div class="bg-red-50 border border-red-200 rounded-lg p-4 text-red-800 text-sm">✗ Fout: ${data.error || 'Onbekende fout'}</div>`;
                     resultSection.classList.remove('hidden');

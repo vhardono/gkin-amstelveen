@@ -3,6 +3,11 @@ import pandas as pd
 from datetime import datetime, timedelta
 from docx import Document
 from docx.shared import Pt, Inches, Cm
+from pptx.util import Emu
+
+# Slide geometry constants (moved to top for bilingual function access)
+SLIDE_WIDTH = Emu(12192000)   # 13.333 in (16:9)
+SLIDE_HEIGHT = Emu(6858000)   # 7.5 in
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from docx.enum.table import WD_ALIGN_VERTICAL
 from docx.oxml import OxmlElement
@@ -823,13 +828,16 @@ for _, row in table3.iterrows():
         if isinstance(v, str) and v.strip():
             cells.append(v.strip())
 
+    # Track original Boek state before any normalization
+    original_boek = str(row.get(boek_col, "")).strip()
     songs.append({
-        "Boek":    str(row.get(boek_col, "")).strip(),
+        "Boek":    original_boek,
         "Nummer":  str(row.get(nummer_col, "")).strip(),
         "Versen":  str(row.get(versen_col, "")).strip(),
         "Titel":   str(row.get(titel_col, "")).strip(),
         "youtube": yt,
         "cells":   cells,
+        "original_boek_was_kosong": original_boek == "Kosong",
     })
 
 # ---------- Helpers ----------
@@ -866,10 +874,23 @@ def _set_row_cant_split(row):
     cant = OxmlElement('w:cantSplit')
     trPr.append(cant)
 
-def _write_cell(cell, text: str):
-    """Write text into a table cell (Calibri 10), no extra blank lines added."""
+def _write_cell(cell, text: str, with_arrow: bool = False):
+    """Write text into a table cell (Calibri 10), no extra blank lines added.
+    If with_arrow is True, add a tab and bold arrow (→) at the end of the text."""
     _clear_cell(cell)
-    add_calibri_paragraph(cell, text, size_pt=10, bold=False, keep_next=False)
+    if with_arrow:
+        # Add arrow at the end with tab space, make it bold
+        text_with_arrow = text.rstrip()
+        add_calibri_paragraph(cell, text_with_arrow, size_pt=10, bold=False, keep_next=False)
+        # Add tab and bold arrow with Calibri size 11
+        if cell.paragraphs:
+            p = cell.paragraphs[0]
+            r = p.add_run("\t→")
+            r.bold = True
+            r.font.name = "Calibri"
+            r.font.size = Pt(11)
+    else:
+        add_calibri_paragraph(cell, text, size_pt=10, bold=False, keep_next=False)
 
 # ---------- Main callable ----------
 def add_song_to_doc(song_no: int, intro_text=""):
@@ -883,7 +904,27 @@ def add_song_to_doc(song_no: int, intro_text=""):
 
     # Title: [optional intro] Boek Nummer: Versen "Titel" — bold Calibri 10
     prefix = (intro_text.strip() + " ") if intro_text.strip() else ""
+    # Store original state before normalization for song title display logic
+    original_boek_was_kosong = song["Boek"] == "Kosong"
+    
+    # Normalize OPW and Kosong
+    if song["Boek"] == "OPW":
+        song["Boek"] = "Opwekking"
     if song["Boek"] == "Kosong":
+        _m = re.search(r"\((.*?)\)", song["Titel"])
+        if _m:
+            song["Boek"] = _m.group(1)
+            song["Titel"] = re.sub(r"\(.*?\)", "", song["Titel"]).strip()
+        else:
+            song["Boek"] = ""
+    
+    # When original Boek was "Kosong" AND Nummer is blank, format as singer "song title" on one line
+    if original_boek_was_kosong and is_empty(song["Nummer"]):
+        # Split title by dash and take first part (song title only)
+        title_parts = song["Titel"].split("-")
+        song_title = title_parts[0].strip() if title_parts else song["Titel"].strip()
+        title_text = f'{prefix}{song["Boek"]} "{song_title}"'
+    elif song["Boek"] == "Kosong":
         title_text = f'{prefix} "{song["Titel"]}"'
     else:
         if is_empty(song["Nummer"]):
@@ -914,7 +955,9 @@ def add_song_to_doc(song_no: int, intro_text=""):
             for cell in row.cells:
                 clear_cell_borders(cell)
         for j, text in enumerate(song["cells"]):
-            _write_cell(tbl.cell(0, j), _append_final_linebreak(text))
+            # For 2-column songs, add arrow to first column
+            with_arrow = (j == 0 and n == 2)
+            _write_cell(tbl.cell(0, j), _append_final_linebreak(text), with_arrow=with_arrow)
     else:
         left_len = ceil(n / 2)
         right_len = n - left_len
@@ -928,7 +971,9 @@ def add_song_to_doc(song_no: int, intro_text=""):
                 clear_cell_borders(cell)
 
         for i in range(left_len):
-            _write_cell(tbl.cell(i, 0), _append_final_linebreak(song["cells"][i]))
+            # Add arrow to end of left column (first column)
+            with_arrow = (i == left_len - 1)  # Only on the last row of left column
+            _write_cell(tbl.cell(i, 0), _append_final_linebreak(song["cells"][i]), with_arrow=with_arrow)
         for i in range(right_len):
             _write_cell(tbl.cell(i, 1), _append_final_linebreak(song["cells"][left_len + i]))
 
@@ -1056,19 +1101,23 @@ vto2   = _get(table2, 0, ["Vers tot 2", "Vers Tot 2", "vers tot 2", "Tot 2"])
 
 if is_empty(vfrom):
     elem3_text = f"3. Aanvangstekst (zittende)   {boek} {hs}"
-elif is_empty(vto):    
+elif is_empty(vto):
     elem3_text = f"3. Aanvangstekst (zittende)   {boek} {hs}:{vfrom}"
 else:
-    elem3_text = f"3. Aanvangstekst (zittende)   {boek} {hs}:{vfrom}-{vto}."
+    elem3_text = f"3. Aanvangstekst (zittende)   {boek} {hs}:{vfrom}-{vto}"
 
 if is_empty(boek2) == False:
     if vfrom2 and str(vfrom2).strip():
         if vto2 and str(vto2).strip():
-            elem3_text = elem3_text + f" en {boek2} {hs2}:{vfrom2}-{vto2}"
+            elem3_text = elem3_text + f" en {boek2} {hs2}:{vfrom2}-{vto2}."
         else:
-            elem3_text = elem3_text + f" en {boek2} {hs2}:{vfrom2}"
+            elem3_text = elem3_text + f" en {boek2} {hs2}:{vfrom2}."
     else:
-        elem3_text = elem3_text + f" en {boek2}"
+        elem3_text = elem3_text + f" en {boek2}."
+else:
+    # Add dot at the end if there's only one bible text
+    if not is_empty(vto):
+        elem3_text = elem3_text + "."
 
 p = doc.add_paragraph()
 pf = p.paragraph_format
@@ -1717,6 +1766,14 @@ def add_song_sheet_entry(song_no: int, *, song_to_imgs: Dict[str, list], max_ima
     if s["Boek"] == "OPW":
         s["Boek"] = "Opwekking"
 
+    if s["Boek"] == "Kosong":
+        _m = re.search(r"\((.*?)\)", s["Titel"])
+        if _m:
+            s["Boek"] = _m.group(1)
+            s["Titel"] = re.sub(r"\(.*?\)", "", s["Titel"]).strip()
+        else:
+            s["Boek"] = ""
+
     # --- Heading (Roboto 11, bold, red) ---
     p = doc2.add_paragraph()
     pf = p.paragraph_format; pf.space_before = Pt(0); pf.space_after = Pt(0); pf.line_spacing = 1.0
@@ -1971,7 +2028,7 @@ print(f"Word document generated: {out_path}")
 # -------------------------------
 
 from pptx import Presentation
-from pptx.util import Emu, Inches, Pt, Cm
+from pptx.util import Inches, Pt, Cm
 from pptx.enum.text import PP_ALIGN
 from pptx.dml.color import RGBColor
 from pptx.enum.text import MSO_AUTO_SIZE, MSO_ANCHOR
@@ -1981,8 +2038,7 @@ import textwrap
 from lxml import etree as ET
 
 # === Slide geometry (from your template) ===
-SLIDE_WIDTH = Emu(12192000)   # 13.333 in (16:9)
-SLIDE_HEIGHT = Emu(6858000)   # 7.5 in
+# SLIDE_WIDTH and SLIDE_HEIGHT moved to top of file for bilingual function access
 BOX_TOP = Cm(0.0)
 # --- Broadcast-safe geometry ---
 # The livestream switcher captures only the CENTER HALF of this slide (matching the
@@ -2593,6 +2649,8 @@ def add_sermon_doc_to_ppt(
     content_height=None,
     content_anchor=MSO_ANCHOR.MIDDLE,
     content_alignment=PP_ALIGN.LEFT,
+    blocks=None,  # Optional: list of blocks with type 'text' or 'image'
+    notes_blocks=None,  # Optional: list of notes blocks with type 'text' or 'image' for 1:1 correspondence
 ):
     """
     - Preserve Word paragraphing (no auto-merging).
@@ -2660,14 +2718,42 @@ def add_sermon_doc_to_ppt(
                 p.text = note
         except Exception:
             pass
+    
+    def _add_note_to_slide(target_slide, note, is_first_slide=False):
+        """Add a single note to a slide immediately."""
+        if not note:
+            return
+        try:
+            ntf = target_slide.notes_slide.notes_text_frame
+            # Only add header on first slide
+            if header_notes_text and is_first_slide:
+                if ntf.paragraphs[0].text == "":
+                    ntf.paragraphs[0].text = header_notes_text
+                elif header_notes_text not in ntf.paragraphs[0].text:
+                    # Insert header at the beginning
+                    for i in range(len(ntf.paragraphs)-1, -1, -1):
+                        if i + 1 < len(ntf.paragraphs):
+                            ntf.paragraphs[i+1].text = ntf.paragraphs[i].text
+                    ntf.paragraphs[0].text = header_notes_text
+            # Find first empty paragraph or add new one
+            p = None
+            for para in ntf.paragraphs:
+                if para.text == "":
+                    p = para
+                    break
+            if p is None:
+                p = ntf.add_paragraph()
+            p.text = note
+        except Exception:
+            pass
 
-    def _new_slide_and_textframe():
+    def _new_slide_and_textframe(add_header=False):
         slide = prs.slides.add_slide(prs.slide_layouts[6])
         fill = slide.background.fill
         fill.solid()
         fill.fore_color.rgb = RGBColor.from_string(bg_hex)
 
-        if header_text:
+        if header_text and add_header:
             hbox = slide.shapes.add_textbox(box_left, box_top, box_width, header_height)
             htf = hbox.text_frame
             htf.clear()
@@ -2760,23 +2846,214 @@ def add_sermon_doc_to_ppt(
             r.font.color.rgb = RGBColor(255, 255, 255)
 
     # --- Convert sermon_text into paragraphs; preserve as-is ---
-    paragraphs = [protect_names(p.strip()) for p in sermon_text.split("\n") if p.strip()]
-    if not paragraphs:
-        return 0
+    # If blocks are provided (with images), use them instead of simple text
+    if blocks:
+        # Use blocks for processing (includes images)
+        pass
+    else:
+        paragraphs = [protect_names(p.strip()) for p in sermon_text.split("\n") if p.strip()]
+        if not paragraphs:
+            return 0
 
-    notes_paragraphs = [p.strip() for p in (notes_text or "").split("\n") if p.strip()]
+    # Build notes from notes_blocks if provided, otherwise use notes_text
+    if notes_blocks:
+        notes_paragraphs = []
+        for b in notes_blocks:
+            # Handle both dictionary blocks and string lists
+            if isinstance(b, dict):
+                if b['type'] == 'image':
+                    notes_paragraphs.append('[IMAGE]')
+                else:
+                    notes_paragraphs.append(b['text'].strip())
+            else:
+                # It's a string, use it directly
+                notes_paragraphs.append(str(b).strip())
+    else:
+        # Fallback to text splitting for non-block content
+        notes_paragraphs = [p.strip() for p in (notes_text or "").split("\n") if p.strip()]
+
+    # STEP 1: Normalize blocks by removing empty/meaningless text blocks before processing
+    # This handles extra empty rows/spacing and dots that cause count mismatches
+    def is_meaningful_text(text):
+        """Check if text contains meaningful content (not just spaces/dots)."""
+        if not text or not text.strip():
+            return False
+        # Remove common spacing characters
+        cleaned = text.strip().replace('.', '').replace('-', '').replace('_', '').replace('…', '').replace(' ', '')
+        return len(cleaned) > 0
+    
+    if blocks and notes_blocks:
+        try:
+            # Filter out meaningless text blocks (both sides)
+            slide_text_blocks = [b for b in blocks if isinstance(b, dict) and b.get('type') == 'text' and is_meaningful_text(b.get('text', ''))]
+            notes_text_blocks = [b for b in notes_blocks if isinstance(b, dict) and b.get('type') == 'text' and is_meaningful_text(b.get('text', ''))]
+            
+            slide_text_count = len(slide_text_blocks)
+            notes_text_count = len(notes_text_blocks)
+            
+            print(f"DEBUG: Meaningful paragraph counts - Translation: {slide_text_count}, Original: {notes_text_count}")
+            
+            if slide_text_count != notes_text_count:
+                # Paragraph count mismatch even after removing meaningless blocks
+                print(f"DEBUG: Paragraph count mismatch persists after filtering.")
+                # Continue with block-based notes (will pad/truncate as needed)
+            else:
+                print(f"DEBUG: Paragraph counts match after normalizing spacing/dots.")
+        except Exception as e:
+            print(f"ERROR in paragraph count check: {e}")
+    
+    # Ensure notes_paragraphs has the same length as blocks (only if using block-based notes)
+    if notes_blocks and len(notes_paragraphs) != len(blocks):
+        if len(notes_paragraphs) < len(blocks):
+            notes_paragraphs.extend([''] * (len(blocks) - len(notes_paragraphs)))
+        else:
+            notes_paragraphs = notes_paragraphs[:len(blocks)]
 
     slides_added = 0
-    slide, tf = _new_slide_and_textframe()
+    slide, tf = _new_slide_and_textframe(add_header=True)
     slides_added += 1
     used_lines = 0
     current_notes = []
+    block_idx = 0
+    note_idx = 0
 
-    for para_idx, para in enumerate(paragraphs):
+    # Process blocks if provided, otherwise process paragraphs
+    items_to_process = blocks if blocks else [{'type': 'text', 'text': p} for p in paragraphs]
+
+    for item_idx, item in enumerate(items_to_process):
+        # Handle both dictionary blocks and string items
+        if isinstance(item, str):
+            # It's a plain string, treat as text
+            para = item.strip()
+            if not para:
+                continue
+            
+            # Get corresponding note from notes_paragraphs based on note index
+            notes_para = notes_paragraphs[note_idx] if note_idx < len(notes_paragraphs) else ""
+            note_idx += 1
+            
+            para_lines = _estimate_lines(para)
+            spacer_cost = 1 if used_lines > 0 else 0  # blank line between paragraphs on same slide
+            
+            if used_lines + spacer_cost + para_lines <= ML:
+                # 1) Fits on current slide → pack it
+                if spacer_cost:
+                    _add_blank_line(tf)
+                    used_lines += 1
+                _add_one_paragraph(tf, para)
+                current_notes.append(notes_para)
+                used_lines += para_lines
+                continue
+            
+            if para_lines <= ML:
+                # 2) Doesn't fit with current content, but fits alone → new slide, no splitting
+                _flush_notes(slide, current_notes)
+                current_notes = []
+                slide, tf = _new_slide_and_textframe()
+                slides_added += 1
+                used_lines = 0
+                _add_one_paragraph(tf, para)
+                current_notes.append(notes_para)
+                used_lines += para_lines
+                continue
+            continue
+        
+        if item['type'] == 'image':
+            # Always put images on their own slides
+            # Get corresponding note (should be [IMAGE] marker)
+            note_for_image = notes_paragraphs[note_idx] if note_idx < len(notes_paragraphs) else "[IMAGE]"
+            note_idx += 1
+            
+            # Flush any existing content to current slide first
+            if used_lines > 0:
+                _flush_notes(slide, current_notes)
+                current_notes = []
+            
+            # Create new slide for image with proper structure
+            slide = prs.slides.add_slide(prs.slide_layouts[6])
+            fill = slide.background.fill
+            fill.solid()
+            fill.fore_color.rgb = RGBColor.from_string(bg_hex)
+            slides_added += 1
+            used_lines = 0
+            
+            # Ensure the slide has proper structure by accessing notes
+            try:
+                _ = slide.notes_slide
+            except Exception:
+                pass
+            
+            # Add image with 16.5cm width, height adjusted automatically
+            for img_bytes in item.get('images', []):
+                try:
+                    import tempfile, uuid
+                    import io
+                    # Determine image extension
+                    if img_bytes[:2] == b'\xff\xd8':
+                        ext = 'jpg'
+                    elif img_bytes[:4] == b'\x89PNG':
+                        ext = 'png'
+                    else:
+                        ext = 'png'
+                    tmp_path = f"/tmp/ppt_img_{uuid.uuid4().hex}.{ext}"
+                    with open(tmp_path, 'wb') as f:
+                        f.write(img_bytes)
+                    
+                    # Calculate dimensions for centering
+                    from PIL import Image as PILImage
+                    img_width = Cm(16.5)
+                    # Get image dimensions to calculate height
+                    with PILImage.open(tmp_path) as pil_img:
+                        w_px, h_px = pil_img.size
+                        if h_px == 0:
+                            h_px = 1
+                        aspect_ratio = w_px / h_px
+                        img_height = img_width / aspect_ratio
+                    
+                    # Calculate centered position using the same approach as existing code
+                    # Use img_width and img_height directly (they're Cm objects)
+                    # Center horizontally: (SLIDE_WIDTH - img_width) / 2
+                    centered_left = (SLIDE_WIDTH - img_width) / 2
+                    # Center vertically: (SLIDE_HEIGHT - img_height) / 2
+                    centered_top = (SLIDE_HEIGHT - img_height) / 2
+                    
+                    # Ensure centered position is non-negative
+                    centered_left = max(0, centered_left)
+                    centered_top = max(0, centered_top)
+                    
+                    # Add image centered on slide using Cm objects directly
+                    pic = slide.shapes.add_picture(tmp_path, left=centered_left, top=centered_top, width=img_width)
+                    # Clean up temp file
+                    import os
+                    try:
+                        os.remove(tmp_path)
+                    except:
+                        pass
+                    break  # Only add first image per block
+                except Exception as e:
+                    print(f"Error adding image: {e}")
+            
+            # Add the image note to the image slide notes
+            try:
+                ntf = slide.notes_slide.notes_text_frame
+                ntf.clear()
+                ntf.paragraphs[0].text = note_for_image
+            except Exception:
+                pass
+            
+            # Reset for next slide with textframe
+            slide, tf = _new_slide_and_textframe()
+            used_lines = 0
+            continue
+
+        # Handle text blocks
+        para = item.get('text', '').strip()
         if not para:
             continue
 
-        notes_para = notes_paragraphs[para_idx] if para_idx < len(notes_paragraphs) else ""
+        # Get corresponding note from notes_paragraphs based on note index
+        notes_para = notes_paragraphs[note_idx] if note_idx < len(notes_paragraphs) else ""
+        note_idx += 1
 
         para_lines = _estimate_lines(para)
         spacer_cost = 1 if used_lines > 0 else 0  # blank line between paragraphs on same slide
@@ -2800,7 +3077,7 @@ def add_sermon_doc_to_ppt(
             used_lines = 0
             _add_one_paragraph(tf, para)
             current_notes.append(notes_para)
-            used_lines = para_lines
+            used_lines += para_lines
             continue
 
         # 3) Paragraph itself is longer than a slide → split into sentence CHUNKS that fit
@@ -3943,6 +4220,9 @@ def add_song_slides(songNumber = 1, presentation = prs, staan = False):
     slideT = prs.slides.add_slide(prs.slide_layouts[6])
     set_background(slideT)
 
+    # Use the stored original state from when songs were loaded
+    original_boek_was_kosong = s.get("original_boek_was_kosong", False)
+
     if s["Boek"] == "OPW":
         s["Boek"] = "Opwekking"
 
@@ -3969,13 +4249,21 @@ def add_song_slides(songNumber = 1, presentation = prs, staan = False):
     else:
         addBox(slideT, "SAMENZANG", BOX_LEFT, title_top, BOX_WIDTH, Cm(2), bold=True, Size=Pt(40))
 
-    if is_empty(s["Nummer"]):
-        addBox(slideT, f'{s["Boek"]}\n\n "{s["Titel"]}"', BOX_LEFT, info_top, BOX_WIDTH, Cm(5), Size = Pt(40))
+    # When original Boek was "Kosong" AND Nummer is blank, extract song title (before dash) instead of singer name
+    if original_boek_was_kosong and is_empty(s["Nummer"]):
+        # Split title by dash and take first part (song title only)
+        title_parts = s["Titel"].split("-")
+        song_title = title_parts[0].strip() if title_parts else s["Titel"].strip()
+        # Show singer name on one line, blank line, then song title with quotes
+        addBox(slideT, f'{s["Boek"]}\n\n "{song_title}"', BOX_LEFT, info_top, BOX_WIDTH, Cm(5), Size = Pt(40))
     else:
-        if is_empty(s["Versen"]):
-            addBox(slideT, f'{s["Boek"]} {s["Nummer"]}\n\n "{s["Titel"]}"', BOX_LEFT, info_top, BOX_WIDTH, Cm(5), Size = Pt(40))
+        if is_empty(s["Nummer"]):
+            addBox(slideT, f'{s["Boek"]}\n\n "{s["Titel"]}"', BOX_LEFT, info_top, BOX_WIDTH, Cm(5), Size = Pt(40))
         else:
-            addBox(slideT, f'{s["Boek"]} {s["Nummer"]}: {s["Versen"]}\n\n  "{s["Titel"]}"', BOX_LEFT, info_top, BOX_WIDTH, Cm(5), Size = Pt(40))
+            if is_empty(s["Versen"]):
+                addBox(slideT, f'{s["Boek"]} {s["Nummer"]}\n\n "{s["Titel"]}"', BOX_LEFT, info_top, BOX_WIDTH, Cm(5), Size = Pt(40))
+            else:
+                addBox(slideT, f'{s["Boek"]} {s["Nummer"]}: {s["Versen"]}\n\n  "{s["Titel"]}"', BOX_LEFT, info_top, BOX_WIDTH, Cm(5), Size = Pt(40))
 
     # Show Tikkie QR on the title slide of the dankoffer song (song 6)
     if songNumber == 6:
@@ -4015,10 +4303,17 @@ def add_song_slides(songNumber = 1, presentation = prs, staan = False):
                 slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
                 set_background(slide)
 
-                if is_empty(s["Nummer"]):
-                    tt1 = f'{s["Boek"]}'
+                # When original Boek was "Kosong" AND Nummer is blank, extract song title (before dash) instead of singer name
+                if original_boek_was_kosong and is_empty(s["Nummer"]):
+                    # Split title by dash and take first part (song title only)
+                    title_parts = s["Titel"].split("-")
+                    song_title = title_parts[0].strip() if title_parts else s["Titel"].strip()
+                    tt1 = song_title
                 else:
-                    tt1 = f'{s["Boek"]} {s["Nummer"]}'
+                    if is_empty(s["Nummer"]):
+                        tt1 = f'{s["Boek"]}'
+                    else:
+                        tt1 = f'{s["Boek"]} {s["Nummer"]}'
 
                 # Orange song number label
                 label_box = slide.shapes.add_textbox(BOX_LEFT, Cm(0), BOX_WIDTH, Cm(2))
@@ -4752,20 +5047,108 @@ if os.path.exists(path_sermon):
     is_bilingual_table = first_table is not None and len(first_table.columns) >= 2
 
     if is_bilingual_table:
-        cell_texts = []
-        for cell in first_table.columns[1].cells:
+        # Extract blocks (text and images) from both columns using enhanced row-based approach for alignment
+        from app import _extract_preek_blocks, _extract_images_from_run
+        from docx.oxml.ns import qn
+        import io
+        
+        # Process row by row to ensure 1:1 correspondence between original and translation
+        # Process both columns together for each row to maintain alignment
+        slide_blocks = []
+        notes_blocks = []
+        
+        def extract_cell_blocks(cell):
+            """Extract text and image blocks from a single cell."""
+            blocks = []
             for p in cell.paragraphs:
-                if p.text.strip():
-                    cell_texts.append(p.text)
-        full_text = "\n".join(cell_texts)
-
-        original_cell_texts = []
-        for cell in first_table.columns[0].cells:
-            for p in cell.paragraphs:
-                if p.text.strip():
-                    original_cell_texts.append(p.text)
-        original_text = "\n".join(original_cell_texts)
+                current_text = ''
+                current_bold = any(r.bold for r in p.runs) if p.runs else False
+                current_italic = any(r.italic for r in p.runs) if p.runs else False
+                any_images = False
+                for run in p.runs:
+                    images = _extract_images_from_run(run, preek_doc)
+                    if images:
+                        if current_text:
+                            blocks.append({'type': 'text', 'text': current_text, 'bold': current_bold, 'italic': current_italic})
+                            current_text = ''
+                        blocks.append({'type': 'image', 'images': images})
+                        any_images = True
+                    else:
+                        if run.text:
+                            current_text += run.text
+                if current_text or (not any_images and not p.runs):
+                    blocks.append({'type': 'text', 'text': current_text, 'bold': current_bold, 'italic': current_italic})
+            return blocks
+        
+        # First, collect all row data to analyze structure
+        row_data = []
+        for row in first_table.rows:
+            right_blocks = extract_cell_blocks(row.cells[1])  # Translation for slides
+            left_blocks = extract_cell_blocks(row.cells[0])    # Original for notes
+            row_data.append({'right': right_blocks, 'left': left_blocks})
+        
+        # Process rows with intelligent block alignment
+        for row_idx, row in enumerate(row_data):
+            right_blocks = row['right']
+            left_blocks = row['left']
+            
+            # Simply concatenate blocks from each column
+            # The semantic correspondence is at the text level, not block level
+            slide_blocks.extend(right_blocks)
+            notes_blocks.extend(left_blocks)
+        
+        # Convert slide blocks to text for the main processing
+        slide_text_blocks = [b['text'] for b in slide_blocks if b['type'] == 'text']
+        notes_text_blocks = [b['text'] for b in notes_blocks if b['type'] == 'text']
+        
+        full_text = "\n".join(slide_text_blocks)
+        original_text = "\n".join(notes_text_blocks)
+        
+        # Use slide blocks for PowerPoint generation (includes images)
+        blocks = slide_blocks
+        
+        # Build notes blocks with [IMAGE] markers for proper correspondence
+        # This preserves the original working logic for auto-translated documents
+        notes_blocks_for_ppt = []
+        for b in notes_blocks:
+            if b['type'] == 'image':
+                notes_blocks_for_ppt.append('[IMAGE]')
+            else:
+                notes_blocks_for_ppt.append(b['text'])
+        
+        # Use block-based notes for 1:1 correspondence
+        original_text_with_images = "\n".join(notes_blocks_for_ppt)
+        
+        # Remove final AMEN/AMIN from text
+        clean_text, removed_amen = strip_final_amen(full_text)
+        clean_text = clean_text.rstrip()
+        
+        original_clean, _ = strip_final_amen(original_text) if original_text else (None, None)
+        if original_clean is not None:
+            original_clean = original_clean.rstrip()
+        
+        # Use the working method for bilingual documents
+        preek_slides = add_sermon_doc_to_ppt(
+            prs,
+            clean_text,
+            box_width=BOX_WIDTH,
+            box_left=BOX_LEFT,
+            box_top=Cm(0),
+            box_height=SLIDE_HEIGHT,
+            font_size_pt=28,
+            max_lines_per_slide=16,
+            notes_text=original_text_with_images,
+            blocks=blocks,
+            notes_blocks=notes_blocks_for_ppt,
+            header_text=None,  # Disable header for all slides
+            header_notes_text=None,
+            header_font_size_pt=40,
+        )
+        
+        preek_loaded = bool(clean_text.strip())
+        preek_translation = bool(original_clean and original_clean.strip())
     else:
+        # Non-bilingual document - use old method
         full_text = "\n".join(p.text for p in preek_doc.paragraphs)
         # Fallback: document has only a single-column table and no body paragraphs.
         if not full_text.strip() and first_table is not None:
@@ -4776,28 +5159,35 @@ if os.path.exists(path_sermon):
                         cell_texts.append(p.text)
             full_text = "\n".join(cell_texts)
         original_text = None
+        blocks = None
 
-    # Remove final AMEN/AMIN
-    clean_text, removed_amen = strip_final_amen(full_text)
-    clean_text = clean_text.rstrip()
+        # Remove final AMEN/AMIN
+        clean_text, removed_amen = strip_final_amen(full_text)
+        clean_text = clean_text.rstrip()
 
-    original_clean, _ = strip_final_amen(original_text) if original_text else (None, None)
-    if original_clean is not None:
-        original_clean = original_clean.rstrip()
+        original_clean, _ = strip_final_amen(original_text) if original_text else (None, None)
+        if original_clean is not None:
+            original_clean = original_clean.rstrip()
 
-    preek_slides = add_sermon_doc_to_ppt(
-        prs,
-        clean_text,
-        box_width=BOX_WIDTH,
-        box_left=BOX_LEFT,
-        box_top=Cm(0),
-        box_height=SLIDE_HEIGHT,
-        font_size_pt=28,
-        max_lines_per_slide=16,
-        notes_text=original_clean,
-    )
-    preek_loaded = bool(clean_text.strip())
-    preek_translation = bool(original_clean and original_clean.strip())
+        # Use the old method for non-bilingual documents
+        preek_slides = add_sermon_doc_to_ppt(
+            prs,
+            clean_text,
+            box_width=BOX_WIDTH,
+            box_left=BOX_LEFT,
+            box_top=Cm(0),
+            box_height=SLIDE_HEIGHT,
+            font_size_pt=28,
+            max_lines_per_slide=16,
+            notes_text=original_clean,
+            blocks=blocks,
+            header_text=None,  # Disable header for all slides
+            header_notes_text=None,
+            header_font_size_pt=40,
+        )
+    
+        preek_loaded = bool(clean_text.strip())
+        preek_translation = bool(original_clean and original_clean.strip())
 
     # --- Add final AMEN slide if needed ---
     if removed_amen:
@@ -5389,48 +5779,62 @@ r.font.size = Pt(40)
 r.font.color.rgb = white
 r.font.bold = True
 
-# --- Closing Slide (Dutch + Indonesian) ---
+# --- Closing Slide (Dutch + Indonesian) with Image ---
 slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank slide
 set_background(slide)
 
-box = slide.shapes.add_textbox(
-    BOX_LEFT,
-    Cm(0),
-    BOX_WIDTH,
-    Cm(19.05)
+# Dutch text at the top (full width)
+box_top = slide.shapes.add_textbox(
+    Cm(0),  # left = 0cm
+    Cm(0),  # top = 0cm
+    Cm(33.87),  # width = 33.87cm
+    Cm(3.5)  # height = 3.5cm
 )
+tf_top = box_top.text_frame
+tf_top.clear()
+tf_top.word_wrap = True
+tf_top.auto_size = MSO_AUTO_SIZE.NONE
+p_top = tf_top.paragraphs[0]
+p_top.alignment = PP_ALIGN.CENTER
+r_top = p_top.add_run()
+r_top.text = "Gezegende zondag\nGraag de kerk schoon houden na de dienst !"
+r_top.font.name = "Calibri"
+r_top.font.size = Pt(32)
+r_top.font.bold = True
+r_top.font.color.rgb = white
 
-tf = box.text_frame
-tf.clear()
-tf.word_wrap = True
-tf.auto_size = MSO_AUTO_SIZE.NONE
-tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+# Add the image centered in the middle
+img_path = os.path.join(os.path.dirname(__file__), 'static', 'eindslide_image.png')
+if os.path.exists(img_path):
+    # Use exact dimensions provided
+    img_left = Cm(8.86)
+    img_top = Cm(3.5)
+    img_width = Cm(16.5)
+    img_height = Cm(11)
+    slide.shapes.add_picture(img_path, img_left, img_top, width=img_width, height=img_height)
+else:
+    print('[Liturgi] Warning: eindslide_image.png not found, using text-only closing slide')
 
-# Dutch text
-p = tf.paragraphs[0]
-p.alignment = PP_ALIGN.CENTER
-r = p.add_run()
-r.text = "Gezegende zondag"
-r.font.name = "Calibri"
-r.font.size = Pt(40)
-r.font.bold = True
-r.font.color.rgb = white
-
-# Empty line
-p = tf.add_paragraph()
-p.alignment = PP_ALIGN.CENTER
-p.text = ""
-
-# Indonesian text
-p = tf.add_paragraph()
-p.alignment = PP_ALIGN.CENTER
-r = p.add_run()
-r.text = "Selamat Hari Minggu\nTuhan Yesus Memberkati"
-r.font.name = "Calibri"
-r.font.size = Pt(40)
-r.font.bold = True
-r.font.italic = True
-r.font.color.rgb = white
+# Indonesian text at the bottom (full width)
+box_bottom = slide.shapes.add_textbox(
+    Cm(0),  # left = 0cm
+    Cm(14.57),  # top = 14.57cm
+    Cm(33.87),  # width = 33.87cm
+    Cm(4.5)  # height = 4.5cm
+)
+tf_bottom = box_bottom.text_frame
+tf_bottom.clear()
+tf_bottom.word_wrap = True
+tf_bottom.auto_size = MSO_AUTO_SIZE.NONE
+p_bottom = tf_bottom.paragraphs[0]
+p_bottom.alignment = PP_ALIGN.CENTER
+r_bottom = p_bottom.add_run()
+r_bottom.text = "Selamat Hari Minggu\nMohon jaga kebersihan gereja setelah ibadah!\nTuhan Yesus Memberkati"
+r_bottom.font.name = "Calibri"
+r_bottom.font.size = Pt(32)
+r_bottom.font.bold = True
+r_bottom.font.italic = True
+r_bottom.font.color.rgb = white
 
 
 # Save after you’ve added all slides

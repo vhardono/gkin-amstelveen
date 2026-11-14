@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Takenrooster — GKIN Amstelveen</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>html{overflow-y:scroll}.text-gkin-green{color:#3A7C22}.bg-gkin-green{background:#3A7C22}.bg-gkin-dark{background:#2d6119}</style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+<header class="sticky top-0 z-10 bg-gkin-green shadow-md">
+    <div class="max-w-md mx-auto px-4 py-3 flex items-center gap-3">
+        <img src="/static/logo2.png" alt="GKIN" class="h-10 w-10 object-contain shrink-0">
+        <div class="flex-1 min-w-0">
+            <h1 class="text-white text-lg font-bold tracking-tight whitespace-nowrap" data-i18n="rooster.title">Takenrooster</h1>
+            <p class="text-green-100 text-xs mt-0.5 whitespace-nowrap truncate" data-i18n="rooster.subtitle">Komende diensten in Amstelveen</p>
+        </div>
+        <div class="flex items-center gap-1 bg-gkin-dark rounded-lg p-1">
+            <button onclick="setLang('nl')" class="lang-btn text-xs px-2 py-1 rounded" data-lang="nl">NL</button>
+            <button onclick="setLang('id')" class="lang-btn text-xs px-2 py-1 rounded" data-lang="id">ID</button>
+            <button onclick="setLang('en')" class="lang-btn text-xs px-2 py-1 rounded" data-lang="en">EN</button>
+        </div>
+    </div>
+</header>
+
+<div class="max-w-md mx-auto px-3 py-4">
+    {% if edit_code_required %}
+    <div class="mb-3 bg-white rounded-lg shadow-sm p-3 flex items-center gap-2">
+        <label class="text-xs text-gray-600 shrink-0" data-i18n="rooster.edit_code">Bewerkcode</label>
+        <input id="editCode" type="password" class="flex-1 border rounded px-2 py-1 text-sm" placeholder="••••••">
+    </div>
+    {% endif %}
+
+    <div class="flex items-center gap-2 mb-3">
+        <select id="dateSelect" onchange="renderView()"
+                class="flex-1 min-w-0 bg-white border border-gray-200 rounded-lg px-3 py-2.5 text-sm shadow-sm"></select>
+        <div id="editBar" class="hidden flex-1 min-w-0 flex items-center justify-between">
+            <span class="text-sm font-bold text-gray-700" data-i18n="tr.bijbellezers">Bijbellezers</span>
+            <div class="flex gap-1.5">
+                <button id="saveBtn" onclick="saveAll(this)"
+                        class="w-16 text-center bg-gkin-green text-white font-semibold rounded-lg py-2 text-xs"
+                        data-i18n="rooster.save">Opslaan</button>
+                <button onclick="toggleMode()"
+                        class="w-16 text-center text-xs font-semibold text-gkin-green border border-gkin-green rounded-lg py-2"
+                        data-i18n="rooster.back">Terug</button>
+            </div>
+        </div>
+        <a href="/rooster/persoon" data-i18n-title="rooster.my_duties" title="Mijn diensten"
+           class="shrink-0 bg-white text-gkin-green border border-gkin-green rounded-lg p-2 inline-flex items-center">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+        </a>
+        <button id="modeBtn" onclick="toggleMode()"
+                class="w-16 shrink-0 text-center bg-gkin-green text-white font-semibold rounded-lg py-2.5 text-xs"
+                data-i18n="rooster.edit_bijbel">Bewerk</button>
+    </div>
+
+    <a href="/rooster/gebedspunten"
+       class="flex items-center justify-center gap-1.5 w-full bg-gkin-green text-white font-semibold rounded-lg py-2.5 mb-3 text-xs">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        <span data-i18n="rooster.gebedspunten">Gebedspunten</span>
+    </a>
+
+    <div id="viewMode"></div>
+    <div id="editMode" class="hidden"></div>
+
+    <p id="emptyState" class="hidden text-center text-sm text-gray-500 py-8" data-i18n="rooster.no_services">
+        Geen diensten gevonden</p>
+</div>
+
+<script src="/static/i18n.js"></script>
+<script>
+const SERVICES = {{ services | tojson }};
+const EDIT_CODE_REQUIRED = {{ 'true' if edit_code_required else 'false' }};
+const codeInput = document.getElementById('editCode');
+if (codeInput) codeInput.value = localStorage.getItem('rooster_edit_code') || '';
+
+const FIELDS = [
+    ['predikant',   'tr.predikant',   'Predikant'],
+    ['ovd',         'tr.ovd',         'Ouderling van Dienst'],
+    ['1eo',         'tr.eo1',         'Eerste Ontvangst'],
+    ['beamer',      'tr.beamer',      'Beamer'],
+    ['muziek',      'tr.muziek',      'Muziek'],
+    ['voorzangers', 'tr.voorzangers', 'Voorzangers'],
+    ['multimedia',  'tr.multimedia',  'Multimedia'],
+    ['knd',         'tr.knd',         'KND'],
+    ['tieners',     'tr.tieners',     'Tieners'],
+];
+let curLang = localStorage.getItem('gkin_lang') || 'nl';
+const DICT  = () => (window.GKIN_I18N && window.GKIN_I18N[curLang]) || {};
+const DAYS   = () => DICT().days   || ['maandag','dinsdag','woensdag','donderdag','vrijdag','zaterdag','zondag'];
+const MONTHS = () => DICT().months || ['januari','februari','maart','april','mei','juni','juli','augustus','september','oktober','november','december'];
+const T = (k, fb) => (DICT()[k] !== undefined ? DICT()[k] : fb);
+const esc = s => (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const dateLabel = s => `${DAYS()[s.day_idx]} ${s.day_num} ${MONTHS()[s.month_idx]} ${s.year}`;
+const SHORT_DAYS   = () => DICT().days_short   || ['ma','di','wo','do','vr','za','zo'];
+const SHORT_MONTHS = () => DICT().months_short || ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
+const shortDate = s => `${SHORT_DAYS()[s.day_idx]} ${s.day_num} ${SHORT_MONTHS()[s.month_idx]} ${String(s.year).slice(-2)}`;
+const dienstOf  = s => (s.dienst || '').replace(/https?:\/\/\S+/gi,'').trim() || 'Eredienst';
+
+// Split stored "name (ID), name (NL)" back into parts; also accepts the
+// legacy "ID: x | NL: y" form. Loose text goes to NL.
+function parseBijbel(raw) {
+    const out = {id: '', nl: ''};
+    (raw || '').split(/\s*[|,]\s*/).map(p => p.trim()).filter(Boolean).forEach(p => {
+        const m = p.match(/^(.*?)\s*\((id|nl)\)\s*$/i);
+        if (m)                        out[m[2].toLowerCase()] = m[1].trim();
+        else if (/^id\s*:/i.test(p))  out.id = p.replace(/^id\s*:/i,'').trim();
+        else if (/^nl\s*:/i.test(p))  out.nl = p.replace(/^nl\s*:/i,'').trim();
+        else                          out.nl = out.nl ? out.nl + ', ' + p : p;
+    });
+    return out;
+}
+const fmtBijbel = (id, nl) =>
+    [id && `${id} (ID)`, nl && `${nl} (NL)`].filter(Boolean).join(', ');
+
+let editMode = false;
+
+function fillSelect() {
+    const sel = document.getElementById('dateSelect');
+    sel.innerHTML = SERVICES.map((s, i) => ({s, i})).filter(x => !x.s.past)
+        .map(({s, i}) => `<option value="${i}">${dateLabel(s)} — ${dienstOf(s)}</option>`).join('');
+}
+
+function renderView() {
+    const wrap = document.getElementById('viewMode');
+    const s = SERVICES[+document.getElementById('dateSelect').value || 0];
+    if (!s) { wrap.innerHTML = ''; return; }
+    const rows = FIELDS.map(([f,k,fb]) =>
+        `<div class="flex"><span class="w-32 shrink-0 font-semibold text-gray-600">${T(k,fb)}</span><span class="text-gray-800">${esc(s[f])||'—'}</span></div>`).join('');
+    wrap.innerHTML = `
+        <div class="bg-white rounded-lg shadow-sm p-3 mb-3">
+            <div class="mb-2 pb-2 border-b border-gray-100">
+                <div class="font-bold text-gkin-green text-sm">${dienstOf(s)}</div>
+                <div class="text-xs text-gray-500">${dateLabel(s)}${s.tijd ? ' · ' + s.tijd : ''}</div>
+            </div>
+            <div class="space-y-1 text-xs">${rows}
+                <div class="flex"><span class="w-32 shrink-0 font-semibold text-gray-600">${T('tr.bijbellezers','Bijbellezers')}</span><span class="text-gray-800">${esc(s.bijbellezers)||'—'}</span></div>
+            </div>
+        </div>`;
+}
+
+function renderEdit() {
+    const wrap = document.getElementById('editMode');
+    wrap.innerHTML = SERVICES.map(s => {
+        if (s.past) return `
+        <div class="bg-gray-100 rounded-lg px-2.5 py-2 mb-1.5 opacity-70">
+            <div class="flex items-center gap-3">
+                <div class="w-24 shrink-0">
+                    <div class="text-xs font-bold text-gray-500 whitespace-nowrap">${shortDate(s)}</div>
+                    <div class="text-[10px] text-gray-400">${dienstOf(s)}</div>
+                </div>
+                <div class="flex-1 text-xs text-gray-600">${esc(s.bijbellezers) || '—'}</div>
+            </div>
+        </div>`;
+        const p = parseBijbel(s.bijbellezers);
+        return `
+        <div class="bg-white rounded-lg shadow-sm px-2.5 py-2 mb-1.5" data-date="${s.value}">
+            <div class="flex items-center gap-3">
+                <div class="w-24 shrink-0">
+                    <div class="text-xs font-bold text-gray-800 whitespace-nowrap">${shortDate(s)}</div>
+                    <div class="text-[10px] text-gkin-green font-semibold">${dienstOf(s)}</div>
+                </div>
+                <div class="flex-1 grid grid-cols-2 gap-2">
+                    <input class="bij-id border rounded px-2 py-1.5 text-sm"
+                           placeholder="${T('rooster.reader_id','Indonesisch')}" value="${esc(p.id)}">
+                    <input class="bij-nl border rounded px-2 py-1.5 text-sm"
+                           placeholder="${T('rooster.reader_nl','Nederlands')}" value="${esc(p.nl)}">
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function toggleMode() {
+    editMode = !editMode;
+    document.getElementById('viewMode').classList.toggle('hidden', editMode);
+    document.getElementById('editMode').classList.toggle('hidden', !editMode);
+    document.getElementById('dateSelect').classList.toggle('hidden', editMode);
+    document.getElementById('modeBtn').classList.toggle('hidden', editMode);
+    document.getElementById('editBar').classList.toggle('hidden', !editMode);
+    if (editMode) renderEdit();
+}
+
+async function saveAll(btn) {
+    if (btn.disabled) return;
+    btn.disabled = true;
+    btn.classList.add('opacity-60');
+    const orig = btn.textContent;
+    btn.textContent = '…';
+    const body_code = {};
+    if (EDIT_CODE_REQUIRED) {
+        body_code.code = codeInput.value;
+        localStorage.setItem('rooster_edit_code', body_code.code);
+    }
+    let failed = [];
+    for (const card of document.querySelectorAll('#editMode [data-date]')) {
+        const date = card.dataset.date;
+        const idInput = card.querySelector('.bij-id');
+        if (!idInput) continue;   // read-only past row
+        const id = idInput.value.trim();
+        const nl = card.querySelector('.bij-nl').value.trim();
+        const value = fmtBijbel(id, nl);
+        const s = SERVICES.find(x => x.value === date);
+        if (s && s.bijbellezers === value) continue;  // unchanged
+        card.classList.add('ring-2', 'ring-amber-300');   // saving indicator
+        try {
+            const r = await fetch('/rooster/bijbellezers', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({date, value, ...body_code})});
+            const data = await r.json();
+            card.classList.remove('ring-amber-300');
+            if (data.ok) {
+                if (s) s.bijbellezers = value;
+                card.classList.add('ring-green-400');    // saved flash
+                setTimeout(() => card.classList.remove('ring-2','ring-green-400'), 1200);
+            } else {
+                card.classList.add('ring-red-400');
+                failed.push(date + (data.error ? ` (${data.error})` : ''));
+            }
+        } catch (e) {
+            card.classList.remove('ring-amber-300');
+            card.classList.add('ring-red-400');
+            failed.push(date);
+        }
+    }
+    btn.disabled = false;
+    btn.classList.remove('opacity-60');
+    btn.textContent = orig;
+    if (failed.length) {
+        alert('Fout: ' + failed.join(', '));
+    } else {
+        btn.textContent = '✓';
+        setTimeout(() => { btn.textContent = orig; }, 1500);
+    }
+}
+
+function setLang(lang) {
+    curLang = lang;
+    try { localStorage.setItem('gkin_lang', lang); } catch(e) {}
+    if (typeof applyLang === 'function') { try { applyLang(lang); } catch(e) {} }
+    render();
+}
+
+function render() {
+    document.getElementById('emptyState').classList.toggle('hidden', SERVICES.length > 0);
+    fillSelect(); renderView();
+    if (editMode) renderEdit();
+}
+
+document.addEventListener('gkin:langchange', e => {
+    if (e.detail?.lang && e.detail.lang !== curLang) { curLang = e.detail.lang; render(); }
+});
+render();
+</script>
+</body>
+</html>
