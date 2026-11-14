@@ -254,6 +254,7 @@ document.addEventListener('gkin:langchange', e => {
     if (e.detail?.lang && e.detail.lang !== curLang) { curLang = e.detail.lang; render(); }
 });
 render();
+if (new URLSearchParams(location.search).get('edit') === '1' && !editMode) toggleMode();
 </script>
 </body>
 </html>
