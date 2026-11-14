@@ -137,21 +137,43 @@ function fillDutySelect() {
         `<option value="${f}"${f === dutyField ? ' selected' : ''}>${T(k, fb)}</option>`).join('');
 }
 
-// Auto-suggest names: everyone already appearing in the roster (any duty).
+// First names only: strip salutation and keep the first token.
+const SALUT = /^(ds|zr|br|mw|mevr|dhr|dr)\.?\s+/i;
+const firstName = n => (n || '').trim().replace(SALUT, '').trim().split(/\s+/)[0] || '';
+const toFirstNames = raw =>
+    (raw || '').split(',')
+              .map(p => firstName(p.replace(/\s*\((id|nl)\)\s*$/i, '')))
+              .filter(Boolean).join(', ');
+
+// Auto-suggest first names: everyone already appearing in the roster (any duty).
+let ALL_NAMES = [];
 function fillNameSuggestions() {
     const names = new Set();
     for (const s of SERVICES) {
         for (const f of ['predikant','ovd','1eo','beamer','muziek','voorzangers',
                          'multimedia','knd','tieners','bijbellezers']) {
             (s[f] || '').split(',').forEach(part => {
-                const n = part.replace(/\s*\((id|nl)\)\s*$/i, '').trim();
+                const n = firstName(part.replace(/\s*\((id|nl)\)\s*$/i, ''));
                 if (n) names.add(n);
             });
         }
     }
-    document.getElementById('roosterNames').innerHTML =
-        [...names].sort((a, b) => a.localeCompare(b))
-                  .map(n => `<option value="${esc(n)}"></option>`).join('');
+    ALL_NAMES = [...names].sort((a, b) => a.localeCompare(b));
+    suggestNames();
+}
+
+// Suggest on the segment after the last comma so lists of names keep working.
+function suggestNames(inp) {
+    let prefix = '', frag = '';
+    if (inp) {
+        const before = inp.value.slice(0, inp.selectionStart ?? inp.value.length);
+        const i = before.lastIndexOf(',');
+        prefix = i >= 0 ? before.slice(0, i + 1) + ' ' : '';
+        frag = before.slice(i + 1).trim().toLowerCase();
+    }
+    document.getElementById('roosterNames').innerHTML = ALL_NAMES
+        .filter(n => !frag || n.toLowerCase().includes(frag))
+        .map(n => `<option value="${esc(prefix + n)}"></option>`).join('');
 }
 
 function fillSelect() {
@@ -197,14 +219,17 @@ function renderEdit() {
             const p = parseBijbel(s.bijbellezers);
             inputs = `<div class="flex-1 grid grid-cols-2 gap-2">
                     <input class="bij-id border rounded px-2 py-1.5 text-sm" list="roosterNames"
-                           placeholder="${T('rooster.reader_id','Indonesisch')}" value="${esc(p.id)}">
+                           oninput="suggestNames(this)" onfocus="suggestNames(this)"
+                           placeholder="${T('rooster.reader_id','Indonesisch')}" value="${esc(toFirstNames(p.id))}">
                     <input class="bij-nl border rounded px-2 py-1.5 text-sm" list="roosterNames"
-                           placeholder="${T('rooster.reader_nl','Nederlands')}" value="${esc(p.nl)}">
+                           oninput="suggestNames(this)" onfocus="suggestNames(this)"
+                           placeholder="${T('rooster.reader_nl','Nederlands')}" value="${esc(toFirstNames(p.nl))}">
                 </div>`;
         } else {
             inputs = `<div class="flex-1">
                     <input class="duty-val w-full border rounded px-2 py-1.5 text-sm" list="roosterNames"
-                           placeholder="${dutyLabel()}" value="${esc(s[dutyField])}">
+                           oninput="suggestNames(this)" onfocus="suggestNames(this)"
+                           placeholder="${dutyLabel()}" value="${esc(toFirstNames(s[dutyField]))}">
                 </div>`;
         }
         return `
@@ -258,14 +283,14 @@ async function saveAll(btn) {
         if (dutyField === 'bijbellezers') {
             const idInput = card.querySelector('.bij-id');
             if (!idInput) continue;   // read-only past row
-            value = fmtBijbel(idInput.value.trim(), card.querySelector('.bij-nl').value.trim());
+            value = fmtBijbel(toFirstNames(idInput.value), toFirstNames(card.querySelector('.bij-nl').value));
         } else {
             const input = card.querySelector('.duty-val');
             if (!input) continue;
-            value = input.value.trim();
+            value = toFirstNames(input.value);
         }
         const s = SERVICES.find(x => x.value === date);
-        if (s && (s[dutyField] || '') === value) continue;  // unchanged
+        if (s && toFirstNames(s[dutyField]) === value) continue;  // unchanged
         card.classList.add('ring-2', 'ring-amber-300');   // saving indicator
         try {
             const r = await fetch('/rooster/duty', {
