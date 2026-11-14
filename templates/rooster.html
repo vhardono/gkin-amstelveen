@@ -252,6 +252,7 @@ function renderEdit() {
 const DEEP_EDIT = new URLSearchParams(location.search).get('edit') === '1';
 const EMBED = {{ 'true' if embed else 'false' }};
 function editBack() {
+    if (EMBED && history.length > 1) { history.back(); return; }
     if (EMBED) { location.href = '/takenrooster-iframe'; return; }
     if (DEEP_EDIT && history.length > 1) { history.back(); return; }
     toggleMode();
