@@ -9,12 +9,12 @@
     <style>html{overflow-y:scroll}.text-gkin-green{color:#3A7C22}.bg-gkin-green{background:#3A7C22}.bg-gkin-dark{background:#2d6119}</style>
 </head>
 <body class="bg-gray-50 min-h-screen">
-<header class="sticky top-0 z-10 bg-gkin-green shadow-md">
-    <div class="max-w-md mx-auto px-4 py-3 flex items-center gap-3">
-        <img src="/static/logo2.png" alt="GKIN" class="h-10 w-10 object-contain shrink-0">
+<header class="bg-gkin-green shadow-md">
+    <div class="max-w-2xl mx-auto px-6 py-5 flex items-center gap-4">
+        <img src="/static/logo2.png" alt="GKIN" class="h-12 w-12 object-contain shrink-0">
         <div class="flex-1 min-w-0">
-            <h1 class="text-white text-lg font-bold tracking-tight whitespace-nowrap" data-i18n="rooster.title">Takenrooster</h1>
-            <p class="text-green-100 text-xs mt-0.5 whitespace-nowrap truncate" data-i18n="rooster.my_duties">Mijn diensten</p>
+            <h1 class="text-white text-2xl font-bold tracking-tight whitespace-nowrap" data-i18n="rooster.title">Takenrooster</h1>
+            <p class="text-green-100 text-sm mt-0.5 whitespace-nowrap truncate" data-i18n="rooster.my_duties">Mijn diensten</p>
         </div>
         <div class="flex items-center gap-1 bg-gkin-dark rounded-lg p-1">
             <button onclick="setLang('nl')" class="lang-btn text-xs px-2 py-1 rounded" data-lang="nl">NL</button>
@@ -24,7 +24,7 @@
     </div>
 </header>
 
-<div class="max-w-md mx-auto px-3 py-4">
+<div class="max-w-2xl mx-auto px-6 py-6">
     <div class="flex items-center gap-2 mb-3">
         <input id="nameInput" list="nameList" oninput="renderDuties()"
                data-i18n-placeholder="rooster.choose_name" placeholder="Typ je naam"
