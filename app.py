@@ -4364,9 +4364,9 @@ def fetch_pm_data():
                 # Also use website predikant if preekroster didn't return one
                 if not ole_predikant and web.get('predikant'):
                     ole_predikant = _normalize_salutation(web.get('predikant', ''))
-                # And website location (e.g. region from preek filename) if preekroster missed it
-                if not location_code and web.get('location'):
-                    location_code = web['location'].strip().upper()
+                # And website location (e.g. region code from preek filename) if preekroster missed it
+                if not location_code and (web.get('location_code') or web.get('location')):
+                    location_code = (web.get('location_code') or web.get('location', '')).strip().upper()
         except Exception as web_err:
             print(f'[fetch-pm-data] Website fetch error: {web_err}')
         # Fallback: YouTube link from the OLE mededeling email (sent days before the service)
