@@ -4369,6 +4369,18 @@ def fetch_pm_data():
                     location_code = web['location'].strip().upper()
         except Exception as web_err:
             print(f'[fetch-pm-data] Website fetch error: {web_err}')
+        # Fallback: YouTube link from takenrooster OPMERKING column (OLE Sundays)
+        if not youtube_link:
+            try:
+                for tr_entry in taken.get('entries', []):
+                    tr_date = tr_entry.get('date')
+                    if tr_date and hasattr(tr_date, 'date'):
+                        tr_date = tr_date.date()
+                    if tr_date == selected_date.date() and tr_entry.get('youtube_link'):
+                        youtube_link = tr_entry['youtube_link']
+                        break
+            except Exception as e:
+                print(f'[fetch-pm-data] Takenrooster youtube fallback error: {e}')
         return jsonify({
             'success': True,
             'am_predikant': am_predikant,
