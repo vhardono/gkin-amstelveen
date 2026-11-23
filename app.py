@@ -4369,6 +4369,15 @@ def fetch_pm_data():
                     location_code = web['location'].strip().upper()
         except Exception as web_err:
             print(f'[fetch-pm-data] Website fetch error: {web_err}')
+        # Fallback: YouTube link from the OLE mededeling email (sent days before the service)
+        if not youtube_link:
+            try:
+                from data_sources.email_reader import OutlookCollecteReader
+                meded = OutlookCollecteReader().fetch_ole_mededeling(target_date=selected_date, since_days=60)
+                if meded and meded.get('youtube_link'):
+                    youtube_link = meded['youtube_link']
+            except Exception as e:
+                print(f'[fetch-pm-data] OLE mededeling fallback error: {e}')
         # Fallback: YouTube link from takenrooster OPMERKING column (OLE Sundays)
         if not youtube_link:
             try:
