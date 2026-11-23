@@ -223,12 +223,14 @@
     const _L = 'text-gkin-green underline hover:text-gkin-dark cursor-pointer';
     const _DBX1 = 'https://www.dropbox.com/scl/fi/51nfkxqdaciu51yd1ba9l/Overzicht-Kerkbezoekers-2026-AM.xlsx?rlkey=btpeg8qjoauew7tcelkai0z37';
     const _DBX2 = 'https://www.dropbox.com/scl/fi/4umk664eaq3tzlj1b9poe/20260114_Dienst-ter-Nagedachtenis-2026_Namenlijst_v1.xlsx?rlkey=28rl2ntjujy13i2vzdl4sq6ch';
+    const _SP1 = 'https://gkinportal.sharepoint.com/:x:/s/am-kerkenraad/IQB1Jy7ptZofRIQwrAQH17SuAe4GCL3Gy9caRo80dd6PTCo?e=iifrlH';
     function _t(key, link) {
       const str = (window.t ? window.t(key) : key);
       return link ? str.replace('{link}', link) : str;
     }
     let _serviceDate = '';
     function _dbx(url,label){return '<a class="'+_L+'" onclick="gateDropbox(\''+url+'\')">'+label+'</a>';}
+    function _ext(url,label){return '<a href="'+url+'" class="'+_L+'" target="_blank" rel="noopener">'+label+'</a>';}
     function _int(url,label){const u=_serviceDate?url+'?date='+_serviceDate:url;return '<a href="'+u+'" class="'+_L+'" target="_blank" rel="noopener">'+label+'</a>';}
     function _wa(label){const u='/mededelingen'+(_serviceDate?'?date='+_serviceDate:'')+'#wa-section';return '<a href="'+u+'" class="'+_L+'" target="_blank" rel="noopener">'+label+'</a>';}
     function _intPrev(url,label){const prev=_serviceDate?_addDays(_serviceDate,-7):'';const u=prev?url+'?date='+prev:url;return '<a href="'+u+'" class="'+_L+'" target="_blank" rel="noopener">'+label+'</a>';}
@@ -249,7 +251,7 @@
         { id:'fri1', def:false, oleOnly:true, text:function(){ return _t('cl.fri1'); } },
         { id:'fri2', def:false, text:function(){ return _t('cl.fri2', _int('/campaign/ole','Mailing List')); } },
         { id:'fri3', def:false, text:function(){ return _t('cl.fri3', _wa('WhatsApp')); } },
-        { id:'fri4', def:false, text:function(){ return _t('cl.fri4', _dbx(_DBX2,'Remembrance list')); } },
+        { id:'fri4', def:false, text:function(){ return _t('cl.fri4', _ext(_SP1,'Remembrance list')); } },
         { id:'fri5', def:false, haOnly:true, text:function(){ return _t('cl.fri5'); } },
       ]},
       { day: 6, label: 'Saturday',  dayOffset: -7, items: [
