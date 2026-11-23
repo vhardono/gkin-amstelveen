@@ -29,6 +29,12 @@ NL_MONTHS = {
     'september': 9, 'oktober': 10, 'november': 11, 'december': 12,
 }
 
+REGION_NAMES = {
+    'TB': 'Tilburg', 'AM': 'Amstelveen', 'DH': 'Den Haag',
+    'RD': 'Rotterdam', 'RT': 'Rotterdam', 'GN': 'Groningen',
+    'UT': 'Utrecht', 'EH': 'Eindhoven',
+}
+
 LOCATION_MAP = {
     'tilburg': ('TB', 'Pauluskerk te Tilburg'),
     'amsterdam': ('AM', 'Amsterdam'),
@@ -188,6 +194,10 @@ class GKINOLEScraper:
                 parts = title_text.split(' - ')
                 if len(parts) > 1:
                     result['thema'] = parts[0].strip()
+                    # title suffix like ' - ds. J. Linandi' is the predikant
+                    last = parts[-1].strip()
+                    if re.match(r'^(ds|zr|br|mw|mevr|dhr)\.\s', last, re.IGNORECASE):
+                        result['predikant'] = result['predikant'] or last
 
         # --- Bible verse ---
         bible_m = re.search(
@@ -234,6 +244,18 @@ class GKINOLEScraper:
                     or ('/preken/' in href_lower and href_lower.endswith('.pdf'))):
                 result['preek_url'] = href if href.startswith('http') else f"https://gkin.org{href}"
                 break
+
+        # --- Service date + region from preek filename (20261122_OLE_Preek_TB.pdf) ---
+        # Preektekst articles only carry a publish date ("Ook beschikbaar: ..."),
+        # so the filename is the authoritative service date for matching.
+        fn_m = re.search(r'(\d{4})(\d{2})(\d{2})_OLE_Preek_([A-Za-z]+)', result.get('preek_url', ''))
+        if fn_m:
+            result['service_date'] = datetime(int(fn_m.group(1)), int(fn_m.group(2)), int(fn_m.group(3)))
+            code = fn_m.group(4).upper()
+            result['region_code'] = code
+            if not result['location']:
+                result['location'] = REGION_NAMES.get(code, code)
+                result['location_code'] = code
 
         # --- Collecte URL (ING / Tikkie / betaal / doneer / qr payment link) ---
         _collecte_keywords = ('ing.nl/payreq', 'tikkie.me', 'ing.nl', 'betaal', 'doneer', 'collecte', 'payment', 'payreq')
@@ -284,15 +306,26 @@ class GKINOLEScraper:
 
         target_date_only = target_date.date() if hasattr(target_date, 'date') else target_date
 
-        for link in links[:10]:  # check first 10 (most recent)
+        for link in links[:12]:  # check first 12 (most recent)
             article = self._parse_article(link['url'])
-            art_date = article.get('date')
-            if art_date:
-                art_date_only = art_date.date() if hasattr(art_date, 'date') else art_date
-                if art_date_only == target_date_only:
-                    print(f"[GKINScraper] Exact match: {link['title']!r} → {link['url']}")
-                    return article
-                print(f"[GKINScraper] Skip: {link['title']!r} date={art_date.strftime('%d-%m-%Y')} ≠ target {target_date.strftime('%d-%m-%Y')}")
+            # Candidate service dates: preek filename > YouTube title > article text
+            candidates = []
+            if article.get('service_date'):
+                candidates.append(article['service_date'])
+            if article.get('youtube_link'):
+                yt_date = self._get_youtube_title_date(article['youtube_link'])
+                if yt_date:
+                    candidates.append(yt_date)
+            if article.get('date'):
+                candidates.append(article['date'])
+            matched = any(
+                (c.date() if hasattr(c, 'date') else c) == target_date_only
+                for c in candidates
+            )
+            if matched:
+                print(f"[GKINScraper] Exact match: {link['title']!r} → {link['url']}")
+                return article
+            print(f"[GKINScraper] Skip: {link['title']!r} dates={[c.strftime('%d-%m-%Y') for c in candidates]} ≠ target {target_date.strftime('%d-%m-%Y')}")
 
         print(f"[GKINScraper] No article found for {target_date.strftime('%d-%m-%Y')}")
         return {'not_found': True}
