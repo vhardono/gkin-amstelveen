@@ -205,41 +205,33 @@ function renderView() {
 function renderEdit() {
     const wrap = document.getElementById('editMode');
     wrap.innerHTML = SERVICES.map(s => {
-        const pastCell = `<div class="flex-1 text-xs text-gray-600">${esc(s[dutyField]) || '—'}</div>`;
-        if (s.past) return `
-        <div class="bg-gray-100 rounded-lg px-2.5 py-2 mb-1.5 opacity-70">
-            <div class="flex items-center gap-3">
-                <div class="w-24 shrink-0">
-                    <div class="text-xs font-bold text-gray-500 whitespace-nowrap">${shortDate(s)}</div>
-                    <div class="text-[10px] text-gray-400">${dienstOf(s)}</div>
-                </div>
-                ${pastCell}
-            </div>
-        </div>`;
+        const ro = s.past;
+        // Same field layout for every week; past weeks are disabled + greyed.
+        const cls = 'border rounded px-2 py-1.5 text-sm ' +
+            (ro ? 'border-gray-200 bg-gray-100 text-gray-500 cursor-not-allowed' : 'border-gray-300');
+        const ev  = ro ? '' : ' oninput="suggestNames(this)" onfocus="suggestNames(this)"';
+        const dis = ro ? ' disabled' : '';
         let inputs;
         if (dutyField === 'bijbellezers') {
             const p = parseBijbel(s.bijbellezers);
             inputs = `<div class="flex-1 grid grid-cols-2 gap-2">
-                    <input class="bij-id border rounded px-2 py-1.5 text-sm" list="roosterNames"
-                           oninput="suggestNames(this)" onfocus="suggestNames(this)"
+                    <input class="${ro ? '' : 'bij-id '}${cls}" list="roosterNames"${ev}${dis}
                            placeholder="${T('rooster.reader_id','Indonesisch')}" value="${esc(toFirstNames(p.id))}">
-                    <input class="bij-nl border rounded px-2 py-1.5 text-sm" list="roosterNames"
-                           oninput="suggestNames(this)" onfocus="suggestNames(this)"
+                    <input class="${ro ? '' : 'bij-nl '}${cls}" list="roosterNames"${ev}${dis}
                            placeholder="${T('rooster.reader_nl','Nederlands')}" value="${esc(toFirstNames(p.nl))}">
                 </div>`;
         } else {
             inputs = `<div class="flex-1">
-                    <input class="duty-val w-full border rounded px-2 py-1.5 text-sm" list="roosterNames"
-                           oninput="suggestNames(this)" onfocus="suggestNames(this)"
+                    <input class="${ro ? '' : 'duty-val '}w-full ${cls}" list="roosterNames"${ev}${dis}
                            placeholder="${dutyLabel()}" value="${esc(toFirstNames(s[dutyField]))}">
                 </div>`;
         }
         return `
-        <div class="bg-white rounded-lg shadow-sm px-2.5 py-2 mb-1.5" data-date="${s.value}">
+        <div class="${ro ? 'bg-gray-50 opacity-80' : 'bg-white shadow-sm'} rounded-lg px-2.5 py-2 mb-1.5" data-date="${s.value}">
             <div class="flex items-center gap-3">
                 <div class="w-24 shrink-0">
-                    <div class="text-xs font-bold text-gray-800 whitespace-nowrap">${shortDate(s)}</div>
-                    <div class="text-[10px] text-gkin-green font-semibold">${dienstOf(s)}</div>
+                    <div class="text-xs font-bold ${ro ? 'text-gray-500' : 'text-gray-800'} whitespace-nowrap">${shortDate(s)}</div>
+                    <div class="text-[10px] ${ro ? 'text-gray-400' : 'text-gkin-green font-semibold'}">${dienstOf(s)}</div>
                 </div>
                 ${inputs}
             </div>
