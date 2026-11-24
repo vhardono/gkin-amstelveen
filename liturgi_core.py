@@ -386,7 +386,7 @@ NS = {
 
 excelF = pd.read_excel(os.path.join(dir_path + '/file mingguan/', EXCEL_NAME), sheet_name=SHEET_NAME)
 
-table1 = excelF.iloc[1:13, 0:2].copy()  # labels | values
+table1 = excelF.iloc[1:20, 0:2].copy()  # labels | values (wide slice tolerates inserted rows)
 table1 = table1.map(lambda x: x.strip() if isinstance(x, str) else x)
 
 if table1.shape[1] < 2:
@@ -775,12 +775,24 @@ _trPr.append(_trHeight)
 # TABLE 2 & 3 parsing (once)
 # -------------------------------
 
-raw_table2 = excelF.iloc[14:22, 1:9]  # Include row 21 for Dankoffer data (rows 14-21)
+def _find_header_row(df, required, col_lo, col_hi):
+    """Locate the row whose cells (cols col_lo..col_hi) contain all required
+    header names (case-insensitive). Tolerates template rows inserted above."""
+    req = {r.lower() for r in required}
+    for i in range(df.shape[0]):
+        vals = {str(v).strip().lower() for v in df.iloc[i, col_lo:col_hi].tolist() if not pd.isna(v)}
+        if req <= vals:
+            return i
+    return None
+
+_t2h = _find_header_row(excelF, ["boek", "vers van"], 1, 9)
+raw_table2 = excelF.iloc[_t2h:_t2h + 8, 1:9] if _t2h is not None else excelF.iloc[14:22, 1:9]
 table2 = raw_table2[1:].copy()
 table2.columns = raw_table2.iloc[0]
 table2 = table2.reset_index(drop=True)
 
-raw_table3 = excelF.iloc[21:29, 1:17]
+_t3h = _find_header_row(excelF, ["nummer", "versen", "titel"], 1, 17)
+raw_table3 = excelF.iloc[_t3h:_t3h + 8, 1:17] if _t3h is not None else excelF.iloc[21:29, 1:17]
 table3 = raw_table3[1:].copy()
 table3.columns = raw_table3.iloc[0]
 table3 = table3.reset_index(drop=True)

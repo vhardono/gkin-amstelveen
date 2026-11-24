@@ -1787,6 +1787,25 @@ def _is_file_entry(entry):
     return not getattr(entry, 'is_folder', False)
 
 
+def _find_dankoffer_row(ws):
+    """Row in the liturgy workbook whose column-A label is 'Dankoffer'
+    (falls back to the legacy fixed row 21 if not found)."""
+    for r in range(1, ws.max_row + 1):
+        v = str(ws.cell(row=r, column=1).value or '').strip().lower()
+        if v == 'dankoffer':
+            return r
+    return 21
+
+
+def _find_readings_header_row(ws, dankoffer_row):
+    """Header row (Boek | H.s. | Vers van | ...) above the Dankoffer row."""
+    for r in range(dankoffer_row - 1, max(0, dankoffer_row - 12), -1):
+        v = str(ws.cell(row=r, column=2).value or '').strip().lower()
+        if v == 'boek':
+            return r
+    return max(1, dankoffer_row - 6)
+
+
 WORKING_FOLDER = '/working folder/file mingguan'
 WORKING_FILE_PATH = f'{WORKING_FOLDER}/Main Liturgy file.xlsx'
 MAIN_LITURGY_PATTERN = re.compile(r'^Main Liturgy file(?: (\d{8}))?\.xlsx$', re.IGNORECASE)
@@ -2672,8 +2691,8 @@ def liturgie_fill_data():
         dbx = _get_dbx_liturgie()
         dankoffer = _get_dankoffer_verse(dbx, service_date)
 
-        # Row 21 (dankoffer) - B21-E21
-        dankoffer_row = 21
+        # Dankoffer row (located by label; the template may insert rows)
+        dankoffer_row = _find_dankoffer_row(ws)
         print(f'[Liturgie Fill] Dankoffer data: {dankoffer}')
 
         if dankoffer:
@@ -2782,7 +2801,7 @@ def liturgie_fill_data():
 
             # Tekst column: write the verse text from Dankoffer.xlsx so liturgi_core.py
             # uses it instead of falling back to the Bible JSON.
-            header_row = dankoffer_row - 6
+            header_row = _find_readings_header_row(ws, dankoffer_row)
             tekst_col = None
             for col in range(2, 13):
                 header_val = str(ws.cell(row=header_row, column=col).value or '').strip().lower()
@@ -3057,11 +3076,12 @@ def preview_liturgie_fill_data():
             current_tikkie = str(ws.cell(row=tikkie_row, column=2).value).strip() if ws.cell(row=tikkie_row, column=2).value else ''
             preview['current_values']['Tikkie link'] = current_tikkie
             
-        # Current Dankoffer verse (B21=book, C21=chapter, D21=verse_start, E21=verse_end)
-        dankoffer_book = str(ws.cell(row=21, column=2).value).strip() if ws.cell(row=21, column=2).value else ''
-        dankoffer_chapter = str(ws.cell(row=21, column=3).value).strip() if ws.cell(row=21, column=3).value else ''
-        dankoffer_verse = str(ws.cell(row=21, column=4).value).strip() if ws.cell(row=21, column=4).value else ''
-        dankoffer_verse_end = str(ws.cell(row=21, column=5).value).strip() if ws.cell(row=21, column=5).value else ''
+        # Current Dankoffer verse (book | chapter | verse_start | verse_end on the Dankoffer row)
+        dankoffer_row = _find_dankoffer_row(ws)
+        dankoffer_book = str(ws.cell(row=dankoffer_row, column=2).value).strip() if ws.cell(row=dankoffer_row, column=2).value else ''
+        dankoffer_chapter = str(ws.cell(row=dankoffer_row, column=3).value).strip() if ws.cell(row=dankoffer_row, column=3).value else ''
+        dankoffer_verse = str(ws.cell(row=dankoffer_row, column=4).value).strip() if ws.cell(row=dankoffer_row, column=4).value else ''
+        dankoffer_verse_end = str(ws.cell(row=dankoffer_row, column=5).value).strip() if ws.cell(row=dankoffer_row, column=5).value else ''
         if dankoffer_book and dankoffer_chapter and dankoffer_verse:
             current_verse = f'{dankoffer_book} {dankoffer_chapter}:{dankoffer_verse}'
             if dankoffer_verse_end:
@@ -3297,8 +3317,8 @@ def auto_fill_working_file():
         dankoffer_info = None
 
         if dankoffer:
-            dankoffer_row = 21
-            header_row = dankoffer_row - 6  # row 15 contains the column headers
+            dankoffer_row = _find_dankoffer_row(ws_active)
+            header_row = _find_readings_header_row(ws_active, dankoffer_row)
 
             # Helpers to treat placeholder/empty markers as blank
             _empty_markers = {'nan', 'none', '', '(leeg)', 'leeg', '(empty)', 'empty', 'nvt', '-', '—', '...'}
@@ -3481,11 +3501,12 @@ def preview_working_file():
                 preview['current_values']['Tikkie link'] = val
                 break
         
-        # Dankoffer current (B21=book, C21=chapter, D21=verse_start, E21=verse_end)
-        b21 = str(ws.cell(row=21, column=2).value).strip() if ws.cell(row=21, column=2).value else ''
-        c21 = str(ws.cell(row=21, column=3).value).strip() if ws.cell(row=21, column=3).value else ''
-        d21 = str(ws.cell(row=21, column=4).value).strip() if ws.cell(row=21, column=4).value else ''
-        e21 = str(ws.cell(row=21, column=5).value).strip() if ws.cell(row=21, column=5).value else ''
+        # Dankoffer current (book | chapter | verse_start | verse_end on the Dankoffer row)
+        dankoffer_row = _find_dankoffer_row(ws)
+        b21 = str(ws.cell(row=dankoffer_row, column=2).value).strip() if ws.cell(row=dankoffer_row, column=2).value else ''
+        c21 = str(ws.cell(row=dankoffer_row, column=3).value).strip() if ws.cell(row=dankoffer_row, column=3).value else ''
+        d21 = str(ws.cell(row=dankoffer_row, column=4).value).strip() if ws.cell(row=dankoffer_row, column=4).value else ''
+        e21 = str(ws.cell(row=dankoffer_row, column=5).value).strip() if ws.cell(row=dankoffer_row, column=5).value else ''
         if b21 and c21 and d21:
             current_verse = f'{b21} {c21}:{d21}'
             if e21:
