@@ -10,6 +10,7 @@ import os
 import shutil
 import tempfile
 import threading
+import time
 import traceback
 import uuid
 from datetime import datetime, timedelta
@@ -341,9 +342,11 @@ def verify_password():
 UPLOAD_DIR = os.path.join(os.path.dirname(__file__), 'output', '_uploads')
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-# Cache takenrooster on startup
+# Cache takenrooster on startup (auto-expires so manual Excel edits show up)
 _takenrooster_cache = None
 _takenrooster_cache_year = None
+_takenrooster_cache_ts = 0
+_TAKENROOSTER_CACHE_TTL = int(os.environ.get('TAKENROOSTER_CACHE_TTL', 600))
 
 # Cache bijbelbasics KND data (slug -> {title, verse, date_day, date_month})
 _knd_cache = None
@@ -397,11 +400,13 @@ def _load_knd_cache():
 
 
 def _get_takenrooster():
-    global _takenrooster_cache, _takenrooster_cache_year
-    if _takenrooster_cache is None or _takenrooster_cache_year != datetime.now().year:
+    global _takenrooster_cache, _takenrooster_cache_year, _takenrooster_cache_ts
+    stale = (time.time() - _takenrooster_cache_ts) > _TAKENROOSTER_CACHE_TTL
+    if _takenrooster_cache is None or _takenrooster_cache_year != datetime.now().year or stale:
         reader = DropboxExcelReader()
         _takenrooster_cache = reader.get_takenrooster()
         _takenrooster_cache_year = datetime.now().year
+        _takenrooster_cache_ts = time.time()
     return _takenrooster_cache
 
 
@@ -1733,8 +1738,9 @@ def email_token_download():
 @app.route('/refresh-dates', methods=['POST'])
 def refresh_dates():
     """Force refresh of takenrooster cache."""
-    global _takenrooster_cache
+    global _takenrooster_cache, _takenrooster_cache_ts
     _takenrooster_cache = None
+    _takenrooster_cache_ts = 0
     return jsonify({'status': 'ok'})
 
 
