@@ -727,18 +727,22 @@ def home():
 ROOSTER_EDIT_CODE = os.environ.get('ROOSTER_EDIT_CODE', '')
 
 
-def _rooster_services():
-    """Upcoming (next ~3 months) service entries for the public roster pages."""
+def _rooster_services(horizon_days=90, include_recent_past=True):
+    """Upcoming service entries for the public roster pages.
+
+    horizon_days: window into the future (None = every entry in the workbook).
+    include_recent_past: include the last 4 weeks (for duty context/history).
+    """
     services = []
     try:
         taken = _get_takenrooster()
         today = datetime.now().date()
-        horizon = today + timedelta(days=90)   # next 3 months only
+        horizon = today + timedelta(days=horizon_days) if horizon_days else None
         # Bijbellezers history: last 4 weeks, but not before the column existed
-        start = max(today - timedelta(days=28), datetime(2026, 11, 15).date())
+        start = max(today - timedelta(days=28), datetime(2026, 11, 15).date()) if include_recent_past else today
         for e in (taken.get('all_entries') or taken.get('entries', [])):
             d = e.get('date')
-            if not d or d.date() < start or d.date() > horizon:
+            if not d or d.date() < start or (horizon and d.date() > horizon):
                 continue
             services.append({
                 'value': d.strftime('%Y-%m-%d'),
@@ -776,8 +780,9 @@ def rooster_page():
 
 @app.route('/rooster/persoon')
 def rooster_persoon_page():
-    """Public 'my duties' lookup: pick a name, see upcoming duty dates/roles."""
-    return render_template('rooster_persoon.html', services=_rooster_services(),
+    """Public 'my duties' lookup: pick a name, see upcoming duty dates/roles.
+    Covers every service from today through the end of the workbook."""
+    return render_template('rooster_persoon.html', services=_rooster_services(horizon_days=None, include_recent_past=False),
                            embed=request.args.get('embed') == '1')
 
 
