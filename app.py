@@ -3402,18 +3402,33 @@ def auto_fill_working_file():
         save_path = f'{WORKING_FOLDER}/{save_name}'
         
         try:
-            dbx.files_upload(
-                output.getvalue(),
-                save_path,
-                mode=dropbox.files.WriteMode.overwrite
-            )
+            payload = output.getvalue()
+            last_err = None
+            for attempt in range(3):
+                try:
+                    dbx.files_upload(
+                        payload,
+                        save_path,
+                        mode=dropbox.files.WriteMode.overwrite
+                    )
+                    last_err = None
+                    break
+                except Exception as e:
+                    last_err = e
+                    if '423' not in str(e):
+                        raise
+                    time.sleep(2)
+            if last_err is not None:
+                raise last_err
             # Remove the un-dated original so only the dated version remains
             try:
                 dbx.files_delete_v2(WORKING_FILE_PATH)
             except Exception:
                 pass
         except Exception as e:
-            return jsonify({'error': f'Kon bestand niet opslaan naar Dropbox: {str(e)}'}), 500
+            if '423' in str(e):
+                return jsonify({'error': f'Kon bestand niet opslaan naar SharePoint: het bestand "{save_name}" is geopend in Excel of Excel Online. Sluit het bestand en probeer opnieuw.'}), 500
+            return jsonify({'error': f'Kon bestand niet opslaan naar SharePoint: {str(e)}'}), 500
         
         return jsonify({
             'success': True,
@@ -3421,7 +3436,7 @@ def auto_fill_working_file():
             'saved_as': save_name,
             'alerts': alerts,
             'dankoffer_info': dankoffer_info,
-            'message': f'Bestand bijgewerkt op Dropbox: {save_path}'
+            'message': f'Bestand bijgewerkt op SharePoint: {save_path}'
         })
         
     except Exception as e:
