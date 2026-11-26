@@ -190,6 +190,22 @@ def generate(entry: dict, iso_date: str, output_path: str, songs: list = None):
                 else:
                     first_para.add_run(new_val)
 
+    # Advent: on the 4 Sundays before Christmas the congregation answers
+    # "Maranatha" instead of "Halleluja" (point 13 of the liturgy table).
+    svc = datetime.strptime(iso_date, '%Y-%m-%d')
+    christmas = datetime(svc.year, 12, 25)
+    if 1 <= (christmas - svc).days <= 28:
+        for table in doc.tables:
+            for row in table.rows:
+                for cell in row.cells:
+                    for para in cell.paragraphs:
+                        if 'Halleluja' in para.text:
+                            new_text = para.text.replace('Halleluja', 'Maranatha')
+                            for i, run in enumerate(para.runs):
+                                run.text = new_text if i == 0 else ''
+                            if not para.runs:
+                                para.add_run(new_text)
+
     doc.save(output_path)
 
 
