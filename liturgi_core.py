@@ -327,6 +327,24 @@ def is_empty(value):
     
     return False
 
+def _ref_text_pair(boek, boek_id, hs, vfrom, vto, boek2, boek_id2, hs2, vfrom2, vto2):
+    """Reference line for slide headers. When both readings are from the same
+    book, the book name appears once: 'Lucas / Lukas 1: 21-25 en 1: 57-64'."""
+    def _full(b, bid, h, vf, vt):
+        if vt and str(vt).strip():
+            return f"{b} / {bid} {h}: {vf}-{vt}"
+        return f"{b} / {bid} {h}: {vf}"
+    def _range(h, vf, vt):
+        if vt and str(vt).strip():
+            return f"{h}: {vf}-{vt}"
+        return f"{h}: {vf}"
+    first = _full(boek, boek_id, hs, vfrom, vto)
+    if is_empty(boek2):
+        return first
+    if str(boek).strip().lower() == str(boek2).strip().lower():
+        return first + " en " + _range(hs2, vfrom2, vto2)
+    return first + "\nen " + _full(boek2, boek_id2, hs2, vfrom2, vto2)
+
 def format_date_long_nl(dt: datetime) -> str:
     return f"{dt.day} {NL_MONTHS[dt.month - 1]} {dt.year}"
 
@@ -4642,18 +4660,7 @@ r.font.color.rgb = white
 r.font.bold = True
 r.font.italic = True
 
-text = ""
-
-if vto and str(vto).strip():
-    text = f"{boek} / {boek_id} {hs}: {vfrom}-{vto}"
-else:
-    text = f"{boek} / {boek_id} {hs}: {vfrom}"
-
-if is_empty(boek2) == False:
-    if vto2 and str(vto2).strip():
-        text = text + f"\nen {boek2} / {boek_id2} {hs2}: {vfrom2}-{vto2}"
-    else:
-        text = text + f"\nen {boek2} / {boek_id2} {hs2}: {vfrom2}"
+text = _ref_text_pair(boek, boek_id, hs, vfrom, vto, boek2, boek_id2, hs2, vfrom2, vto2)
 
 p = tf.add_paragraph()
 p.alignment = PP_ALIGN.CENTER
@@ -4787,18 +4794,7 @@ r.font.color.rgb = white
 r.font.bold = True
 r.font.italic = True
 
-text = ""
-
-if vto and str(vto).strip():
-    text = f"{boek} / {boek_id} {hs}: {vfrom}-{vto}"
-else:
-    text = f"{boek} / {boek_id} {hs}: {vfrom}"
-
-if is_empty(boek2) == False:
-    if vto2 and str(vto2).strip():
-        text = text + f"\nen {boek2} / {boek_id2} {hs2}: {vfrom2}-{vto2}"
-    else:
-        text = text + f"\nen {boek2} / {boek_id2} {hs2}: {vfrom2}"
+text = _ref_text_pair(boek, boek_id, hs, vfrom, vto, boek2, boek_id2, hs2, vfrom2, vto2)
 
 p = tf.add_paragraph()
 p.alignment = PP_ALIGN.CENTER
@@ -4864,18 +4860,7 @@ r.font.color.rgb = white
 r.font.bold = True
 r.font.italic = True
 
-text = ""
-
-if vto and str(vto).strip():
-    text = f"{boek} / {boek_id} {hs}: {vfrom}-{vto}"
-else:
-    text = f"{boek} / {boek_id} {hs}: {vfrom}"
-
-if is_empty(boek2) == False:
-    if vto2 and str(vto2).strip():
-        text = text + f"\nen {boek2} / {boek_id2} {hs2}: {vfrom2}-{vto2}"
-    else:
-        text = text + f"\nen {boek2} / {boek_id2} {hs2}: {vfrom2}"
+text = _ref_text_pair(boek, boek_id, hs, vfrom, vto, boek2, boek_id2, hs2, vfrom2, vto2)
 
 p = tf.add_paragraph()
 p.alignment = PP_ALIGN.CENTER
@@ -4968,18 +4953,7 @@ r.font.color.rgb = white
 r.font.italic = True
 r.font.bold = True
 
-text = ""
-
-if vto and str(vto).strip():
-    textP = f"{boek} / {boek_id} {hs}: {vfrom}-{vto}"
-else:
-    textP = f"{boek} / {boek_id} {hs}: {vfrom}"
-
-if is_empty(boek2) == False:
-    if vto2 and str(vto2).strip():
-        textP = text + f"\nen {boek2} / {boek_id2} {hs2}: {vfrom2}-{vto2}"
-    else:
-        textP = text + f"\nen {boek2} / {boek_id2} {hs2}: {vfrom2}"
+textP = _ref_text_pair(boek, boek_id, hs, vfrom, vto, boek2, boek_id2, hs2, vfrom2, vto2)
 
 r = p.add_run()
 r.text = textP
