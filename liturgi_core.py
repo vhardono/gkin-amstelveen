@@ -4667,14 +4667,17 @@ r.font.color.rgb = white
 add_verses_to_ppt(prs, boek, hs, vfrom, vto)
 slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
 set_background(slide)
-add_verses_to_ppt_indo(prs, boek_id, hs, vfrom, vto)
-slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
-set_background(slide)
 
 if is_empty(boek2) == False:
     add_verses_to_ppt(prs, boek2, hs2, vfrom2, vto2)
     slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
     set_background(slide)
+
+add_verses_to_ppt_indo(prs, boek_id, hs, vfrom, vto)
+slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
+set_background(slide)
+
+if is_empty(boek2) == False:
     add_verses_to_ppt_indo(prs, boek_id2, hs2, vfrom2, vto2)
     slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
     set_background(slide)
@@ -4808,14 +4811,17 @@ r.font.color.rgb = white
 add_verses_to_ppt(prs, boek, hs, vfrom, vto)
 slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
 set_background(slide)
-add_verses_to_ppt_indo(prs, boek_id, hs, vfrom, vto)
-slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
-set_background(slide)
 
 if is_empty(boek2) == False:
     add_verses_to_ppt(prs, boek2, hs2, vfrom2, vto2)
     slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
     set_background(slide)
+
+add_verses_to_ppt_indo(prs, boek_id, hs, vfrom, vto)
+slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
+set_background(slide)
+
+if is_empty(boek2) == False:
     add_verses_to_ppt_indo(prs, boek_id2, hs2, vfrom2, vto2)
     slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
     set_background(slide)
@@ -4882,14 +4888,17 @@ r.font.color.rgb = white
 add_verses_to_ppt(prs, boek, hs, vfrom, vto)
 slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
 set_background(slide)
-add_verses_to_ppt_indo(prs, boek_id, hs, vfrom, vto)
-slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
-set_background(slide)
 
 if is_empty(boek2) == False:
     add_verses_to_ppt(prs, boek2, hs2, vfrom2, vto2)
     slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
     set_background(slide)
+
+add_verses_to_ppt_indo(prs, boek_id, hs, vfrom, vto)
+slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
+set_background(slide)
+
+if is_empty(boek2) == False:
     add_verses_to_ppt_indo(prs, boek_id2, hs2, vfrom2, vto2)
     slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
     set_background(slide)
@@ -4981,12 +4990,15 @@ r.font.color.rgb = white
 add_verses_to_ppt(prs, boek, hs, vfrom, vto)
 slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
 set_background(slide)
-add_verses_to_ppt_indo(prs, boek_id, hs, vfrom, vto)
 
 if is_empty(boek2) == False:
     add_verses_to_ppt(prs, boek2, hs2, vfrom2, vto2)
     slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
     set_background(slide)
+
+add_verses_to_ppt_indo(prs, boek_id, hs, vfrom, vto)
+
+if is_empty(boek2) == False:
     add_verses_to_ppt_indo(prs, boek_id2, hs2, vfrom2, vto2)
     
 slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
