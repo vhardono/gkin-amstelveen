@@ -412,6 +412,11 @@ if isinstance(date_val, datetime):
 else:
     dienst_date = pd.to_datetime(str(date_val), dayfirst=True).to_pydatetime()
 
+# Advent: on the 4 Sundays before Christmas the congregation sings
+# "Maranatha" instead of "Haleluja" after the Schriftlezing.
+if 1 <= (datetime(dienst_date.year, 12, 25) - dienst_date).days <= 28:
+    HMH = "Maranatha"
+
 voorganger = str(data_map["voorganger"]).strip()
 ouderling = str(data_map["ouderling"]).strip()
 eersteO = str(data_map["eersteO"]).strip()
