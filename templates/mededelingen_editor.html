@@ -14,8 +14,8 @@
         @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
-<body class="bg-gray-50 min-h-screen">
-    <header class="bg-gkin-green shadow-md">
+<body class="bg-gray-50 h-screen flex flex-col overflow-hidden">
+    <header class="bg-gkin-green shadow-md shrink-0">
         <div class="max-w-7xl mx-auto px-4 py-4 flex items-center gap-3">
             <a href="/mededelingen"><img src="/static/logo2.png" alt="GKIN Logo" class="h-10 w-10 object-contain shrink-0"></a>
             <div class="flex-1">
@@ -25,8 +25,8 @@
         </div>
     </header>
 
-    <main class="max-w-7xl mx-auto px-4 py-4">
-        <div class="flex flex-wrap items-center gap-3 mb-3">
+    <main class="w-full max-w-7xl mx-auto px-4 py-4 flex-1 flex flex-col min-h-0">
+        <div class="flex flex-wrap items-center gap-3 mb-3 shrink-0">
             <a href="/mededelingen" class="inline-flex items-center gap-1 text-sm text-gkin-green hover:text-gkin-dark">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
                 <span>Terug</span>
@@ -40,34 +40,34 @@
             <button type="button" onclick="openAdd()" class="bg-gkin-green hover:bg-gkin-dark text-white text-sm font-semibold px-3 py-1.5 rounded shadow transition-colors">+ Nieuw</button>
         </div>
 
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-x-auto">
-            <table class="w-full text-sm text-left">
-                <thead class="bg-gray-100 text-gray-600 text-xs uppercase">
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 flex-1 min-h-0 overflow-y-auto">
+            <table class="w-full text-sm text-left table-fixed">
+                <thead class="bg-gray-100 text-gray-600 text-xs uppercase sticky top-0 z-10 shadow-sm">
                     <tr>
-                        <th class="px-2 py-2">Cat</th>
-                        <th class="px-2 py-2">Type</th>
-                        <th class="px-2 py-2 w-1/6">NL Titel</th>
-                        <th class="px-2 py-2 w-1/6">ID Titel</th>
-                        <th class="px-2 py-2">Van</th>
-                        <th class="px-2 py-2">Tot</th>
-                        <th class="px-2 py-2">Event</th>
-                        <th class="px-2 py-2">Bron</th>
-                        <th class="px-2 py-2">Status</th>
-                        <th class="px-2 py-2">Afbeelding</th>
+                        <th class="px-2 py-2 w-[6%]">Cat</th>
+                        <th class="px-2 py-2 w-[8%]">Type</th>
+                        <th class="px-2 py-2 w-[14%]">NL Titel</th>
+                        <th class="px-2 py-2 w-[14%]">ID Titel</th>
+                        <th class="px-2 py-2 w-[7%]">Van</th>
+                        <th class="px-2 py-2 w-[7%]">Tot</th>
+                        <th class="px-2 py-2 w-[7%]">Event</th>
+                        <th class="px-2 py-2 w-[9%]">Bron</th>
+                        <th class="px-2 py-2 w-[8%]">Status</th>
+                        <th class="px-2 py-2 w-[8%]">Afbeelding</th>
                         <th class="px-2 py-2">Actie</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
                     {% for row in rows %}
                     <tr data-status="{{ row.status | lower }}" data-row-index="{{ row.row_index }}" class="hover:bg-gray-50{% if row.status == 'Active' %}{% else %} hidden{% endif %}">
-                        <td class="px-2 py-1.5 whitespace-nowrap">{{ row.category }}</td>
-                        <td class="px-2 py-1.5 whitespace-nowrap">{{ row.type }}</td>
-                        <td class="px-2 py-1.5 max-w-xs truncate" title="{{ row.nl_body }}">{{ row.nl_title }}</td>
-                        <td class="px-2 py-1.5 max-w-xs truncate" title="{{ row.id_body }}">{{ row.id_title }}</td>
-                        <td class="px-2 py-1.5 whitespace-nowrap">{{ row.first_date }}</td>
-                        <td class="px-2 py-1.5 whitespace-nowrap">{{ row.last_date }}</td>
-                        <td class="px-2 py-1.5 whitespace-nowrap">{{ row.event_date }}</td>
-                        <td class="px-2 py-1.5 whitespace-nowrap">{{ row.source }}</td>
+                        <td class="px-2 py-1.5 truncate">{{ row.category }}</td>
+                        <td class="px-2 py-1.5 truncate">{{ row.type }}</td>
+                        <td class="px-2 py-1.5 truncate" title="{{ row.nl_body }}">{{ row.nl_title }}</td>
+                        <td class="px-2 py-1.5 truncate" title="{{ row.id_body }}">{{ row.id_title }}</td>
+                        <td class="px-2 py-1.5 truncate">{{ row.first_date }}</td>
+                        <td class="px-2 py-1.5 truncate">{{ row.last_date }}</td>
+                        <td class="px-2 py-1.5 truncate">{{ row.event_date }}</td>
+                        <td class="px-2 py-1.5 truncate">{{ row.source }}</td>
                         <td class="px-2 py-1.5">
                             <span class="inline-block rounded-full px-2 py-0.5 text-xs font-medium
                                 {% if row.status == 'Active' %}bg-green-100 text-green-800
