@@ -9,9 +9,6 @@ primary_region = 'ams'
 [build]
   dockerfile = 'Dockerfile.fly'
 
-[deploy]
-  release_command = "python -c \"print('Release command executed')\""
-
 [env]
   PORT = '8080'
 
