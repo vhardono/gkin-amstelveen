@@ -1806,6 +1806,31 @@ def _find_readings_header_row(ws, dankoffer_row):
     return max(1, dankoffer_row - 6)
 
 
+def _find_label_row(ws, label):
+    """Row in the liturgy workbook whose column-A label matches `label`
+    (None if not found). Templates may insert rows, so never hardcode."""
+    want = label.strip().lower()
+    for r in range(1, ws.max_row + 1):
+        v = str(ws.cell(row=r, column=1).value or '').strip().lower()
+        if v == want:
+            return r
+    return None
+
+
+def _duty_row(ws, label, fallback):
+    """Label-driven row for a duty field, falling back to the legacy fixed row."""
+    return _find_label_row(ws, label) or fallback
+
+
+def _clear_orphan_value(ws, label_row, legacy_row, col=2):
+    """After a row shift, the old hardcoded write may have left a value one row
+    above its label. Clear it when the legacy row has no label of its own."""
+    if legacy_row and label_row and legacy_row != label_row:
+        lbl = str(ws.cell(row=legacy_row, column=1).value or '').strip()
+        if not lbl:
+            ws.cell(row=legacy_row, column=col).value = None
+
+
 WORKING_FOLDER = '/working folder/file mingguan'
 WORKING_FILE_PATH = f'{WORKING_FOLDER}/Main Liturgy file.xlsx'
 MAIN_LITURGY_PATTERN = re.compile(r'^Main Liturgy file(?: (\d{8}))?\.xlsx$', re.IGNORECASE)
@@ -2665,8 +2690,8 @@ def liturgie_fill_data():
                 return True
             return False
 
-        # Define the fields to populate (excel row, field name, takenrooster key, excel column)
-        # B4-B12 correspond to rows 4-12, column 2
+        # Define the fields to populate (legacy excel row, field name, takenrooster key, excel column)
+        # Rows are resolved by their column-A label because templates may insert rows.
         field_mapping = [
             (4, 'Voorganger', 'predikant', 2),      # B4
             (5, 'OvD', 'ovd', 2),                   # B5
@@ -2679,13 +2704,15 @@ def liturgie_fill_data():
             (12, 'Tieners', 'tieners', 2),          # B12
         ]
 
-        # Populate B4-B12
-        for row, field_name, taken_key, col in field_mapping:
+        # Populate the duty fields next to their labels
+        for legacy_row, field_name, taken_key, col in field_mapping:
+            row = _duty_row(ws, field_name, legacy_row)
             new_val = str(entry.get(taken_key, '')).strip()
             if not new_val:
                 alerts['not_found'].append(f'{field_name}: niet gevonden in takenrooster')
             elif new_val:
-                set_cell_value(row, col, new_val, field_name)
+                if set_cell_value(row, col, new_val, field_name):
+                    _clear_orphan_value(ws, row, legacy_row, col)
 
         # Get dankoffer verse from Dropbox
         dbx = _get_dbx_liturgie()
@@ -3047,8 +3074,7 @@ def preview_liturgie_fill_data():
             }
         }
         
-        # Get current values from Excel
-        # B4-B12: People on duty
+        # Get current values from Excel — rows resolved by column-A label
         field_mapping = [
             (4, 'Voorganger'),       # B4
             (5, 'OvD'),              # B5
@@ -3061,7 +3087,8 @@ def preview_liturgie_fill_data():
             (12, 'Tieners'),         # B12
         ]
         
-        for row, field_name in field_mapping:
+        for legacy_row, field_name in field_mapping:
+            row = _duty_row(ws, field_name, legacy_row)
             current_val = str(ws.cell(row=row, column=2).value).strip() if ws.cell(row=row, column=2).value else ''
             preview['current_values'][field_name] = current_val
             
@@ -3276,13 +3303,16 @@ def auto_fill_working_file():
                 (12, 'Tieners', 'tieners'),
             ]
             
-            for row, field_name, taken_key in field_mapping:
+            for legacy_row, field_name, taken_key in field_mapping:
+                row = _duty_row(ws_active, field_name, legacy_row)
                 new_val = str(entry.get(taken_key, '')).strip()
-                print(f"[AutoFill] {field_name} ({taken_key}): '{new_val}'")
+                print(f"[AutoFill] {field_name} ({taken_key}): '{new_val}' -> row {row}")
                 # Force update if field is in selected_changes
                 force_update = field_name in selected_changes
                 if new_val:
                     result = set_cell_value(ws_active, row, 2, new_val, field_name, force=force_update)
+                    if result:
+                        _clear_orphan_value(ws_active, row, legacy_row, 2)
                     print(f"[AutoFill]   -> set_cell_value result: {result} (force={force_update})")
                 else:
                     alerts['not_found'].append(f'{field_name}: niet gevonden in takenrooster')
@@ -3504,7 +3534,8 @@ def preview_working_file():
             'Voorzangers': 8, 'Beamer': 9, 'Geluid': 10, 'KND': 11, 'Tieners': 12
         }
         
-        for field, row in field_rows.items():
+        for field, legacy_row in field_rows.items():
+            row = _duty_row(ws, field, legacy_row)
             val = str(ws.cell(row=row, column=2).value).strip() if ws.cell(row=row, column=2).value else ''
             preview['current_values'][field] = val
         
