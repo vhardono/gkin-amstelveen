@@ -6,6 +6,7 @@
     <meta name="robots" content="noindex, nofollow">
     <title>Gebedspunten — GKIN Amstelveen</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         html{overflow-y:scroll}.text-gkin-green{color:#3A7C22}.bg-gkin-green{background:#3A7C22}.bg-gkin-dark{background:#2d6119}
         @media print {
@@ -47,6 +48,9 @@
            class="w-20 text-center text-xs font-semibold text-gkin-green border border-gkin-green rounded-lg py-2.5"
            data-i18n="gebed.back">Terug</a>
         <div class="flex-1"></div>
+        <button onclick="savePdf()"
+                class="w-20 text-center text-xs font-semibold text-gkin-green border border-gkin-green rounded-lg py-2.5 inline-flex items-center justify-center gap-1"
+                data-i18n="gebed.pdf">PDF</button>
         <button onclick="window.print()"
                 class="w-20 text-center text-xs font-semibold text-gkin-green border border-gkin-green rounded-lg py-2.5 inline-flex items-center justify-center gap-1"
                 data-i18n="gebed.print">Print</button>
@@ -103,6 +107,18 @@ const T = (k, fb) => (DICT()[k] !== undefined ? DICT()[k] : fb);
 const esc = s => (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let currentText = RAW_TEXT;
 let editMode = false;
+
+function savePdf() {
+    const el = document.getElementById('printArea');
+    const name = (SOURCE_NAME || 'Gebedspunten').replace(/\.txt$/i, '') + '.pdf';
+    html2pdf().set({
+        margin: [10, 12, 10, 12],
+        filename: name,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    }).from(el).save();
+}
 
 // Render the plain-text file: "Titel:" lines become bold headers,
 // "- item" lines become bullets, other lines plain paragraphs.
