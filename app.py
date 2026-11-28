@@ -737,7 +737,17 @@ def _rooster_services(horizon_days=90, include_recent_past=True):
     try:
         taken = _get_takenrooster()
         today = datetime.now().date()
-        horizon = today + timedelta(days=horizon_days) if horizon_days else None
+        if horizon_days:
+            # End of next quarter: e.g. in Nov (Q4) the window runs to 31 Mar (end of Q1)
+            next_q_first_month = ((today.month - 1) // 3 * 3 + 3) % 12 + 1
+            next_q_year = today.year + (1 if today.month >= 10 else 0)
+            end_month = next_q_first_month + 2
+            end_year = next_q_year + (1 if end_month > 12 else 0)
+            end_month = (end_month - 1) % 12 + 1
+            horizon = datetime(end_year, end_month, 1).date() + timedelta(days=31)
+            horizon = horizon.replace(day=1) - timedelta(days=1)
+        else:
+            horizon = None
         # Bijbellezers history: last 4 weeks, but not before the column existed
         start = max(today - timedelta(days=28), datetime(2026, 11, 15).date()) if include_recent_past else today
         for e in (taken.get('all_entries') or taken.get('entries', [])):
