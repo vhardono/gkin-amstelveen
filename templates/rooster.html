@@ -147,6 +147,87 @@ const toFirstNames = raw =>
               .map(p => firstName(p.replace(/\s*\((id|nl)\)\s*$/i, '')))
               .filter(Boolean).join(', ');
 
+// --- Duplicate-duty detection ---------------------------------------------
+// Map of normalized first name -> ordered unique duty labels for one service.
+const DUTY_ALL = [
+    ['predikant',   'tr.predikant',   'Predikant'],
+    ['ovd',         'tr.ovd',         'Ouderling van Dienst'],
+    ['1eo',         'tr.eo1',         'Eerste Ontvangst'],
+    ['beamer',      'tr.beamer',      'Beamer'],
+    ['muziek',      'tr.muziek',      'Muziek'],
+    ['voorzangers', 'tr.voorzangers', 'Voorzangers'],
+    ['multimedia',  'tr.multimedia',  'Multimedia'],
+    ['knd',         'tr.knd',         'KND'],
+    ['tieners',     'tr.tieners',     'Tieners'],
+];
+function dutyNameMap(s) {
+    const map = {};   // firstName(lower) -> [labels]
+    const add = (label, val) => {
+        (val || '').split(',').forEach(part => {
+            const n = firstName(part.replace(/\s*\((id|nl)\)\s*$/i, '')).toLowerCase();
+            if (n) {
+                map[n] = map[n] || [];
+                if (!map[n].includes(label)) map[n].push(label);
+            }
+        });
+    };
+    for (const [f, k, fb] of DUTY_ALL) add(T(k, fb), s[f]);
+    const p = parseBijbel(s.bijbellezers);
+    const bl = T('tr.bijbellezers', 'Bijbellezers');
+    add(bl, p.id); add(bl, p.nl);
+    return map;
+}
+// Names (lowercase first names) scheduled for more than one duty on this service.
+function dupNames(s) {
+    const m = dutyNameMap(s);
+    return new Set(Object.keys(m).filter(n => new Set(m[n]).size > 1));
+}
+// Render a duty value with duplicate names highlighted dark red.
+function renderDutyVal(s, val) {
+    if (!val) return '\u2014';
+    const dups = dupNames(s);
+    return val.split(',').map(part => {
+        const n = firstName(part.replace(/\s*\((id|nl)\)\s*$/i, '')).toLowerCase();
+        const html = esc(part.trim());
+        return dups.has(n) ? `<span class="text-red-800 font-semibold" title="${esc(T('rooster.dupe_title','Meerdere diensten op deze dag'))}">${html}</span>` : html;
+    }).join(', ');
+}
+// Toast popup (non-blocking) for duplicate warnings in edit mode.
+let toastTimer = null;
+function showToast(msg) {
+    let el = document.getElementById('dupeToast');
+    if (!el) {
+        el = document.createElement('div');
+        el.id = 'dupeToast';
+        el.className = 'fixed left-1/2 -translate-x-1/2 bottom-4 z-50 bg-amber-100 border border-amber-400 text-amber-900 text-xs font-semibold rounded-lg shadow-lg px-4 py-2.5 max-w-sm text-center';
+        document.body.appendChild(el);
+    }
+    el.innerHTML = msg;
+    el.classList.remove('hidden');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.add('hidden'), 5000);
+}
+// Warn when a typed name already serves in another duty on the same date.
+function checkDupes(inp) {
+    const card = inp.closest('[data-date]');
+    if (!card) return;
+    const s = SERVICES.find(x => x.value === card.dataset.date);
+    if (!s) return;
+    const m = dutyNameMap(s);
+    const curLabel = dutyField === 'bijbellezers' ? T('tr.bijbellezers','Bijbellezers') : dutyLabel();
+    const seen = new Set(); const conflicts = [];
+    (inp.value || '').split(',').forEach(part => {
+        const n = firstName(part).toLowerCase();
+        if (!n || seen.has(n)) return;
+        seen.add(n);
+        const others = (m[n] || []).filter(l => l !== curLabel);
+        if (others.length) conflicts.push(`${esc(firstName(part))} — ${others.map(esc).join(', ')}`);
+    });
+    if (conflicts.length) {
+        showToast('\u26a0\ufe0f ' + esc(T('rooster.dupe_warn','Al ingepland op deze dag voor')) + ':<br>' + conflicts.join('<br>'));
+    }
+}
+
 // Auto-suggest first names: everyone already appearing in the roster (any duty).
 let ALL_NAMES = [];
 function fillNameSuggestions() {
@@ -189,7 +270,7 @@ function renderView() {
     const s = SERVICES[+document.getElementById('dateSelect').value || 0];
     if (!s) { wrap.innerHTML = ''; return; }
     const rows = FIELDS.map(([f,k,fb]) =>
-        `<div class="flex"><span class="w-32 shrink-0 font-semibold text-gray-600">${T(k,fb)}</span><span class="text-gray-800">${esc(s[f])||'—'}</span></div>`).join('');
+        `<div class="flex"><span class="w-32 shrink-0 font-semibold text-gray-600">${T(k,fb)}</span><span class="text-gray-800">${renderDutyVal(s, s[f])}</span></div>`).join('');
     wrap.innerHTML = `
         <div class="bg-white rounded-lg shadow-sm p-3 mb-3">
             <div class="mb-2 pb-2 border-b border-gray-100">
@@ -197,7 +278,7 @@ function renderView() {
                 <div class="text-xs text-gray-500">${dateLabel(s)}${s.tijd ? ' · ' + s.tijd : ''}</div>
             </div>
             <div class="space-y-1 text-xs">${rows}
-                <div class="flex"><span class="w-32 shrink-0 font-semibold text-gray-600">${T('tr.bijbellezers','Bijbellezers')}</span><span class="text-gray-800">${esc(s.bijbellezers)||'—'}</span></div>
+                <div class="flex"><span class="w-32 shrink-0 font-semibold text-gray-600">${T('tr.bijbellezers','Bijbellezers')}</span><span class="text-gray-800">${renderDutyVal(s, s.bijbellezers)}</span></div>
             </div>
         </div>`;
 }
@@ -209,7 +290,7 @@ function renderEdit() {
         // Same field layout for every week; past weeks are disabled + greyed.
         const cls = 'border rounded px-2 py-1.5 text-sm ' +
             (ro ? 'border-gray-200 bg-gray-100 text-gray-500 cursor-not-allowed' : 'border-gray-300');
-        const ev  = ro ? '' : ' oninput="suggestNames(this)" onfocus="suggestNames(this)"';
+        const ev  = ro ? '' : ' oninput="suggestNames(this)" onfocus="suggestNames(this)" onchange="checkDupes(this)"';
         const dis = ro ? ' disabled' : '';
         let inputs;
         if (dutyField === 'bijbellezers') {
